@@ -26,6 +26,7 @@ namespace IonKiwi.Json {
 			Detect,
 			EscapeSequenceUnicode,
 			EscapeSequenceUnicodeHex,
+			EscapeSequenceUnicodeHexSurrogate,
 			EscapeSequenceUnicodeCodePoint,
 			EscapeSequenceHex,
 		}

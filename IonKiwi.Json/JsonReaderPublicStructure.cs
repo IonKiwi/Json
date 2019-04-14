@@ -36,6 +36,11 @@ namespace IonKiwi.Json {
 
 			}
 
+			public UnexpectedDataException(string message) :
+				base(message) {
+
+			}
+
 			private UnexpectedDataException(SerializationInfo info, StreamingContext context)
 					: base(info, context) {
 

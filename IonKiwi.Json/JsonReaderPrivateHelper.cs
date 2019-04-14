@@ -321,13 +321,77 @@ namespace IonKiwi.Json {
 					v |= GetByte(state.MultiByteSequence[1], out _) << 8;
 					v |= GetByte(state.MultiByteSequence[2], out _) << 4;
 					v |= GetByte(state.MultiByteSequence[3], out _);
+
+					// high/lead surrogate
+					if (v >= 0xD800 && v <= 0xDBFF) {
+						byte[] tmp = state.MultiByteSequence;
+						state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicodeHexSurrogate;
+						state.MultiByteSequence = new byte[10];
+						state.MultiByteSequence[0] = tmp[0];
+						state.MultiByteSequence[1] = tmp[1];
+						state.MultiByteSequence[2] = tmp[2];
+						state.MultiByteSequence[3] = tmp[3];
+						state.MultiByteIndex = 4;
+						return null;
+					}
+					// low/trail surrogate
+					else if (v >= 0xDC00 && v <= 0xDFFF) {
+						throw new NotSupportedException("Low surrogate without high surrogate");
+					}
+
 					var utf16 = Char.ConvertFromUtf32(v);
 					if (utf16.Length != 1) {
 						throw new NotSupportedException("Expected one unicode character from escape sequence");
 					}
+					return utf16[0];
+				}
+				else {
+					throw new UnexpectedDataException();
+				}
+			}
+			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicodeHexSurrogate) {
+				if (isMultiByteCharacter) {
+					throw new UnexpectedDataException();
+				}
+				else if (state.MultiByteIndex == 4) {
+					if (c != '\\') {
+						throw new UnexpectedDataException("Expected unicode escape sequence for low surrogate");
+					}
+					state.MultiByteIndex++;
+					return null;
+				}
+				else if (state.MultiByteIndex == 5) {
+					if (c != 'u') {
+						throw new UnexpectedDataException("Expected unicode escape sequence for low surrogate");
+					}
+					state.MultiByteIndex++;
+					return null;
+				}
+				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+					if (state.MultiByteIndex < state.MultiByteSequenceLength) {
+						return null;
+					}
 
-					// TODO: handle UTF-16 surrogate pairs
+					int v1 = GetByte(state.MultiByteSequence[0], out _) << 12;
+					v1 |= GetByte(state.MultiByteSequence[1], out _) << 8;
+					v1 |= GetByte(state.MultiByteSequence[2], out _) << 4;
+					v1 |= GetByte(state.MultiByteSequence[3], out _);
 
+					int v2 = GetByte(state.MultiByteSequence[6], out _) << 12;
+					v2 |= GetByte(state.MultiByteSequence[7], out _) << 8;
+					v2 |= GetByte(state.MultiByteSequence[8], out _) << 4;
+					v2 |= GetByte(state.MultiByteSequence[9], out _);
+
+					if (!(v2 >= 0xDC00 && v2 <= 0xDFFF)) {
+						throw new NotSupportedException("Expected low surrogate pair");
+					}
+
+					int utf16v = (v1 - 0xD800) * 0x400 + v2 - 0xDC00 + 0x10000;
+					var utf16 = Char.ConvertFromUtf32(utf16v);
+					if (utf16.Length != 1) {
+						throw new NotSupportedException("Expected one unicode character from escape sequence");
+					}
 					return utf16[0];
 				}
 				else {
@@ -390,11 +454,11 @@ namespace IonKiwi.Json {
 			}
 			else if (escapeToken == JsonInternalEscapeToken.Detect) {
 				if (c == 'u') {
-					escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicode;
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicode;
 					return null;
 				}
 				else if (c == 'x') {
-					escapeToken = JsonInternalEscapeToken.EscapeSequenceHex;
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceHex;
 					state.MultiByteSequenceLength = 2;
 					state.MultiByteSequence = new byte[2];
 					state.MultiByteIndex = 0;
