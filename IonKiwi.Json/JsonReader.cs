@@ -14,7 +14,8 @@ namespace IonKiwi.Json {
 			"class", "enum", "extends", "super",
 			"const", "export", "import",
 			"implements", "let", "private", "public", "yield",
-			"interface", "package", "protected", "static"
+			"interface", "package", "protected", "static",
+			"null", "true", "false",
 		};
 
 		public static bool ValidateIdentifier(string identifier) {
@@ -23,7 +24,7 @@ namespace IonKiwi.Json {
 				return false;
 			}
 
-			if (ReservedKeywords.Contains(identifier, StringComparer.OrdinalIgnoreCase)) {
+			if (ReservedKeywords.Contains(identifier, StringComparer.Ordinal)) {
 				return false;
 			}
 
