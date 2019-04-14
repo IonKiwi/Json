@@ -9,14 +9,15 @@ namespace IonKiwi.Json {
 	partial class JsonReader {
 		public enum JsonToken {
 			None,
-			Section,
-			SequenceEntry,
-			CommentStart,
-			CommentEnd,
-			TextEnd,
-			ScalarHeader,
-			ScalarStart,
-			ScalarEnd,
+			ObjectStart,
+			ObjectProperty,
+			ObjectEnd,
+			ArrayStart,
+			ArrayEnd,
+			String,
+			Number,
+			Boolean,
+			Null,
 		}
 
 		public sealed class MoreDataExpectedException : Exception {

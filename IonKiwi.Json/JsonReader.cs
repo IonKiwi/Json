@@ -10,7 +10,6 @@ namespace IonKiwi.Json {
 	public partial class JsonReader {
 		private readonly IInputReader _dataReader;
 
-		private JsonInternalPosition _currentPosition = JsonInternalPosition.None;
 		private Stack<JsonInternalState> _currentState = new Stack<JsonInternalState>();
 
 		private byte[] _buffer = new byte[4096];
@@ -63,7 +62,7 @@ namespace IonKiwi.Json {
 		private async ValueTask<JsonToken> ReadInternal() {
 			JsonToken token = JsonToken.None;
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
-				if (!await ReadEnsureData().NoSync()) {
+				if (_length - _offset == 0 && !await ReadEnsureData().NoSync()) {
 					if (_currentState.Count != 1) {
 						throw new MoreDataExpectedException();
 					}
@@ -76,7 +75,7 @@ namespace IonKiwi.Json {
 		private JsonToken ReadInternalSync() {
 			JsonToken token = JsonToken.None;
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
-				if (!ReadEnsureDataSync()) {
+				if (_length - _offset == 0 && !ReadEnsureDataSync()) {
 					if (_currentState.Count != 1) {
 						throw new MoreDataExpectedException();
 					}
@@ -87,9 +86,18 @@ namespace IonKiwi.Json {
 		}
 
 		private bool HandleDataBlock(Span<byte> block, out JsonToken token) {
-			token = JsonToken.None;
 			var state = _currentState.Peek();
-			var currentToken = state.Token;
+			if (state is JsonInternalRootState rootState) {
+				return HandleRootState(rootState, block, out token);
+			}
+			else {
+				throw new InvalidOperationException();
+			}
+		}
+
+		private bool HandleRootState(JsonInternalRootState rootState, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			var currentToken = rootState.Token;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte b = block[i];
@@ -97,14 +105,11 @@ namespace IonKiwi.Json {
 				_lineOffset++;
 
 				if (b == 0xFF || b == 0xFE || b == 0xEF) {
-					if (!(state is JsonInternalRootState rootState)) {
-						throw new InvalidOperationException("Internal state corruption");
-					}
 					if (_lineIndex == 0 && _lineOffset == 0) {
 						rootState.ByteOrderMark = new byte[3];
 						rootState.ByteOrderMark[0] = b;
 						rootState.ByteOrderMarkIndex = 1;
-						rootState.Token = currentToken = JsonInternalToken.ByteOrderMark;
+						rootState.Token = currentToken = JsonInternalRootToken.ByteOrderMark;
 
 						if (remaining == 0) {
 							// need more data
@@ -116,10 +121,7 @@ namespace IonKiwi.Json {
 						throw new UnexpectedDataException();
 					}
 				}
-				else if (currentToken == JsonInternalToken.ByteOrderMark) {
-					if (!(state is JsonInternalRootState rootState)) {
-						throw new InvalidOperationException("Internal state corruption");
-					}
+				else if (currentToken == JsonInternalRootToken.ByteOrderMark) {
 
 					if (rootState.ByteOrderMarkIndex == 0 || rootState.ByteOrderMarkIndex > 3) {
 						throw new InvalidOperationException();
@@ -169,7 +171,7 @@ namespace IonKiwi.Json {
 								rootState.ByteOrderMark[1] = b;
 								rootState.ByteOrderMarkIndex = 3;
 								rootState.Charset = rootState.ByteOrderMark[0] == 0xFF ? Charset.Utf32LE : Charset.Utf32BE;
-								rootState.Token = currentToken = JsonInternalToken.None;
+								rootState.Token = currentToken = JsonInternalRootToken.None;
 								throw new InvalidOperationException("Charset '" + rootState.Charset + "' is not supported.");
 								//continue;
 							}
@@ -185,7 +187,7 @@ namespace IonKiwi.Json {
 								rootState.ByteOrderMark[1] = b;
 								rootState.ByteOrderMarkIndex = 3;
 								rootState.Charset = Charset.Utf8;
-								rootState.Token = currentToken = JsonInternalToken.None;
+								rootState.Token = currentToken = JsonInternalRootToken.None;
 								continue;
 							}
 							else {
@@ -197,34 +199,71 @@ namespace IonKiwi.Json {
 						}
 					}
 				}
-				else if (currentToken == JsonInternalToken.None) {
-					// white-space
-					if (b == ' ' || b == '\t' || b == '\v' || b == '\f' || b == '\u00A0') {
-						continue;
-					}
-					else if (b == '{') {
-						var newState = new JsonInternalObjectState() { Parent = state, PreviousPosition = _currentPosition, Token = JsonInternalToken.None };
-						state = newState;
-						_currentState.Push(newState);
-					}
-					else if (b == '}') {
-
-					}
-					else if (b == '[') {
-						var newState = new JsonInternalArrayState() { Parent = state, PreviousPosition = _currentPosition, Token = JsonInternalToken.None };
-						state = newState;
-						_currentState.Push(newState);
-					}
-					else if (b == ']') {
-
-					}
-					else {
-						throw new UnexpectedDataException();
-					}
+				else if (HandleNonePosition(rootState, block, b, i, remaining, ref token)) {
+					return true;
 				}
 			}
 
 			return false;
+		}
+
+		private bool HandleNonePosition(JsonInternalState state, Span<byte> block, byte b, int i, int remaing, ref JsonToken token) {
+
+			// white-space
+			if (b == ' ' || b == '\t' || b == '\v' || b == '\f' || b == '\u00A0') {
+				return false;
+			}
+			else if (b == '{') {
+				var newState = new JsonInternalObjectState() { Parent = state };
+				_currentState.Push(newState);
+				token = JsonToken.ObjectStart;
+				return true;
+			}
+			else if (b == '[') {
+				var newState = new JsonInternalArrayState() { Parent = state };
+				_currentState.Push(newState);
+				token = JsonToken.ArrayStart;
+				return true;
+			}
+			else if (b == '\'') {
+				var newState = new JsonInternalSingleQuotedStringState() { Parent = state };
+				_currentState.Push(newState);
+				token = JsonToken.ArrayStart;
+				return true;
+			}
+			else if (b == '"') {
+				var newState = new JsonInternalDoubleQuotedStringState() { Parent = state };
+				_currentState.Push(newState);
+				token = JsonToken.ArrayStart;
+				return true;
+			}
+			// numeric
+			else if (b == '.' || (b >= '0' && b <= '9') || b == '+' || b == '-') {
+				throw new NotImplementedException();
+			}
+			// Infinity
+			else if (b == 'I') {
+				throw new NotImplementedException();
+			}
+			// NaN
+			else if (b == 'N') {
+				throw new NotImplementedException();
+			}
+			// null
+			else if (b == 'n') {
+				throw new NotImplementedException();
+			}
+			// true
+			else if (b == 't') {
+				throw new NotImplementedException();
+			}
+			// false
+			else if (b == 'f') {
+				throw new NotImplementedException();
+			}
+			else {
+				throw new UnexpectedDataException();
+			}
 		}
 	}
 }

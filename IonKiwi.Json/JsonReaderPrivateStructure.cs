@@ -4,24 +4,9 @@ using System.Text;
 
 namespace IonKiwi.Json {
 	partial class JsonReader {
-		private enum JsonInternalPosition {
-			None,
-			ObjectStart,
-			ObjectProperty,
-			ObjectEnd,
-			ArrayStart,
-			ArrayEnd,
-			String,
-			Number,
-			Boolean,
-			Null,
-		}
 
-		private enum JsonInternalToken {
+		private enum JsonInternalRootToken {
 			None,
-			CarriageReturn,
-			SingleHypen,
-			DoubleHypen,
 			ByteOrderMark,
 		}
 
@@ -34,12 +19,11 @@ namespace IonKiwi.Json {
 		}
 
 		private abstract class JsonInternalState {
-			public JsonInternalPosition PreviousPosition = JsonInternalPosition.None;
-			public JsonInternalToken Token = JsonInternalToken.None;
 			public JsonInternalState Parent;
 		}
 
 		private sealed class JsonInternalRootState : JsonInternalState {
+			public JsonInternalRootToken Token = JsonInternalRootToken.None;
 			public Charset Charset = Charset.Utf8;
 			public byte[] ByteOrderMark;
 			public int ByteOrderMarkIndex;
@@ -55,6 +39,23 @@ namespace IonKiwi.Json {
 
 		private sealed class JsonInternalArrayState : JsonInternalState {
 			public List<JsonInternalArrayItemState> Items = new List<JsonInternalArrayItemState>();
+		}
+
+		private abstract class JsonInternalStringState : JsonInternalState {
+			public List<byte> Data = new List<byte>();
+
+			public byte[] MultiByteSequence;
+			public int MultiByteIndex;
+			public int MultiByteSequenceLength;
+			public bool IsComplete;
+		}
+
+		private sealed class JsonInternalSingleQuotedStringState : JsonInternalStringState {
+
+		}
+
+		private sealed class JsonInternalDoubleQuotedStringState : JsonInternalStringState {
+
 		}
 
 		private sealed class JsonInternalArrayItemState : JsonInternalState {
