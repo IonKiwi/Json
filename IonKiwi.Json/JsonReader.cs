@@ -364,8 +364,8 @@ namespace IonKiwi.Json {
 
 		private bool HandleNonePosition(JsonInternalState state, char c, ref JsonToken token) {
 
-			// white-space (treat NEL (newline) as whitespace)
-			if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == 0x85) {
+			// white-space
+			if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == '\uFEFF') {
 				return false;
 			}
 			else if (c == '{') {
@@ -419,7 +419,7 @@ namespace IonKiwi.Json {
 			else {
 				var cc = Char.GetUnicodeCategory(c);
 				// white-space
-				if (cc == UnicodeCategory.SpaceSeparator || cc == UnicodeCategory.LineSeparator) {
+				if (cc == UnicodeCategory.SpaceSeparator) {
 					return false;
 				}
 				throw new UnexpectedDataException();
