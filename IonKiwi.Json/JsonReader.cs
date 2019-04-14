@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
@@ -17,6 +18,7 @@ namespace IonKiwi.Json {
 			"interface", "package", "protected", "static",
 			"null", "true", "false",
 		};
+		private static readonly HashSet<string> ReservedKeywordsSet = new HashSet<string>(ReservedKeywords, StringComparer.Ordinal);
 
 		public static bool ValidateIdentifier(string identifier) {
 
@@ -24,7 +26,7 @@ namespace IonKiwi.Json {
 				return false;
 			}
 
-			if (ReservedKeywords.Contains(identifier, StringComparer.Ordinal)) {
+			if (ReservedKeywordsSet.Contains(identifier)) {
 				return false;
 			}
 
@@ -52,7 +54,7 @@ namespace IonKiwi.Json {
 
 			for (int l = identifier.Length; i < l; i++) {
 				var c = identifier[i];
-				var valid = c == '$' || c == '_' || c == '\\';
+				var valid = c == '$' || c == '_';
 				if (!valid) {
 					var cc = Char.GetUnicodeCategory(c);
 					valid =
