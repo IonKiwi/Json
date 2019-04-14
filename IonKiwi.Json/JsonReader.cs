@@ -383,6 +383,24 @@ namespace IonKiwi.Json {
 						throw new UnexpectedDataException();
 					}
 				}
+				else if (currentToken == JsonInternalObjectToken.AfterIdentifier) {
+					if (c == ':') {
+						state.Token = currentToken = JsonInternalObjectToken.AfterColon;
+						var newState = new JsonInternalObjectPropertyState() { Parent = state, PropertyName = state.CurrentProperty.ToString() };
+						_currentState.Push(newState);
+						token = JsonToken.ObjectProperty;
+						return true;
+					}
+					// white-space
+					else if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0') {
+						continue;
+					}
+					var ccat = Char.GetUnicodeCategory(c);
+					if (ccat == UnicodeCategory.SpaceSeparator) {
+						continue;
+					}
+					throw new UnexpectedDataException();
+				}
 				else if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier) {
 					if (c == '\'') {
 						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
