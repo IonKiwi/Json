@@ -325,6 +325,9 @@ namespace IonKiwi.Json {
 					if (utf16.Length != 1) {
 						throw new NotSupportedException("Expected one unicode character from escape sequence");
 					}
+
+					// TODO: handle UTF-16 surrogate pairs
+
 					return utf16[0];
 				}
 				else {
@@ -361,6 +364,74 @@ namespace IonKiwi.Json {
 					else {
 						throw new UnexpectedDataException();
 					}
+				}
+			}
+			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceHex) {
+				if (isMultiByteCharacter) {
+					throw new UnexpectedDataException();
+				}
+				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+					if (state.MultiByteIndex < state.MultiByteSequenceLength) {
+						return null;
+					}
+					int v = GetByte(state.MultiByteSequence[0], out _) << 4;
+					v |= GetByte(state.MultiByteSequence[1], out _);
+					var utf16 = Char.ConvertFromUtf32(v);
+					if (utf16.Length != 1) {
+						throw new NotSupportedException("Expected one unicode character from escape sequence");
+					}
+
+					return utf16[0];
+				}
+				else {
+					throw new UnexpectedDataException();
+				}
+			}
+			else if (escapeToken == JsonInternalEscapeToken.Detect) {
+				if (c == 'u') {
+					escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicode;
+					return null;
+				}
+				else if (c == 'x') {
+					escapeToken = JsonInternalEscapeToken.EscapeSequenceHex;
+					state.MultiByteSequenceLength = 2;
+					state.MultiByteSequence = new byte[2];
+					state.MultiByteIndex = 0;
+					return null;
+				}
+				else if (c == '\'') {
+					return '\'';
+				}
+				else if (c == '"') {
+					return '"';
+				}
+				else if (c == '\\') {
+					return '\\';
+				}
+				else if (c == 'b') {
+					return '\b';
+				}
+				else if (c == 'f') {
+					return '\f';
+				}
+				else if (c == 'n') {
+					return '\n';
+				}
+				else if (c == 'r') {
+					return '\r';
+				}
+				else if (c == 't') {
+					return '\t';
+				}
+				else if (c == 'v') {
+					return '\v';
+				}
+				else if (c == '0') {
+					return '\0';
+				}
+				else {
+					return c;
 				}
 			}
 			else {

@@ -27,6 +27,7 @@ namespace IonKiwi.Json {
 			EscapeSequenceUnicode,
 			EscapeSequenceUnicodeHex,
 			EscapeSequenceUnicodeCodePoint,
+			EscapeSequenceHex,
 		}
 
 		private enum Charset {
