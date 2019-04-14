@@ -32,6 +32,8 @@ namespace IonKiwi.Json {
 				validStart = startCategory == UnicodeCategory.UppercaseLetter || startCategory == UnicodeCategory.LowercaseLetter || startCategory == UnicodeCategory.TitlecaseLetter || startCategory == UnicodeCategory.ModifierLetter || startCategory == UnicodeCategory.OtherLetter || startCategory == UnicodeCategory.LetterNumber;
 			}
 
+			// TODO: add ID_Start
+
 			int i = 1;
 			if (!validStart && start == '\\') {
 				if (identifier.Length < 6) { return false; }
@@ -59,6 +61,9 @@ namespace IonKiwi.Json {
 						cc == UnicodeCategory.ConnectorPunctuation ||
 						c == '\u200C' || c == '\u200D';
 				}
+
+				// TODO: add ID_Continue
+
 				if (!valid && c == '\\') {
 					if (i + 5 > l) { return false; }
 					if (identifier[i + 1] != 'u') { return false; }
