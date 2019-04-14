@@ -6,16 +6,11 @@ using System.Text;
 namespace IonKiwi.Json {
 	public class JsonWriter {
 		public static string[] ReservedKeywords => new string[] {
-			"break", "do", "instanceof", "typeof",
-			"case", "else", "new", "var",
-			"catch", "finally", "return", "void",
-			"continue", "for", "switch", "while",
-			"debugger", "function", "this", "with",
-			"default", "if", "throw", "delete", "in", "try",
-			"class", "enum", "extends", "super",
-			"const", "export", "import",
-			"implements", "let", "private", "public", "yield",
-			"interface", "package", "protected", "static",
+			"await", "break", "case", "catch", "class", "const", "continue", "debugger", "default", "delete", "do", "else", "export", "extends", "finally", "for", "function", "if", "import", "in", "instanceof", "new", "return", "super", "switch", "this", "throw", "try", "typeof", "var", "void", "while", "with", "yield",
+			"let", "static",
+			"enum",
+			"implements", "package", "protected",
+			"interface", "private", "public",
 			"null", "true", "false",
 		};
 		private static readonly HashSet<string> ReservedKeywordsSet = new HashSet<string>(ReservedKeywords, StringComparer.Ordinal);
