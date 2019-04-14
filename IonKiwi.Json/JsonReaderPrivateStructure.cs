@@ -41,6 +41,8 @@ namespace IonKiwi.Json {
 		}
 
 		private sealed class JsonInternalObjectState : JsonInternalState {
+			public JsonInternalObjectToken Token = JsonInternalObjectToken.BeforeProperty;
+			public bool IsCarriageReturn;
 			public Dictionary<string, JsonInternalObjectPropertyState> Properties = new Dictionary<string, JsonInternalObjectPropertyState>(StringComparer.Ordinal);
 		}
 
