@@ -107,15 +107,23 @@ namespace IonKiwi.Json {
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte b = block[i];
 				int remaining = l - i - 1;
-				_lineOffset++;
 
 				if (isMultiByteSequence) {
 					var mbChar = HandleMultiByteSequence(state, block, b, ref isMultiByteSequence);
 					if (mbChar.HasValue) {
-
+						_lineOffset--;
+					}
+					else if (!isMultiByteSequence) {
+						throw new InvalidOperationException("Internal state corruption");
+					}
+					else {
+						continue;
 					}
 				}
-				else if (isCarriageReturn) {
+
+				_lineOffset++;
+
+				if (isCarriageReturn) {
 					// assert i == 0
 					if (i != 0) {
 						throw new InvalidOperationException("Internal state corruption");
@@ -195,15 +203,23 @@ namespace IonKiwi.Json {
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte b = block[i];
 				int remaining = l - i - 1;
-				_lineOffset++;
 
 				if (isMultiByteSequence) {
 					var mbChar = HandleMultiByteSequence(state, block, b, ref isMultiByteSequence);
 					if (mbChar.HasValue) {
-
+						_lineOffset--;
+					}
+					else if (!isMultiByteSequence) {
+						throw new InvalidOperationException("Internal state corruption");
+					}
+					else {
+						continue;
 					}
 				}
-				else if (b == 0xFF || b == 0xFE || b == 0xEF) {
+
+				_lineOffset++;
+
+				if (b == 0xFF || b == 0xFE || b == 0xEF) {
 					if (_lineIndex == 0 && _lineOffset == 0) {
 						state.ByteOrderMark = new byte[3];
 						state.ByteOrderMark[0] = b;
