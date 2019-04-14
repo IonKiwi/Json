@@ -213,7 +213,7 @@ namespace IonKiwi.Json {
 					}
 				}
 
-				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence);
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
 				if (!cc.HasValue) {
 					continue;
 				}
@@ -276,18 +276,28 @@ namespace IonKiwi.Json {
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			bool expectUnicodeEscapeSequence = state.ExpectUnicodeEscapeSequence;
+			var escapeToken = state.EscapeToken;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence);
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
 				if (!cc.HasValue) {
 					continue;
 				}
 
 				_lineOffset++;
 				Char c = cc.Value;
+
+				if (escapeToken != JsonInternalEscapeToken.None) {
+					Char? cu = GetCharacterFromEscapeSequence(state, c, isMultiByteCharacter, ref escapeToken);
+					if (!cu.HasValue) {
+						continue;
+					}
+					c = cu.Value;
+				}
 
 				if (isCarriageReturn) {
 					// assert i == 0
@@ -304,6 +314,14 @@ namespace IonKiwi.Json {
 						i = -1;
 					}
 
+					continue;
+				}
+				else if (expectUnicodeEscapeSequence) {
+					if (c != 'u' || isMultiByteCharacter) {
+						throw new UnexpectedDataException();
+					}
+					state.ExpectUnicodeEscapeSequence = expectUnicodeEscapeSequence = false;
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicode;
 					continue;
 				}
 				else if (currentToken == JsonInternalObjectToken.BeforeProperty || currentToken == JsonInternalObjectToken.Comma) {
@@ -341,7 +359,10 @@ namespace IonKiwi.Json {
 						state.Token = currentToken = JsonInternalObjectToken.DoubleQuotedIdentifier;
 						continue;
 					}
-
+					else if (c == '\\') {
+						state.ExpectUnicodeEscapeSequence = expectUnicodeEscapeSequence = true;
+						continue;
+					}
 					else {
 						throw new UnexpectedDataException();
 					}

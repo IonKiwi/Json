@@ -46,11 +46,13 @@ namespace IonKiwi.Json {
 			return bs != 0;
 		}
 
-		private Char? GetCharacterFromUtf8(JsonInternalState state, byte b, ref bool isMultiByteSequence) {
+		private Char? GetCharacterFromUtf8(JsonInternalState state, byte b, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+			isMultiByteCharacter = false;
 			if (isMultiByteSequence) {
 				var mbChar = HandleMultiByteSequence(state, b, ref isMultiByteSequence);
 				if (mbChar.HasValue) {
 					_lineOffset--;
+					isMultiByteCharacter = true;
 					return mbChar;
 				}
 				else if (!isMultiByteSequence) {
@@ -281,6 +283,107 @@ namespace IonKiwi.Json {
 			else {
 				throw new InvalidOperationException("Internal state corruption");
 			}
+		}
+
+		private char? GetCharacterFromEscapeSequence(JsonInternalState state, char c, bool isMultiByteCharacter, ref JsonInternalEscapeToken escapeToken) {
+			if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicode) {
+				if (isMultiByteCharacter) {
+					throw new UnexpectedDataException();
+				}
+				if (c == '{') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicodeCodePoint;
+					state.MultiByteSequenceLength = 8;
+					state.MultiByteSequence = new byte[8];
+					state.MultiByteIndex = 0;
+					return null;
+				}
+				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || c >= 'A' && c <= 'Z') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicodeHex;
+					state.MultiByteSequenceLength = 4;
+					state.MultiByteSequence = new byte[4];
+					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+					return null;
+				}
+				else {
+					throw new UnexpectedDataException();
+				}
+			}
+			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicodeHex) {
+				if (isMultiByteCharacter) {
+					throw new UnexpectedDataException();
+				}
+				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+					if (state.MultiByteIndex < state.MultiByteSequenceLength) {
+						return null;
+					}
+					int v = GetByte(state.MultiByteSequence[0], out _) << 12;
+					v |= GetByte(state.MultiByteSequence[1], out _) << 8;
+					v |= GetByte(state.MultiByteSequence[2], out _) << 4;
+					v |= GetByte(state.MultiByteSequence[3], out _);
+					var utf16 = Char.ConvertFromUtf32(v);
+					if (utf16.Length != 1) {
+						throw new NotSupportedException("Expected one unicode character from escape sequence");
+					}
+					return utf16[0];
+				}
+				else {
+					throw new UnexpectedDataException();
+				}
+			}
+			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicodeCodePoint) {
+				if (isMultiByteCharacter) {
+					throw new UnexpectedDataException();
+				}
+				else if (c == '}') {
+					if (state.MultiByteIndex == 0) {
+						throw new NotSupportedException("CodePoint with 0 HexDigits");
+					}
+					int v = 0;
+					for (int ii = 0, ls = (state.MultiByteIndex - 1) * 4; ii < state.MultiByteIndex - 1; ii++, ls -= 4) {
+						v |= GetByte(state.MultiByteSequence[ii], out _) << ls;
+					}
+					v |= GetByte(state.MultiByteSequence[state.MultiByteIndex - 1], out _);
+					var utf16 = Char.ConvertFromUtf32(v);
+					if (utf16.Length != 1) {
+						throw new NotSupportedException("Expected one unicode character from escape sequence");
+					}
+					return utf16[0];
+				}
+				else {
+					if (state.MultiByteIndex == state.MultiByteSequenceLength) {
+						throw new NotSupportedException("CodePoint > 8 HexDigits");
+					}
+					if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || c >= 'A' && c <= 'Z') {
+						state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+						return null;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+			}
+			else {
+				throw new NotImplementedException(escapeToken.ToString());
+			}
+		}
+
+		private static int GetByte(byte x, out bool valid) {
+			int z = (int)x;
+			if (z >= 0x30 && z <= 0x39) {
+				valid = true;
+				return (byte)(z - 0x30);
+			}
+			else if (z >= 0x41 && z <= 0x46) {
+				valid = true;
+				return (byte)(z - 0x37);
+			}
+			else if (z >= 0x61 && z <= 0x66) {
+				valid = true;
+				return (byte)(z - 0x57);
+			}
+			valid = false;
+			return 0;
 		}
 	}
 }

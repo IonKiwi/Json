@@ -21,6 +21,13 @@ namespace IonKiwi.Json {
 			Comma,
 		}
 
+		private enum JsonInternalEscapeToken {
+			None,
+			EscapeSequenceUnicode,
+			EscapeSequenceUnicodeHex,
+			EscapeSequenceUnicodeCodePoint,
+		}
+
 		private enum Charset {
 			Utf8,
 			Utf16BE,
@@ -33,6 +40,8 @@ namespace IonKiwi.Json {
 			public JsonInternalState Parent;
 
 			public bool IsMultiByteSequence;
+			public JsonInternalEscapeToken EscapeToken;
+
 			public byte[] MultiByteSequence;
 			public int MultiByteIndex;
 			public int MultiByteSequenceLength;
@@ -48,6 +57,7 @@ namespace IonKiwi.Json {
 		private sealed class JsonInternalObjectState : JsonInternalState {
 			public JsonInternalObjectToken Token = JsonInternalObjectToken.BeforeProperty;
 			public bool IsCarriageReturn;
+			public bool ExpectUnicodeEscapeSequence;
 			public Dictionary<string, JsonInternalObjectPropertyState> Properties = new Dictionary<string, JsonInternalObjectPropertyState>(StringComparer.Ordinal);
 		}
 
