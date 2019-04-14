@@ -343,6 +343,7 @@ namespace IonKiwi.Json {
 					if (utf16.Length != 1) {
 						throw new NotSupportedException("Expected one unicode character from escape sequence");
 					}
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return utf16[0];
 				}
 				else {
@@ -392,6 +393,7 @@ namespace IonKiwi.Json {
 					if (utf16.Length != 1) {
 						throw new NotSupportedException("Expected one unicode character from escape sequence");
 					}
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return utf16[0];
 				}
 				else {
@@ -415,6 +417,7 @@ namespace IonKiwi.Json {
 					if (utf16.Length != 1) {
 						throw new NotSupportedException("Expected one unicode character from escape sequence");
 					}
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return utf16[0];
 				}
 				else {
@@ -445,7 +448,7 @@ namespace IonKiwi.Json {
 					if (utf16.Length != 1) {
 						throw new NotSupportedException("Expected one unicode character from escape sequence");
 					}
-
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return utf16[0];
 				}
 				else {
@@ -465,36 +468,47 @@ namespace IonKiwi.Json {
 					return null;
 				}
 				else if (c == '\'') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '\'';
 				}
 				else if (c == '"') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '"';
 				}
 				else if (c == '\\') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '\\';
 				}
 				else if (c == 'b') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '\b';
 				}
 				else if (c == 'f') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '\f';
 				}
 				else if (c == 'n') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '\n';
 				}
 				else if (c == 'r') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '\r';
 				}
 				else if (c == 't') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '\t';
 				}
 				else if (c == 'v') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '\v';
 				}
 				else if (c == '0') {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return '\0';
 				}
 				else {
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					return c;
 				}
 			}
