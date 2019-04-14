@@ -31,6 +31,11 @@ namespace IonKiwi.Json {
 
 		private abstract class JsonInternalState {
 			public JsonInternalState Parent;
+
+			public bool IsMultiByteSequence;
+			public byte[] MultiByteSequence;
+			public int MultiByteIndex;
+			public int MultiByteSequenceLength;
 		}
 
 		private sealed class JsonInternalRootState : JsonInternalState {
@@ -56,10 +61,6 @@ namespace IonKiwi.Json {
 
 		private abstract class JsonInternalStringState : JsonInternalState {
 			public List<byte> Data = new List<byte>();
-
-			public byte[] MultiByteSequence;
-			public int MultiByteIndex;
-			public int MultiByteSequenceLength;
 			public bool IsComplete;
 		}
 

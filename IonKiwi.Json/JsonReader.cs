@@ -102,13 +102,20 @@ namespace IonKiwi.Json {
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
+			bool isMultiByteSequence = state.IsMultiByteSequence;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte b = block[i];
 				int remaining = l - i - 1;
 				_lineOffset++;
 
-				if (isCarriageReturn) {
+				if (isMultiByteSequence) {
+					var mbChar = HandleMultiByteSequence(state, block, b, ref isMultiByteSequence);
+					if (mbChar.HasValue) {
+
+					}
+				}
+				else if (isCarriageReturn) {
 					// assert i == 0
 					if (i != 0) {
 						throw new InvalidOperationException("Internal state corruption");
@@ -159,9 +166,7 @@ namespace IonKiwi.Json {
 						state.Token = currentToken = JsonInternalObjectToken.DoubleQuotedIdentifier;
 						continue;
 					}
-					else if ((b >= 'a' && b <= 'z') && (b >= 'A' && b <= 'Z')) {
-						state.Token = JsonInternalObjectToken.PlainIdentifier;
-					}
+
 					else {
 						throw new UnexpectedDataException();
 					}
@@ -185,13 +190,20 @@ namespace IonKiwi.Json {
 		private bool HandleRootState(JsonInternalRootState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
 			var currentToken = state.Token;
+			var isMultiByteSequence = state.IsMultiByteSequence;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte b = block[i];
 				int remaining = l - i - 1;
 				_lineOffset++;
 
-				if (b == 0xFF || b == 0xFE || b == 0xEF) {
+				if (isMultiByteSequence) {
+					var mbChar = HandleMultiByteSequence(state, block, b, ref isMultiByteSequence);
+					if (mbChar.HasValue) {
+
+					}
+				}
+				else if (b == 0xFF || b == 0xFE || b == 0xEF) {
 					if (_lineIndex == 0 && _lineOffset == 0) {
 						state.ByteOrderMark = new byte[3];
 						state.ByteOrderMark[0] = b;
@@ -332,7 +344,7 @@ namespace IonKiwi.Json {
 					_lineOffset = 0;
 					continue;
 				}
-				else if (HandleNonePosition(state, block, b, i, ref token)) {
+				else if (HandleNonePosition(state, block, b, i, ref isMultiByteSequence, ref token)) {
 					_offset += i + 1;
 					return true;
 				}
@@ -343,10 +355,165 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
-		private bool HandleNonePosition(JsonInternalState state, Span<byte> block, byte b, int i, ref JsonToken token) {
+		private char? HandleMultiByteSequence(JsonInternalState state, Span<byte> block, byte b, ref bool isMultiByteSequence) {
+			if (state.MultiByteIndex == 1 && state.MultiByteSequenceLength == 2) {
+				if ((b & 0xC0) != 0x80) {
+					// not a continuing byte in a multi-byte sequence
+					throw new UnexpectedDataException();
+				}
+				int v = (state.MultiByteSequence[0] & 0x1F) << 6;
+				v |= (b & 0x3F);
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
 
-			// white-space
-			if (b == ' ' || b == '\t' || b == '\v' || b == '\f' || b == '\u00A0') {
+				if (v >= 0xD800 && v <= 0xDFFF) {
+					// surrogate block
+					throw new UnexpectedDataException();
+				}
+				else if (v == 0xFFFE || v == 0xFFFF) {
+					// BOM
+					throw new UnexpectedDataException();
+				}
+
+				state.MultiByteSequence[state.MultiByteIndex] = b;
+				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
+				if (chars.Length != 1) {
+					throw new InvalidOperationException("Expected one unicode character");
+				}
+				return chars[0];
+			}
+			else if (state.MultiByteIndex == 2 && state.MultiByteSequenceLength == 3) {
+				if ((b & 0xC0) != 0x80) {
+					// not a continuing byte in a multi-byte sequence
+					throw new UnexpectedDataException();
+				}
+				int v = (state.MultiByteSequence[0] & 0xF) << 12;
+				v |= (state.MultiByteSequence[1] & 0x3F) << 6;
+				v |= (b & 0x3F);
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
+
+				if (v >= 0xD800 && v <= 0xDFFF) {
+					// surrogate block
+					throw new UnexpectedDataException();
+				}
+				else if (v == 0xFFFE || v == 0xFFFF) {
+					// BOM
+					throw new UnexpectedDataException();
+				}
+
+				state.MultiByteSequence[state.MultiByteIndex] = b;
+				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
+				if (chars.Length != 1) {
+					throw new InvalidOperationException("Expected one unicode character");
+				}
+				return chars[0];
+			}
+			else if (state.MultiByteIndex == 3 && state.MultiByteSequenceLength == 4) {
+				if ((b & 0xC0) != 0x80) {
+					// not a continuing byte in a multi-byte sequence
+					throw new UnexpectedDataException();
+				}
+				int v = (state.MultiByteSequence[0] & 0x7) << 18;
+				v |= (state.MultiByteSequence[1] & 0x3F) << 12;
+				v |= (state.MultiByteSequence[2] & 0x3F) << 6;
+				v |= (b & 0x3F);
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
+
+				if (v >= 0xD800 && v <= 0xDFFF) {
+					// surrogate block
+					throw new UnexpectedDataException();
+				}
+				else if (v == 0xFFFE || v == 0xFFFF) {
+					// BOM
+					throw new UnexpectedDataException();
+				}
+
+				state.MultiByteSequence[state.MultiByteIndex] = b;
+				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
+				if (chars.Length != 1) {
+					throw new InvalidOperationException("Expected one unicode character");
+				}
+				return chars[0];
+			}
+			else if (state.MultiByteIndex == 4 && state.MultiByteSequenceLength == 5) {
+				if ((b & 0xC0) != 0x80) {
+					// not a continuing byte in a multi-byte sequence
+					throw new UnexpectedDataException();
+				}
+				int v = (state.MultiByteSequence[0] & 0x3) << 24;
+				v |= (state.MultiByteSequence[1] & 0x3F) << 18;
+				v |= (state.MultiByteSequence[2] & 0x3F) << 12;
+				v |= (state.MultiByteSequence[3] & 0x3F) << 6;
+				v |= (b & 0x3F);
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
+
+				if (v >= 0xD800 && v <= 0xDFFF) {
+					// surrogate block
+					throw new UnexpectedDataException();
+				}
+				else if (v == 0xFFFE || v == 0xFFFF) {
+					// BOM
+					throw new UnexpectedDataException();
+				}
+
+				state.MultiByteSequence[state.MultiByteIndex] = b;
+				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
+				if (chars.Length != 1) {
+					throw new InvalidOperationException("Expected one unicode character");
+				}
+				return chars[0];
+			}
+			else if (state.MultiByteIndex == 5 && state.MultiByteSequenceLength == 6) {
+				if ((b & 0xC0) != 0x80) {
+					// not a continuing byte in a multi-byte sequence
+					throw new UnexpectedDataException();
+				}
+
+				int v = (state.MultiByteSequence[0] & 0x1) << 30;
+				v |= (state.MultiByteSequence[1] & 0x3F) << 24;
+				v |= (state.MultiByteSequence[2] & 0x3F) << 18;
+				v |= (state.MultiByteSequence[3] & 0x3F) << 12;
+				v |= (state.MultiByteSequence[4] & 0x3F) << 6;
+				v |= (b & 0x3F);
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
+
+				if (v >= 0xD800 && v <= 0xDFFF) {
+					// surrogate block
+					throw new UnexpectedDataException();
+				}
+				else if (v == 0xFFFE || v == 0xFFFF) {
+					// BOM
+					throw new UnexpectedDataException();
+				}
+
+				state.MultiByteSequence[state.MultiByteIndex] = b;
+				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
+				if (chars.Length != 1) {
+					throw new InvalidOperationException("Expected one unicode character");
+				}
+				return chars[0];
+			}
+			else if (state.MultiByteIndex < (state.MultiByteSequenceLength - 1)) {
+				if (!(b >= 0x80 && b <= 0xBF)) {
+					// not a continuing byte in a multi-byte sequence
+					throw new UnexpectedDataException();
+				}
+				state.MultiByteSequence[state.MultiByteIndex++] = b;
+				return null;
+			}
+			else {
+				throw new InvalidOperationException("Internal state corruption");
+			}
+		}
+
+		private bool HandleNonePosition(JsonInternalState state, Span<byte> block, byte b, int i, ref bool isMultiByteSequence, ref JsonToken token) {
+
+			// white-space (treat NEL (newline) as whitespace)
+			if (b == ' ' || b == '\t' || b == '\v' || b == '\f' || b == '\u00A0' || b == 0x85) {
 				return false;
 			}
 			else if (b == '{') {
@@ -396,6 +563,54 @@ namespace IonKiwi.Json {
 			// false
 			else if (b == 'f') {
 				throw new NotImplementedException();
+			}
+			else if (b >= 0x80 && b <= 0x9F) {
+				// C1 control block
+				throw new UnexpectedDataException();
+			}
+			else if ((b & 0xE0) == 0xC0) {
+				state.IsMultiByteSequence = isMultiByteSequence = true;
+				state.MultiByteSequence = new byte[2];
+				state.MultiByteSequence[0] = b;
+				state.MultiByteSequenceLength = 2;
+				state.MultiByteIndex = 1;
+				return false;
+			}
+			else if ((b & 0xF0) == 0xE0) {
+				state.IsMultiByteSequence = isMultiByteSequence = true;
+				state.MultiByteSequence = new byte[3];
+				state.MultiByteSequence[0] = b;
+				state.MultiByteSequenceLength = 3;
+				state.MultiByteIndex = 1;
+				return false;
+			}
+			else if ((b & 0xF8) == 0xF0) {
+				state.IsMultiByteSequence = isMultiByteSequence = true;
+				state.MultiByteSequence = new byte[4];
+				state.MultiByteSequence[0] = b;
+				state.MultiByteSequenceLength = 4;
+				state.MultiByteIndex = 1;
+				return false;
+			}
+			else if ((b & 0xFC) == 0xF8) {
+				state.IsMultiByteSequence = isMultiByteSequence = true;
+				state.MultiByteSequence = new byte[5];
+				state.MultiByteSequence[0] = b;
+				state.MultiByteSequenceLength = 5;
+				state.MultiByteIndex = 1;
+				return false;
+			}
+			else if ((b & 0xFE) == 0xFC) {
+				state.IsMultiByteSequence = isMultiByteSequence = true;
+				state.MultiByteSequence = new byte[6];
+				state.MultiByteSequence[0] = b;
+				state.MultiByteSequenceLength = 6;
+				state.MultiByteIndex = 1;
+				return false;
+			}
+			else if (b >= 0x00 && b <= 0x7F) {
+				// reamaining normal single byte => accept
+				throw new UnexpectedDataException();
 			}
 			else {
 				throw new UnexpectedDataException();
