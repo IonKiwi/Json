@@ -50,6 +50,7 @@ namespace IonKiwi.Json {
 			if (isMultiByteSequence) {
 				var mbChar = HandleMultiByteSequence(state, b, ref isMultiByteSequence);
 				if (mbChar.HasValue) {
+					_lineOffset--;
 					return mbChar;
 				}
 				else if (!isMultiByteSequence) {
@@ -78,6 +79,7 @@ namespace IonKiwi.Json {
 					state.MultiByteSequence[0] = b;
 					state.MultiByteSequenceLength = 2;
 					state.MultiByteIndex = 1;
+					_lineOffset++;
 					return null;
 				}
 				else if ((b & 0xF0) == 0xE0) {
@@ -86,6 +88,7 @@ namespace IonKiwi.Json {
 					state.MultiByteSequence[0] = b;
 					state.MultiByteSequenceLength = 3;
 					state.MultiByteIndex = 1;
+					_lineOffset++;
 					return null;
 				}
 				else if ((b & 0xF8) == 0xF0) {
@@ -94,6 +97,7 @@ namespace IonKiwi.Json {
 					state.MultiByteSequence[0] = b;
 					state.MultiByteSequenceLength = 4;
 					state.MultiByteIndex = 1;
+					_lineOffset++;
 					return null;
 				}
 				else if ((b & 0xFC) == 0xF8) {
@@ -102,6 +106,7 @@ namespace IonKiwi.Json {
 					state.MultiByteSequence[0] = b;
 					state.MultiByteSequenceLength = 5;
 					state.MultiByteIndex = 1;
+					_lineOffset++;
 					return null;
 				}
 				else if ((b & 0xFE) == 0xFC) {
@@ -110,6 +115,7 @@ namespace IonKiwi.Json {
 					state.MultiByteSequence[0] = b;
 					state.MultiByteSequenceLength = 6;
 					state.MultiByteIndex = 1;
+					_lineOffset++;
 					return null;
 				}
 				else if (b >= 0x00 && b <= 0x7F) {

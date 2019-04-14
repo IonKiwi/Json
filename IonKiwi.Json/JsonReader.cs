@@ -17,6 +17,7 @@ namespace IonKiwi.Json {
 		private int _length = 0;
 		private long _lineIndex = 0;
 		private long _lineOffset = 0;
+		private bool _isAbsoluteStart = true;
 
 		public JsonReader(IInputReader dataReader) {
 			_dataReader = dataReader;
@@ -104,21 +105,15 @@ namespace IonKiwi.Json {
 			var isMultiByteSequence = state.IsMultiByteSequence;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
-				byte b = block[i];
+				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				Char? cc = GetCharacterFromUtf8(state, b, ref isMultiByteSequence);
-				if (!cc.HasValue) {
-					continue;
-				}
+				// byte order handling first
 
-				_lineOffset++;
-				Char c = cc.Value;
-
-				if (b == 0xFF || b == 0xFE || b == 0xEF) {
-					if (_lineIndex == 0 && _lineOffset == 0) {
+				if (bb == 0xFF || bb == 0xFE || bb == 0xEF) {
+					if (_isAbsoluteStart) {
 						state.ByteOrderMark = new byte[3];
-						state.ByteOrderMark[0] = b;
+						state.ByteOrderMark[0] = bb;
 						state.ByteOrderMarkIndex = 1;
 						state.Token = currentToken = JsonInternalRootToken.ByteOrderMark;
 
@@ -142,8 +137,8 @@ namespace IonKiwi.Json {
 
 					if (state.ByteOrderMarkIndex == 1) {
 						if (state.ByteOrderMark[0] == 0xFF) {
-							if (b == 0xFE) {
-								state.ByteOrderMark[1] = b;
+							if (bb == 0xFE) {
+								state.ByteOrderMark[1] = bb;
 								state.ByteOrderMarkIndex = 2;
 							}
 							else {
@@ -151,8 +146,8 @@ namespace IonKiwi.Json {
 							}
 						}
 						else if (state.ByteOrderMark[0] == 0xFE) {
-							if (b == 0xFF) {
-								state.ByteOrderMark[1] = b;
+							if (bb == 0xFF) {
+								state.ByteOrderMark[1] = bb;
 								state.ByteOrderMarkIndex = 2;
 							}
 							else {
@@ -160,8 +155,8 @@ namespace IonKiwi.Json {
 							}
 						}
 						else if (state.ByteOrderMark[0] == 0xEF) {
-							if (b == 0xBB) {
-								state.ByteOrderMark[1] = b;
+							if (bb == 0xBB) {
+								state.ByteOrderMark[1] = bb;
 								state.ByteOrderMarkIndex = 2;
 							}
 							else {
@@ -182,8 +177,8 @@ namespace IonKiwi.Json {
 					}
 					else if (state.ByteOrderMarkIndex == 2) {
 						if (state.ByteOrderMark[0] == 0xFF || state.ByteOrderMark[0] == 0xFE) {
-							if (b == 0x00) {
-								state.ByteOrderMark[1] = b;
+							if (bb == 0x00) {
+								state.ByteOrderMark[1] = bb;
 								state.ByteOrderMarkIndex = 3;
 								state.Charset = state.ByteOrderMark[0] == 0xFF ? Charset.Utf32LE : Charset.Utf32BE;
 								state.Token = currentToken = JsonInternalRootToken.None;
@@ -198,8 +193,8 @@ namespace IonKiwi.Json {
 							}
 						}
 						else if (state.ByteOrderMark[0] == 0xEF) {
-							if (b == 0xBF) {
-								state.ByteOrderMark[1] = b;
+							if (bb == 0xBF) {
+								state.ByteOrderMark[1] = bb;
 								state.ByteOrderMarkIndex = 3;
 								state.Charset = Charset.Utf8;
 								state.Token = currentToken = JsonInternalRootToken.None;
@@ -217,7 +212,16 @@ namespace IonKiwi.Json {
 						throw new InvalidOperationException();
 					}
 				}
-				else if (currentToken == JsonInternalRootToken.CarriageReturn) {
+
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence);
+				if (!cc.HasValue) {
+					continue;
+				}
+
+				_lineOffset++;
+				Char c = cc.Value;
+
+				if (currentToken == JsonInternalRootToken.CarriageReturn) {
 					// assert i == 0
 					if (i != 0) {
 						throw new InvalidOperationException("Internal state corruption");
@@ -227,21 +231,21 @@ namespace IonKiwi.Json {
 					_lineOffset = 0;
 					state.Token = currentToken = JsonInternalRootToken.None;
 
-					if (b != '\n') {
+					if (c != '\n') {
 						// reset
 						i = -1;
 					}
 
 					continue;
 				}
-				else if (b == '\r') {
+				else if (c == '\r') {
 					if (remaining > 0) {
 						if (block[i + 1] == '\n') {
 							i++;
-							_lineIndex++;
-							_lineOffset = 0;
 						}
 
+						_lineIndex++;
+						_lineOffset = 0;
 						continue;
 					}
 					else {
@@ -251,12 +255,12 @@ namespace IonKiwi.Json {
 						return false;
 					}
 				}
-				else if (b == '\n') {
+				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
 					_lineIndex++;
 					_lineOffset = 0;
 					continue;
 				}
-				else if (HandleNonePosition(state, block, b, i, ref isMultiByteSequence, ref token)) {
+				else if (HandleNonePosition(state, c, ref token)) {
 					_offset += i + 1;
 					return true;
 				}
@@ -274,10 +278,10 @@ namespace IonKiwi.Json {
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
-				byte b = block[i];
+				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				Char? cc = GetCharacterFromUtf8(state, b, ref isMultiByteSequence);
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence);
 				if (!cc.HasValue) {
 					continue;
 				}
@@ -295,7 +299,7 @@ namespace IonKiwi.Json {
 					_lineOffset = 0;
 					state.IsCarriageReturn = isCarriageReturn = false;
 
-					if (b != '\n') {
+					if (c != '\n') {
 						// reset
 						i = -1;
 					}
@@ -304,16 +308,17 @@ namespace IonKiwi.Json {
 				}
 				else if (currentToken == JsonInternalObjectToken.BeforeProperty || currentToken == JsonInternalObjectToken.Comma) {
 					// white-space
-					if (b == ' ' || b == '\t' || b == '\v' || b == '\f' || b == '\u00A0') {
+					if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0') {
 						continue;
 					}
-					else if (b == '\r') {
+					else if (c == '\r') {
 						if (remaining > 0) {
 							if (block[i + 1] == '\n') {
 								i++;
-								_lineIndex++;
-								_lineOffset = 0;
 							}
+
+							_lineIndex++;
+							_lineOffset = 0;
 							continue;
 						}
 						else {
@@ -323,16 +328,16 @@ namespace IonKiwi.Json {
 							return false;
 						}
 					}
-					else if (b == '\n') {
+					else if (c == '\n' || c == '\u2028' || c == '\u2029') {
 						_lineIndex++;
 						_lineOffset = 0;
 						continue;
 					}
-					else if (b == '\'') {
+					else if (c == '\'') {
 						state.Token = currentToken = JsonInternalObjectToken.SingleQuotedIdentifier;
 						continue;
 					}
-					else if (b == '"') {
+					else if (c == '"') {
 						state.Token = currentToken = JsonInternalObjectToken.DoubleQuotedIdentifier;
 						continue;
 					}
@@ -357,109 +362,66 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
-		private bool HandleNonePosition(JsonInternalState state, Span<byte> block, byte b, int i, ref bool isMultiByteSequence, ref JsonToken token) {
+		private bool HandleNonePosition(JsonInternalState state, char c, ref JsonToken token) {
 
 			// white-space (treat NEL (newline) as whitespace)
-			if (b == ' ' || b == '\t' || b == '\v' || b == '\f' || b == '\u00A0' || b == 0x85) {
+			if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == 0x85) {
 				return false;
 			}
-			else if (b == '{') {
+			else if (c == '{') {
 				var newState = new JsonInternalObjectState() { Parent = state };
 				_currentState.Push(newState);
 				token = JsonToken.ObjectStart;
 				return true;
 			}
-			else if (b == '[') {
+			else if (c == '[') {
 				var newState = new JsonInternalArrayState() { Parent = state };
 				_currentState.Push(newState);
 				token = JsonToken.ArrayStart;
 				return true;
 			}
-			else if (b == '\'') {
+			else if (c == '\'') {
 				var newState = new JsonInternalSingleQuotedStringState() { Parent = state };
 				_currentState.Push(newState);
 				token = JsonToken.ArrayStart;
 				return true;
 			}
-			else if (b == '"') {
+			else if (c == '"') {
 				var newState = new JsonInternalDoubleQuotedStringState() { Parent = state };
 				_currentState.Push(newState);
 				token = JsonToken.ArrayStart;
 				return true;
 			}
-			// numeric
-			else if (b == '.' || (b >= '0' && b <= '9') || b == '+' || b == '-') {
+			// numeric (or negative Infinity)
+			else if (c == '.' || (c >= '0' && c <= '9') || c == '+' || c == '-') {
 				throw new NotImplementedException();
 			}
 			// Infinity
-			else if (b == 'I') {
+			else if (c == 'I') {
 				throw new NotImplementedException();
 			}
 			// NaN
-			else if (b == 'N') {
+			else if (c == 'N') {
 				throw new NotImplementedException();
 			}
 			// null
-			else if (b == 'n') {
+			else if (c == 'n') {
 				throw new NotImplementedException();
 			}
 			// true
-			else if (b == 't') {
+			else if (c == 't') {
 				throw new NotImplementedException();
 			}
 			// false
-			else if (b == 'f') {
+			else if (c == 'f') {
 				throw new NotImplementedException();
 			}
-			else if (b >= 0x80 && b <= 0x9F) {
-				// C1 control block
-				throw new UnexpectedDataException();
-			}
-			else if ((b & 0xE0) == 0xC0) {
-				state.IsMultiByteSequence = isMultiByteSequence = true;
-				state.MultiByteSequence = new byte[2];
-				state.MultiByteSequence[0] = b;
-				state.MultiByteSequenceLength = 2;
-				state.MultiByteIndex = 1;
-				return false;
-			}
-			else if ((b & 0xF0) == 0xE0) {
-				state.IsMultiByteSequence = isMultiByteSequence = true;
-				state.MultiByteSequence = new byte[3];
-				state.MultiByteSequence[0] = b;
-				state.MultiByteSequenceLength = 3;
-				state.MultiByteIndex = 1;
-				return false;
-			}
-			else if ((b & 0xF8) == 0xF0) {
-				state.IsMultiByteSequence = isMultiByteSequence = true;
-				state.MultiByteSequence = new byte[4];
-				state.MultiByteSequence[0] = b;
-				state.MultiByteSequenceLength = 4;
-				state.MultiByteIndex = 1;
-				return false;
-			}
-			else if ((b & 0xFC) == 0xF8) {
-				state.IsMultiByteSequence = isMultiByteSequence = true;
-				state.MultiByteSequence = new byte[5];
-				state.MultiByteSequence[0] = b;
-				state.MultiByteSequenceLength = 5;
-				state.MultiByteIndex = 1;
-				return false;
-			}
-			else if ((b & 0xFE) == 0xFC) {
-				state.IsMultiByteSequence = isMultiByteSequence = true;
-				state.MultiByteSequence = new byte[6];
-				state.MultiByteSequence[0] = b;
-				state.MultiByteSequenceLength = 6;
-				state.MultiByteIndex = 1;
-				return false;
-			}
-			else if (b >= 0x00 && b <= 0x7F) {
-				// reamaining normal single byte => accept
-				throw new UnexpectedDataException();
-			}
 			else {
+				var cc = Char.GetUnicodeCategory(c);
+				// white-space
+				if (cc == UnicodeCategory.SpaceSeparator || cc == UnicodeCategory.LineSeparator) {
+					return false;
+				}
 				throw new UnexpectedDataException();
 			}
 		}
