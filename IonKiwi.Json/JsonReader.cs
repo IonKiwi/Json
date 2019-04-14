@@ -1,4 +1,5 @@
-﻿using System;
+﻿using IonKiwi.Extenions;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -58,10 +59,32 @@ namespace IonKiwi.Json {
 		}
 
 		private async ValueTask<JsonToken> ReadInternal() {
-			throw new NotImplementedException();
+			JsonToken token = JsonToken.None;
+			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
+				if (!await ReadEnsureData().NoSync()) {
+					if (_currentState.Count != 0) {
+						throw new MoreDataExpectedException();
+					}
+					return JsonToken.None;
+				}
+			}
+			return token;
 		}
 
 		private JsonToken ReadInternalSync() {
+			JsonToken token = JsonToken.None;
+			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
+				if (!ReadEnsureDataSync()) {
+					if (_currentState.Count != 0) {
+						throw new MoreDataExpectedException();
+					}
+					return JsonToken.None;
+				}
+			}
+			return token;
+		}
+
+		private bool HandleDataBlock(Span<byte> block, out JsonToken token) {
 			throw new NotImplementedException();
 		}
 	}
