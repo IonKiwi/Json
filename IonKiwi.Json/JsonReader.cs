@@ -169,7 +169,7 @@ namespace IonKiwi.Json {
 								rootState.ByteOrderMark[1] = b;
 								rootState.ByteOrderMarkIndex = 3;
 								rootState.Charset = rootState.ByteOrderMark[0] == 0xFF ? Charset.Utf32LE : Charset.Utf32BE;
-								rootState.Token = currentToken = JsonInternalToken.Linestart;
+								rootState.Token = currentToken = JsonInternalToken.None;
 								throw new InvalidOperationException("Charset '" + rootState.Charset + "' is not supported.");
 								//continue;
 							}
@@ -185,7 +185,7 @@ namespace IonKiwi.Json {
 								rootState.ByteOrderMark[1] = b;
 								rootState.ByteOrderMarkIndex = 3;
 								rootState.Charset = Charset.Utf8;
-								rootState.Token = currentToken = JsonInternalToken.Linestart;
+								rootState.Token = currentToken = JsonInternalToken.None;
 								continue;
 							}
 							else {
@@ -195,6 +195,31 @@ namespace IonKiwi.Json {
 						else {
 							throw new InvalidOperationException();
 						}
+					}
+				}
+				else if (currentToken == JsonInternalToken.None) {
+					// white-space
+					if (b == ' ' || b == '\t' || b == '\v' || b == '\f' || b == '\u00A0') {
+						continue;
+					}
+					else if (b == '{') {
+						var newState = new JsonInternalObjectState() { Parent = state, PreviousPosition = _currentPosition, Token = JsonInternalToken.None };
+						state = newState;
+						_currentState.Push(newState);
+					}
+					else if (b == '}') {
+
+					}
+					else if (b == '[') {
+						var newState = new JsonInternalArrayState() { Parent = state, PreviousPosition = _currentPosition, Token = JsonInternalToken.None };
+						state = newState;
+						_currentState.Push(newState);
+					}
+					else if (b == ']') {
+
+					}
+					else {
+						throw new UnexpectedDataException();
 					}
 				}
 			}

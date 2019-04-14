@@ -18,8 +18,7 @@ namespace IonKiwi.Json {
 		}
 
 		private enum JsonInternalToken {
-			Linestart,
-			Whitespace,
+			None,
 			CarriageReturn,
 			SingleHypen,
 			DoubleHypen,
@@ -36,7 +35,7 @@ namespace IonKiwi.Json {
 
 		private abstract class JsonInternalState {
 			public JsonInternalPosition PreviousPosition = JsonInternalPosition.None;
-			public JsonInternalToken Token = JsonInternalToken.Linestart;
+			public JsonInternalToken Token = JsonInternalToken.None;
 			public JsonInternalState Parent;
 		}
 
@@ -44,6 +43,22 @@ namespace IonKiwi.Json {
 			public Charset Charset = Charset.Utf8;
 			public byte[] ByteOrderMark;
 			public int ByteOrderMarkIndex;
+		}
+
+		private sealed class JsonInternalObjectState : JsonInternalState {
+			public Dictionary<string, JsonInternalObjectPropertyState> Properties = new Dictionary<string, JsonInternalObjectPropertyState>(StringComparer.Ordinal);
+		}
+
+		private sealed class JsonInternalObjectPropertyState : JsonInternalState {
+			public string PropertyName;
+		}
+
+		private sealed class JsonInternalArrayState : JsonInternalState {
+			public List<JsonInternalArrayItemState> Items = new List<JsonInternalArrayItemState>();
+		}
+
+		private sealed class JsonInternalArrayItemState : JsonInternalState {
+			public int Index;
 		}
 	}
 }
