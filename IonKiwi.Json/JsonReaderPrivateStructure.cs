@@ -23,6 +23,7 @@ namespace IonKiwi.Json {
 
 		private enum JsonInternalEscapeToken {
 			None,
+			Detect,
 			EscapeSequenceUnicode,
 			EscapeSequenceUnicodeHex,
 			EscapeSequenceUnicodeCodePoint,
@@ -58,6 +59,7 @@ namespace IonKiwi.Json {
 			public JsonInternalObjectToken Token = JsonInternalObjectToken.BeforeProperty;
 			public bool IsCarriageReturn;
 			public bool ExpectUnicodeEscapeSequence;
+			public StringBuilder CurrentProperty = new StringBuilder();
 			public Dictionary<string, JsonInternalObjectPropertyState> Properties = new Dictionary<string, JsonInternalObjectPropertyState>(StringComparer.Ordinal);
 		}
 

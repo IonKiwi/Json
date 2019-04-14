@@ -291,12 +291,14 @@ namespace IonKiwi.Json {
 				_lineOffset++;
 				Char c = cc.Value;
 
+				bool isEscapeSequence = false;
 				if (escapeToken != JsonInternalEscapeToken.None) {
 					Char? cu = GetCharacterFromEscapeSequence(state, c, isMultiByteCharacter, ref escapeToken);
 					if (!cu.HasValue) {
 						continue;
 					}
 					c = cu.Value;
+					isEscapeSequence = true;
 				}
 
 				if (isCarriageReturn) {
@@ -360,21 +362,87 @@ namespace IonKiwi.Json {
 						continue;
 					}
 					else if (c == '\\') {
+						state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
 						state.ExpectUnicodeEscapeSequence = expectUnicodeEscapeSequence = true;
 						continue;
 					}
+					else if (c == '$' || c == '_' || isEscapeSequence) {
+						state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+						state.CurrentProperty.Append(c);
+						continue;
+					}
 					else {
+						var ccat = Char.GetUnicodeCategory(c);
+						// TODO: add ID_Start & ID_Continue
+						var isValidIdentifier = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber;
+						if (isValidIdentifier) {
+							state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+							state.CurrentProperty.Append(c);
+							continue;
+						}
 						throw new UnexpectedDataException();
 					}
 				}
 				else if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier) {
-
+					if (c == '\'') {
+						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
+						continue;
+					}
+					else if (c == '\\') {
+						state.EscapeToken = escapeToken = JsonInternalEscapeToken.Detect;
+						continue;
+					}
+					else {
+						state.CurrentProperty.Append(c);
+						continue;
+					}
 				}
 				else if (currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier) {
-
+					if (c == '"') {
+						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
+						continue;
+					}
+					else if (c == '\\') {
+						state.EscapeToken = escapeToken = JsonInternalEscapeToken.Detect;
+						continue;
+					}
+					else {
+						state.CurrentProperty.Append(c);
+						continue;
+					}
 				}
 				else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
-
+					if (c == '\\') {
+						state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+						state.ExpectUnicodeEscapeSequence = expectUnicodeEscapeSequence = true;
+						continue;
+					}
+					else if (c == '$' || c == '_' || isEscapeSequence) {
+						state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+						state.CurrentProperty.Append(c);
+						continue;
+					}
+					// white-space
+					else if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == '\uFEFF') {
+						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
+						continue;
+					}
+					else {
+						var ccat = Char.GetUnicodeCategory(c);
+						// white-space
+						if (ccat == UnicodeCategory.SpaceSeparator) {
+							state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
+							continue;
+						}
+						// TODO: add ID_Start & ID_Continue
+						var isValidIdentifier = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber;
+						if (isValidIdentifier) {
+							state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+							state.CurrentProperty.Append(c);
+							continue;
+						}
+						throw new UnexpectedDataException();
+					}
 				}
 			}
 
