@@ -90,14 +90,23 @@ namespace IonKiwi.Json {
 			if (state is JsonInternalRootState rootState) {
 				return HandleRootState(rootState, block, out token);
 			}
+			else if (state is JsonInternalObjectState objectState) {
+				return HandleObjectState(objectState, block, out token);
+			}
 			else {
 				throw new InvalidOperationException();
 			}
 		}
 
-		private bool HandleRootState(JsonInternalRootState rootState, Span<byte> block, out JsonToken token) {
+		private bool HandleObjectState(JsonInternalObjectState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
-			var currentToken = rootState.Token;
+
+			throw new NotImplementedException();
+		}
+
+		private bool HandleRootState(JsonInternalRootState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			var currentToken = state.Token;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte b = block[i];
@@ -106,10 +115,10 @@ namespace IonKiwi.Json {
 
 				if (b == 0xFF || b == 0xFE || b == 0xEF) {
 					if (_lineIndex == 0 && _lineOffset == 0) {
-						rootState.ByteOrderMark = new byte[3];
-						rootState.ByteOrderMark[0] = b;
-						rootState.ByteOrderMarkIndex = 1;
-						rootState.Token = currentToken = JsonInternalRootToken.ByteOrderMark;
+						state.ByteOrderMark = new byte[3];
+						state.ByteOrderMark[0] = b;
+						state.ByteOrderMarkIndex = 1;
+						state.Token = currentToken = JsonInternalRootToken.ByteOrderMark;
 
 						if (remaining == 0) {
 							// need more data
@@ -123,33 +132,33 @@ namespace IonKiwi.Json {
 				}
 				else if (currentToken == JsonInternalRootToken.ByteOrderMark) {
 
-					if (rootState.ByteOrderMarkIndex == 0 || rootState.ByteOrderMarkIndex > 3) {
+					if (state.ByteOrderMarkIndex == 0 || state.ByteOrderMarkIndex > 3) {
 						throw new InvalidOperationException();
 					}
 
-					if (rootState.ByteOrderMarkIndex == 1) {
-						if (rootState.ByteOrderMark[0] == 0xFF) {
+					if (state.ByteOrderMarkIndex == 1) {
+						if (state.ByteOrderMark[0] == 0xFF) {
 							if (b == 0xFE) {
-								rootState.ByteOrderMark[1] = b;
-								rootState.ByteOrderMarkIndex = 2;
+								state.ByteOrderMark[1] = b;
+								state.ByteOrderMarkIndex = 2;
 							}
 							else {
 								throw new UnexpectedDataException();
 							}
 						}
-						else if (rootState.ByteOrderMark[0] == 0xFE) {
+						else if (state.ByteOrderMark[0] == 0xFE) {
 							if (b == 0xFF) {
-								rootState.ByteOrderMark[1] = b;
-								rootState.ByteOrderMarkIndex = 2;
+								state.ByteOrderMark[1] = b;
+								state.ByteOrderMarkIndex = 2;
 							}
 							else {
 								throw new UnexpectedDataException();
 							}
 						}
-						else if (rootState.ByteOrderMark[0] == 0xEF) {
+						else if (state.ByteOrderMark[0] == 0xEF) {
 							if (b == 0xBB) {
-								rootState.ByteOrderMark[1] = b;
-								rootState.ByteOrderMarkIndex = 2;
+								state.ByteOrderMark[1] = b;
+								state.ByteOrderMarkIndex = 2;
 							}
 							else {
 								throw new UnexpectedDataException();
@@ -165,29 +174,29 @@ namespace IonKiwi.Json {
 							return false;
 						}
 					}
-					else if (rootState.ByteOrderMarkIndex == 2) {
-						if (rootState.ByteOrderMark[0] == 0xFF || rootState.ByteOrderMark[0] == 0xFE) {
+					else if (state.ByteOrderMarkIndex == 2) {
+						if (state.ByteOrderMark[0] == 0xFF || state.ByteOrderMark[0] == 0xFE) {
 							if (b == 0x00) {
-								rootState.ByteOrderMark[1] = b;
-								rootState.ByteOrderMarkIndex = 3;
-								rootState.Charset = rootState.ByteOrderMark[0] == 0xFF ? Charset.Utf32LE : Charset.Utf32BE;
-								rootState.Token = currentToken = JsonInternalRootToken.None;
-								throw new InvalidOperationException("Charset '" + rootState.Charset + "' is not supported.");
+								state.ByteOrderMark[1] = b;
+								state.ByteOrderMarkIndex = 3;
+								state.Charset = state.ByteOrderMark[0] == 0xFF ? Charset.Utf32LE : Charset.Utf32BE;
+								state.Token = currentToken = JsonInternalRootToken.None;
+								throw new InvalidOperationException("Charset '" + state.Charset + "' is not supported.");
 								//continue;
 							}
 							else {
 								i--;
-								rootState.Charset = rootState.ByteOrderMark[0] == 0xFF ? Charset.Utf16LE : Charset.Utf16BE;
-								throw new InvalidOperationException("Charset '" + rootState.Charset + "' is not supported.");
+								state.Charset = state.ByteOrderMark[0] == 0xFF ? Charset.Utf16LE : Charset.Utf16BE;
+								throw new InvalidOperationException("Charset '" + state.Charset + "' is not supported.");
 								//continue;
 							}
 						}
-						else if (rootState.ByteOrderMark[0] == 0xEF) {
+						else if (state.ByteOrderMark[0] == 0xEF) {
 							if (b == 0xBF) {
-								rootState.ByteOrderMark[1] = b;
-								rootState.ByteOrderMarkIndex = 3;
-								rootState.Charset = Charset.Utf8;
-								rootState.Token = currentToken = JsonInternalRootToken.None;
+								state.ByteOrderMark[1] = b;
+								state.ByteOrderMarkIndex = 3;
+								state.Charset = Charset.Utf8;
+								state.Token = currentToken = JsonInternalRootToken.None;
 								continue;
 							}
 							else {
@@ -199,15 +208,52 @@ namespace IonKiwi.Json {
 						}
 					}
 				}
-				else if (HandleNonePosition(rootState, block, b, i, remaining, ref token)) {
+				else if (currentToken == JsonInternalRootToken.CarriageReturn) {
+					// assert i == 0
+					if (i != 0) {
+						throw new InvalidOperationException("Internal state corruption");
+					}
+
+					_lineIndex++;
+					_lineOffset = 0;
+
+					if (b != '\n') {
+						// reset
+						i = -1;
+						continue;
+					}
+				}
+				else if (b == '\r') {
+					if (remaining > 0) {
+						if (block[i + 1] == '\n') {
+							i++;
+							_lineIndex++;
+							_lineOffset = 0;
+						}
+					}
+					else {
+						// need more data
+						_offset += block.Length;
+						return false;
+					}
+				}
+				else if (b == '\n') {
+					_lineIndex++;
+					_lineOffset = 0;
+					return false;
+				}
+				else if (HandleNonePosition(state, block, b, i, ref token)) {
+					_offset += i + 1;
 					return true;
 				}
 			}
 
+			// need more data
+			_offset += block.Length;
 			return false;
 		}
 
-		private bool HandleNonePosition(JsonInternalState state, Span<byte> block, byte b, int i, int remaing, ref JsonToken token) {
+		private bool HandleNonePosition(JsonInternalState state, Span<byte> block, byte b, int i, ref JsonToken token) {
 
 			// white-space
 			if (b == ' ' || b == '\t' || b == '\v' || b == '\f' || b == '\u00A0') {

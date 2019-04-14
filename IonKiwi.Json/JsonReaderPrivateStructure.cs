@@ -8,6 +8,17 @@ namespace IonKiwi.Json {
 		private enum JsonInternalRootToken {
 			None,
 			ByteOrderMark,
+			CarriageReturn,
+		}
+
+		private enum JsonInternalObjectToken {
+			BeforeProperty,
+			SingleQuotedIdentifier,
+			DoubleQuotedIdentifier,
+			PlainIdentifier,
+			AfterIdentifier,
+			AfterColon,
+			Comma,
 		}
 
 		private enum Charset {
