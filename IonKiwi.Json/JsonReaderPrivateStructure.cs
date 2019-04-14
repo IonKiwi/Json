@@ -17,6 +17,15 @@ namespace IonKiwi.Json {
 			Null,
 		}
 
+		private enum JsonInternalToken {
+			Linestart,
+			Whitespace,
+			CarriageReturn,
+			SingleHypen,
+			DoubleHypen,
+			ByteOrderMark,
+		}
+
 		private enum Charset {
 			Utf8,
 			Utf16BE,
@@ -27,7 +36,14 @@ namespace IonKiwi.Json {
 
 		private abstract class JsonInternalState {
 			public JsonInternalPosition PreviousPosition = JsonInternalPosition.None;
+			public JsonInternalToken Token = JsonInternalToken.Linestart;
 			public JsonInternalState Parent;
+		}
+
+		private sealed class JsonInternalRootState : JsonInternalState {
+			public Charset Charset = Charset.Utf8;
+			public byte[] ByteOrderMark;
+			public int ByteOrderMarkIndex;
 		}
 	}
 }
