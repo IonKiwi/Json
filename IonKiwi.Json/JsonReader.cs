@@ -106,6 +106,9 @@ namespace IonKiwi.Json {
 			else if (state is JsonInternalDoubleQuotedStringState stringState2) {
 				return HandleDoubleQuotedStringState(stringState2, block, out token);
 			}
+			else if (state is JsonInternalNumberState numberState) {
+				return HandleNumberState(numberState, block, out token);
+			}
 			else {
 				throw new InvalidOperationException(state.GetType().FullName);
 			}
@@ -876,6 +879,242 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+		private void ValidateNumberState(JsonInternalNumberState state) {
+			if (state.Token == JsonInternalNumberToken.Infinity || state.Token == JsonInternalNumberToken.NaN) {
+				throw new UnexpectedDataException();
+			}
+			else if (state.Token == JsonInternalNumberToken.Positive || state.Token == JsonInternalNumberToken.Negative) {
+				throw new UnexpectedDataException();
+			}
+			else if (state.Token == JsonInternalNumberToken.Digit && state.Data.Length == 1) {
+				throw new UnexpectedDataException();
+			}
+			else if (state.Token == JsonInternalNumberToken.Exponent && !state.ExponentType.HasValue) {
+				throw new UnexpectedDataException();
+			}
+		}
+
+		private bool HandleNumberState(JsonInternalNumberState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			var currentToken = state.Token;
+			bool isMultiByteSequence = state.IsMultiByteSequence;
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+				int remaining = l - i - 1;
+
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (!cc.HasValue) {
+					continue;
+				}
+
+				_lineOffset++;
+				Char c = cc.Value;
+
+				// white-space
+				if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == '\uFEFF' || c == '\r' || c == '\n' || c == '\u2028' || c == '\u2029') {
+					ValidateNumberState(state);
+					state.IsComplete = true;
+					_offset += i;
+					return true;
+				}
+				// control characters
+				else if (c == ',' || c == ']' || c == '}') {
+					ValidateNumberState(state);
+					state.IsComplete = true;
+					_offset += i;
+					return true;
+				}
+				else if (currentToken == JsonInternalNumberToken.Dot) {
+					if (c >= '0' && c <= '9') {
+						state.Data.Append(c);
+						state.Token = currentToken = JsonInternalNumberToken.Digit;
+						continue;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+				else if (currentToken == JsonInternalNumberToken.Infinity) {
+					if (c == 'n' && (state.Data.Length == 1 || state.Data.Length == 4)) {
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c == 'f' && state.Data.Length == 2) {
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c == 'i' && (state.Data.Length == 3 || state.Data.Length == 5)) {
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c == 't' && state.Data.Length == 6) {
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c == 'y' && state.Data.Length == 7) {
+						state.Data.Append(c);
+						state.IsComplete = true;
+						_offset += i + 1;
+						return true;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+				else if (currentToken == JsonInternalNumberToken.Positive || currentToken == JsonInternalNumberToken.Negative) {
+					if (c == 'I') {
+						state.Data.Append(c);
+						state.Token = currentToken = JsonInternalNumberToken.Infinity;
+						continue;
+					}
+					else if (c >= '0' && c <= '9') {
+						state.Data.Append(c);
+						state.Token = currentToken = JsonInternalNumberToken.Digit;
+						continue;
+					}
+					else if (c == '.') {
+						state.Data.Append(c);
+						state.AfterDot = true;
+						state.Token = currentToken = JsonInternalNumberToken.Dot;
+						continue;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+				else if (currentToken == JsonInternalNumberToken.NaN) {
+					if (c == 'a' && state.Data.Length == 1) {
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c == 'N' && state.Data.Length == 2) {
+						state.Data.Append(c);
+						state.IsComplete = true;
+						_offset += i + 1;
+						return true;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+				else if (currentToken == JsonInternalNumberToken.Digit) {
+					if (c == 'e' || c == 'E') {
+						state.Data.Append(c);
+						state.IsExponent = true;
+						state.Token = currentToken = JsonInternalNumberToken.Exponent;
+						continue;
+					}
+					else if (c >= '0' && c <= '9') {
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c == '.' && !state.AfterDot) {
+						state.Data.Append(c);
+						state.AfterDot = true;
+						state.Token = currentToken = JsonInternalNumberToken.Dot;
+						continue;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+				else if (currentToken == JsonInternalNumberToken.Exponent) {
+					if (c == '+' && !state.ExponentType.HasValue) {
+						state.ExponentType = true;
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c == '-' && !state.ExponentType.HasValue) {
+						state.ExponentType = false;
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c >= '0' && c <= '9') {
+						if (!state.ExponentType.HasValue) {
+							state.ExponentType = true;
+						}
+						state.Data.Append(c);
+						continue;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+				else if (currentToken == JsonInternalNumberToken.Zero) {
+					if (c == 'x' || c == 'X') {
+						state.Data.Append(c);
+						state.Token = currentToken = JsonInternalNumberToken.Hex;
+						continue;
+					}
+					else if (c == 'b' || c == 'B') {
+						state.Data.Append(c);
+						state.Token = currentToken = JsonInternalNumberToken.Binary;
+						continue;
+					}
+					else if (c == 'o' || c == 'O') {
+						state.Data.Append(c);
+						state.Token = currentToken = JsonInternalNumberToken.Octal;
+						continue;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+				else if (currentToken == JsonInternalNumberToken.Binary) {
+					if (c == '0') {
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c == '1') {
+						state.Data.Append(c);
+						continue;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+				else if (currentToken == JsonInternalNumberToken.Hex) {
+					if (c >= '0' && c <= '9') {
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c >= 'a' && c <= 'f') {
+						state.Data.Append(c);
+						continue;
+					}
+					else if (c >= 'A' && c <= 'F') {
+						state.Data.Append(c);
+						continue;
+					}
+					else {
+						throw new UnexpectedDataException();
+					}
+				}
+				else if (currentToken == JsonInternalNumberToken.Octal) {
+					if (c >= '0' && c <= '7') {
+						state.Data.Append(c);
+						continue;
+					}
+				}
+				else {
+					var cuc = Char.GetUnicodeCategory(c);
+					// white-space
+					if (cuc == UnicodeCategory.SpaceSeparator) {
+						ValidateNumberState(state);
+						state.IsComplete = true;
+						_offset += i;
+						return true;
+					}
+					throw new UnexpectedDataException();
+				}
+			}
+
+			// need more data
+			_offset += block.Length;
+			return false;
+		}
+
 		private bool HandleNonePosition(JsonInternalState state, char c, ref JsonToken token) {
 
 			// white-space
@@ -908,17 +1147,61 @@ namespace IonKiwi.Json {
 				token = JsonToken.ArrayStart;
 				return true;
 			}
-			// numeric (or negative Infinity)
-			else if (c == '.' || (c >= '0' && c <= '9') || c == '+' || c == '-') {
-				throw new NotImplementedException();
+			// numeric
+			else if (c == '.') {
+				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Dot, AfterDot = true };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Number;
+				return true;
+			}
+			// numeric
+			else if (c == '0') {
+				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Zero };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Number;
+				return true;
+			}
+			// numeric
+			else if (c >= '1' && c <= '9') {
+				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Digit };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Number;
+				return true;
+			}
+			// numeric
+			else if (c == '-') {
+				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Negative, Negative = true };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Number;
+				return true;
+			}
+			// numeric
+			else if (c == '+') {
+				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Positive };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Number;
+				return true;
 			}
 			// Infinity
 			else if (c == 'I') {
-				throw new NotImplementedException();
+				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Infinity };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Number;
+				return true;
 			}
 			// NaN
 			else if (c == 'N') {
-				throw new NotImplementedException();
+				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.NaN };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Number;
+				return true;
 			}
 			// null
 			else if (c == 'n') {

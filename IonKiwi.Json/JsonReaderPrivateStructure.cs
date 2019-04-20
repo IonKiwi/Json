@@ -30,6 +30,20 @@ namespace IonKiwi.Json {
 			Value,
 		}
 
+		private enum JsonInternalNumberToken {
+			Positive,
+			Negative,
+			Infinity,
+			NaN,
+			Digit,
+			Dot,
+			Zero,
+			Exponent,
+			Hex,
+			Binary,
+			Octal,
+		}
+
 		private enum JsonInternalEscapeToken {
 			None,
 			Detect,
@@ -86,22 +100,29 @@ namespace IonKiwi.Json {
 
 		private abstract class JsonInternalStringState : JsonInternalState {
 			public bool IsComplete;
-			public bool IsCarriageReturn;
 			public StringBuilder Data = new StringBuilder();
 		}
 
 		private sealed class JsonInternalSingleQuotedStringState : JsonInternalStringState {
-
+			public bool IsCarriageReturn;
 		}
 
 		private sealed class JsonInternalDoubleQuotedStringState : JsonInternalStringState {
-
+			public bool IsCarriageReturn;
 		}
 
 		private sealed class JsonInternalArrayItemState : JsonInternalState {
 			public JsonInternalArrayItemToken Token = JsonInternalArrayItemToken.BeforeValue;
 			public int Index;
 			public bool IsCarriageReturn;
+		}
+
+		private sealed class JsonInternalNumberState : JsonInternalStringState {
+			public JsonInternalNumberToken Token;
+			public bool Negative;
+			public bool AfterDot;
+			public bool IsExponent;
+			public bool? ExponentType;
 		}
 	}
 }
