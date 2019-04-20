@@ -124,5 +124,17 @@ namespace IonKiwi.Json {
 			public bool IsExponent;
 			public bool? ExponentType;
 		}
+
+		private sealed class JsonInternalNullState : JsonInternalStringState {
+
+		}
+
+		private sealed class JsonInternalTrueState : JsonInternalStringState {
+
+		}
+
+		private sealed class JsonInternalFalseState : JsonInternalStringState {
+
+		}
 	}
 }

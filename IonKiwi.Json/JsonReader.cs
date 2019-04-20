@@ -109,6 +109,15 @@ namespace IonKiwi.Json {
 			else if (state is JsonInternalNumberState numberState) {
 				return HandleNumberState(numberState, block, out token);
 			}
+			else if (state is JsonInternalNullState nullState) {
+				return HandleNullState(nullState, block, out token);
+			}
+			else if (state is JsonInternalTrueState trueState) {
+				return HandleTrueState(trueState, block, out token);
+			}
+			else if (state is JsonInternalFalseState falseState) {
+				return HandleFalseState(falseState, block, out token);
+			}
 			else {
 				throw new InvalidOperationException(state.GetType().FullName);
 			}
@@ -1115,6 +1124,130 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+		private bool HandleNullState(JsonInternalNullState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			bool isMultiByteSequence = state.IsMultiByteSequence;
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+				int remaining = l - i - 1;
+
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (!cc.HasValue) {
+					continue;
+				}
+
+				_lineOffset++;
+				Char c = cc.Value;
+
+				if (c == 'u' && state.Data.Length == 1) {
+					state.Data.Append(c);
+					continue;
+				}
+				else if (c == 'l' && state.Data.Length == 2) {
+					state.Data.Append(c);
+					continue;
+				}
+				else if (c == 'l' && state.Data.Length == 3) {
+					state.Data.Append(c);
+					state.IsComplete = true;
+					token = JsonToken.Null;
+					return true;
+				}
+				else {
+					throw new UnexpectedDataException();
+				}
+			}
+
+			// need more data
+			_offset += block.Length;
+			return false;
+		}
+
+		private bool HandleTrueState(JsonInternalTrueState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			bool isMultiByteSequence = state.IsMultiByteSequence;
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+				int remaining = l - i - 1;
+
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (!cc.HasValue) {
+					continue;
+				}
+
+				_lineOffset++;
+				Char c = cc.Value;
+
+				if (c == 'r' && state.Data.Length == 1) {
+					state.Data.Append(c);
+					continue;
+				}
+				else if (c == 'u' && state.Data.Length == 2) {
+					state.Data.Append(c);
+					continue;
+				}
+				else if (c == 'e' && state.Data.Length == 3) {
+					state.Data.Append(c);
+					state.IsComplete = true;
+					token = JsonToken.Null;
+					return true;
+				}
+				else {
+					throw new UnexpectedDataException();
+				}
+			}
+
+			// need more data
+			_offset += block.Length;
+			return false;
+		}
+
+		private bool HandleFalseState(JsonInternalFalseState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			bool isMultiByteSequence = state.IsMultiByteSequence;
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+				int remaining = l - i - 1;
+
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (!cc.HasValue) {
+					continue;
+				}
+
+				_lineOffset++;
+				Char c = cc.Value;
+
+				if (c == 'a' && state.Data.Length == 1) {
+					state.Data.Append(c);
+					continue;
+				}
+				else if (c == 'l' && state.Data.Length == 2) {
+					state.Data.Append(c);
+					continue;
+				}
+				else if (c == 's' && state.Data.Length == 3) {
+					state.Data.Append(c);
+					continue;
+				}
+				else if (c == 's' && state.Data.Length == 4) {
+					state.Data.Append(c);
+					state.IsComplete = true;
+					token = JsonToken.Null;
+					return true;
+				}
+				else {
+					throw new UnexpectedDataException();
+				}
+			}
+
+			// need more data
+			_offset += block.Length;
+			return false;
+		}
+
 		private bool HandleNonePosition(JsonInternalState state, char c, ref JsonToken token) {
 
 			// white-space
@@ -1205,15 +1338,27 @@ namespace IonKiwi.Json {
 			}
 			// null
 			else if (c == 'n') {
-				throw new NotImplementedException();
+				var newState = new JsonInternalNullState() { Parent = state };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Null;
+				return true;
 			}
 			// true
 			else if (c == 't') {
-				throw new NotImplementedException();
+				var newState = new JsonInternalTrueState() { Parent = state };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Null;
+				return true;
 			}
 			// false
 			else if (c == 'f') {
-				throw new NotImplementedException();
+				var newState = new JsonInternalFalseState() { Parent = state };
+				newState.Data.Append(c);
+				_currentState.Push(newState);
+				token = JsonToken.Null;
+				return true;
 			}
 			else {
 				var cc = Char.GetUnicodeCategory(c);
