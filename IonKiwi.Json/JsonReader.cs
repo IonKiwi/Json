@@ -45,11 +45,40 @@ namespace IonKiwi.Json {
 			if (_currentState.Count == 0) {
 				throw new InvalidOperationException();
 			}
-			throw new NotImplementedException();
+			var state = _currentState.Peek();
+			if (state is JsonInternalStringState stringState) {
+				if (!stringState.IsComplete) {
+					throw new InvalidOperationException();
+				}
+				return stringState.Data.ToString();
+			}
+			else {
+				throw new InvalidOperationException();
+			}
 		}
 
 		public string GetPath() {
-			throw new NotImplementedException();
+			if (_currentState.Count == 0) {
+				return string.Empty;
+			}
+			StringBuilder sb = new StringBuilder();
+			var state = _currentState.Peek();
+			while (state != null) {
+				if (state is JsonInternalArrayItemState arrayItemState) {
+					sb.Insert(0, "[" + arrayItemState.Index.ToString(CultureInfo.InvariantCulture) + "]");
+				}
+				else if (state is JsonInternalObjectPropertyState propertyState) {
+					sb.Insert(0, '.' + propertyState.PropertyName);
+				}
+				else if (state is JsonInternalObjectState || state is JsonInternalArrayState || state is JsonInternalRootState || state is JsonInternalStringState) {
+					continue;
+				}
+				else {
+					throw new NotImplementedException();
+				}
+				state = state.Parent;
+			}
+			return sb.ToString();
 		}
 
 		public ValueTask<JsonToken> Read() {
