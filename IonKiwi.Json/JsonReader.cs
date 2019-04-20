@@ -71,7 +71,7 @@ namespace IonKiwi.Json {
 					sb.Insert(0, '.' + propertyState.PropertyName);
 				}
 				else if (state is JsonInternalObjectState || state is JsonInternalArrayState || state is JsonInternalRootState || state is JsonInternalStringState) {
-					continue;
+					// skip
 				}
 				else {
 					throw new NotImplementedException();
