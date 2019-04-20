@@ -300,16 +300,6 @@ namespace IonKiwi.Json {
 				_lineOffset++;
 				Char c = cc.Value;
 
-				bool isEscapeSequence = false;
-				if (escapeToken != JsonInternalEscapeToken.None) {
-					Char? cu = GetCharacterFromEscapeSequence(state, c, isMultiByteCharacter, ref escapeToken);
-					if (!cu.HasValue) {
-						continue;
-					}
-					c = cu.Value;
-					isEscapeSequence = true;
-				}
-
 				if (isCarriageReturn) {
 					// assert i == 0
 					if (i != 0) {
@@ -325,6 +315,47 @@ namespace IonKiwi.Json {
 						i = -1;
 					}
 
+					if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier) {
+						state.CurrentProperty.Append(c);
+					}
+					else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
+						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
+					}
+					continue;
+				}
+				else if (c == '\r') {
+					if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier) {
+						state.CurrentProperty.Append(c);
+					}
+					else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
+						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
+					}
+
+					if (remaining > 0) {
+						if (block[i + 1] == '\n') {
+							i++;
+						}
+
+						_lineIndex++;
+						_lineOffset = 0;
+						continue;
+					}
+					else {
+						state.IsCarriageReturn = true;
+						// need more data
+						_offset += block.Length;
+						return false;
+					}
+				}
+				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
+					_lineIndex++;
+					_lineOffset = 0;
+					if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier) {
+						state.CurrentProperty.Append(c);
+					}
+					else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
+						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
+					}
 					continue;
 				}
 				else if (expectUnicodeEscapeSequence) {
@@ -335,31 +366,20 @@ namespace IonKiwi.Json {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicode;
 					continue;
 				}
-				else if (currentToken == JsonInternalObjectToken.BeforeProperty) {
-					// white-space
-					if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0') {
+
+				bool isEscapeSequence = false;
+				if (escapeToken != JsonInternalEscapeToken.None) {
+					Char? cu = GetCharacterFromEscapeSequence(state, c, isMultiByteCharacter, ref escapeToken);
+					if (!cu.HasValue) {
 						continue;
 					}
-					else if (c == '\r') {
-						if (remaining > 0) {
-							if (block[i + 1] == '\n') {
-								i++;
-							}
+					c = cu.Value;
+					isEscapeSequence = true;
+				}
 
-							_lineIndex++;
-							_lineOffset = 0;
-							continue;
-						}
-						else {
-							state.IsCarriageReturn = true;
-							// need more data
-							_offset += block.Length;
-							return false;
-						}
-					}
-					else if (c == '\n' || c == '\u2028' || c == '\u2029') {
-						_lineIndex++;
-						_lineOffset = 0;
+				if (currentToken == JsonInternalObjectToken.BeforeProperty) {
+					// white-space
+					if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0') {
 						continue;
 					}
 					else if (c == '}') {
