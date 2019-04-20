@@ -18,7 +18,16 @@ namespace IonKiwi.Json {
 			PlainIdentifier,
 			AfterIdentifier,
 			AfterColon,
-			Comma,
+		}
+
+		private enum JsonInternalObjectPropertyToken {
+			BeforeValue,
+			Value,
+		}
+
+		private enum JsonInternalArrayItemToken {
+			BeforeValue,
+			Value,
 		}
 
 		private enum JsonInternalEscapeToken {
@@ -66,7 +75,9 @@ namespace IonKiwi.Json {
 		}
 
 		private sealed class JsonInternalObjectPropertyState : JsonInternalState {
+			public JsonInternalObjectPropertyToken Token = JsonInternalObjectPropertyToken.BeforeValue;
 			public string PropertyName;
+			public bool IsCarriageReturn;
 		}
 
 		private sealed class JsonInternalArrayState : JsonInternalState {
@@ -87,7 +98,9 @@ namespace IonKiwi.Json {
 		}
 
 		private sealed class JsonInternalArrayItemState : JsonInternalState {
+			public JsonInternalArrayItemToken Token = JsonInternalArrayItemToken.BeforeValue;
 			public int Index;
+			public bool IsCarriageReturn;
 		}
 	}
 }

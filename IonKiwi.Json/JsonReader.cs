@@ -94,8 +94,14 @@ namespace IonKiwi.Json {
 			else if (state is JsonInternalObjectState objectState) {
 				return HandleObjectState(objectState, block, out token);
 			}
+			else if (state is JsonInternalObjectPropertyState propertyState) {
+				return HandleObjectPropertyState(propertyState, block, out token);
+			}
+			else if (state is JsonInternalArrayItemState itemState) {
+				return HandleArrayItemState(itemState, block, out token);
+			}
 			else {
-				throw new InvalidOperationException();
+				throw new InvalidOperationException(state.GetType().FullName);
 			}
 		}
 
@@ -326,7 +332,7 @@ namespace IonKiwi.Json {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicode;
 					continue;
 				}
-				else if (currentToken == JsonInternalObjectToken.BeforeProperty || currentToken == JsonInternalObjectToken.Comma) {
+				else if (currentToken == JsonInternalObjectToken.BeforeProperty) {
 					// white-space
 					if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0') {
 						continue;
@@ -352,6 +358,13 @@ namespace IonKiwi.Json {
 						_lineIndex++;
 						_lineOffset = 0;
 						continue;
+					}
+					else if (c == '}') {
+						// allow trailing comma => state.Properties.Count > 0
+						token = JsonToken.ObjectEnd;
+						_currentState.Pop();
+						_offset += i + 1;
+						return true;
 					}
 					else if (c == '\'') {
 						state.Token = currentToken = JsonInternalObjectToken.SingleQuotedIdentifier;
@@ -383,12 +396,25 @@ namespace IonKiwi.Json {
 						throw new UnexpectedDataException();
 					}
 				}
+				else if (currentToken == JsonInternalObjectToken.AfterColon) {
+					if (c == ',') {
+						state.Token = currentToken = JsonInternalObjectToken.BeforeProperty;
+						continue;
+					}
+					else if (c == '}') {
+						token = JsonToken.ObjectEnd;
+						_currentState.Pop();
+						_offset += i + 1;
+						return true;
+					}
+				}
 				else if (currentToken == JsonInternalObjectToken.AfterIdentifier) {
 					if (c == ':') {
 						state.Token = currentToken = JsonInternalObjectToken.AfterColon;
 						var newState = new JsonInternalObjectPropertyState() { Parent = state, PropertyName = state.CurrentProperty.ToString() };
 						_currentState.Push(newState);
 						token = JsonToken.ObjectProperty;
+						_offset += i + 1;
 						return true;
 					}
 					// white-space
@@ -469,6 +495,201 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+		private bool HandleObjectPropertyState(JsonInternalObjectPropertyState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			var currentToken = state.Token;
+			bool isCarriageReturn = state.IsCarriageReturn;
+			bool isMultiByteSequence = state.IsMultiByteSequence;
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+				int remaining = l - i - 1;
+
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (!cc.HasValue) {
+					continue;
+				}
+
+				_lineOffset++;
+				Char c = cc.Value;
+
+				if (c == ',') {
+					if (currentToken != JsonInternalObjectPropertyToken.Value) {
+						throw new UnexpectedDataException();
+					}
+					_currentState.Pop();
+					_offset += i;
+					return false;
+				}
+				else if (c == '}') {
+					_currentState.Pop();
+					_offset += i;
+					return false;
+				}
+				else if (isCarriageReturn) {
+					// assert i == 0
+					if (i != 0) {
+						throw new InvalidOperationException("Internal state corruption");
+					}
+
+					_lineIndex++;
+					_lineOffset = 0;
+					state.IsCarriageReturn = isCarriageReturn = false;
+
+					if (c != '\n') {
+						// reset
+						i = -1;
+					}
+
+					continue;
+				}
+				else if (c == '\r') {
+					if (remaining > 0) {
+						if (block[i + 1] == '\n') {
+							i++;
+						}
+
+						_lineIndex++;
+						_lineOffset = 0;
+						continue;
+					}
+					else {
+						state.IsCarriageReturn = isCarriageReturn = true;
+						// need more data
+						_offset += block.Length;
+						return false;
+					}
+				}
+				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
+					_lineIndex++;
+					_lineOffset = 0;
+					continue;
+				}
+				else if (HandleNonePosition(state, c, ref token)) {
+					if (currentToken != JsonInternalObjectPropertyToken.BeforeValue) {
+						throw new UnexpectedDataException();
+					}
+					state.Token = currentToken = JsonInternalObjectPropertyToken.Value;
+					_offset += i + 1;
+					return true;
+				}
+			}
+
+			// need more data
+			_offset += block.Length;
+			return false;
+		}
+
+		private bool HandleArrayItemState(JsonInternalArrayItemState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			var currentToken = state.Token;
+			bool isCarriageReturn = state.IsCarriageReturn;
+			bool isMultiByteSequence = state.IsMultiByteSequence;
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+				int remaining = l - i - 1;
+
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (!cc.HasValue) {
+					continue;
+				}
+
+				_lineOffset++;
+				Char c = cc.Value;
+
+				if (c == ',') {
+
+					if (currentToken != JsonInternalArrayItemToken.Value) {
+						throw new UnexpectedDataException();
+					}
+
+					var parentState = state.Parent;
+					if (!(parentState is JsonInternalArrayState arrayState)) {
+						throw new InvalidOperationException("Internal state corruption");
+					}
+
+					var newState = new JsonInternalArrayItemState() { Parent = arrayState, Index = arrayState.Items.Count };
+					_currentState.Pop();
+					_currentState.Push(newState);
+
+					_offset += i + 1;
+					return false;
+				}
+				else if (c == ']') {
+					var parentState = state.Parent;
+					if (!(parentState is JsonInternalArrayState arrayState)) {
+						throw new InvalidOperationException("Internal state corruption");
+					}
+
+					// allow trailing comma
+					if (currentToken != JsonInternalArrayItemToken.Value) {
+						// remove empty value
+						arrayState.Items.RemoveAt(arrayState.Items.Count - 1);
+					}
+
+					_currentState.Pop(); // item
+					_currentState.Pop(); // array
+
+					_offset += i + 1;
+					token = JsonToken.ArrayEnd;
+					return true;
+				}
+				else if (isCarriageReturn) {
+					// assert i == 0
+					if (i != 0) {
+						throw new InvalidOperationException("Internal state corruption");
+					}
+
+					_lineIndex++;
+					_lineOffset = 0;
+					state.IsCarriageReturn = isCarriageReturn = false;
+
+					if (c != '\n') {
+						// reset
+						i = -1;
+					}
+
+					continue;
+				}
+				else if (c == '\r') {
+					if (remaining > 0) {
+						if (block[i + 1] == '\n') {
+							i++;
+						}
+
+						_lineIndex++;
+						_lineOffset = 0;
+						continue;
+					}
+					else {
+						state.IsCarriageReturn = isCarriageReturn = true;
+						// need more data
+						_offset += block.Length;
+						return false;
+					}
+				}
+				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
+					_lineIndex++;
+					_lineOffset = 0;
+					continue;
+				}
+				else if (HandleNonePosition(state, c, ref token)) {
+					if (currentToken != JsonInternalArrayItemToken.BeforeValue) {
+						throw new UnexpectedDataException();
+					}
+
+					state.Token = currentToken = JsonInternalArrayItemToken.Value;
+					_offset += i + 1;
+					return true;
+				}
+			}
+
+			// need more data
+			_offset += block.Length;
+			return false;
+		}
+
 		private bool HandleNonePosition(JsonInternalState state, char c, ref JsonToken token) {
 
 			// white-space
@@ -482,8 +703,10 @@ namespace IonKiwi.Json {
 				return true;
 			}
 			else if (c == '[') {
-				var newState = new JsonInternalArrayState() { Parent = state };
-				_currentState.Push(newState);
+				var newState1 = new JsonInternalArrayState() { Parent = state };
+				_currentState.Push(newState1);
+				var newState2 = new JsonInternalArrayItemState() { Parent = newState1, Index = 0 };
+				_currentState.Push(newState2);
 				token = JsonToken.ArrayStart;
 				return true;
 			}
