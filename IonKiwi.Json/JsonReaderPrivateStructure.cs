@@ -85,8 +85,9 @@ namespace IonKiwi.Json {
 		}
 
 		private abstract class JsonInternalStringState : JsonInternalState {
-			public List<byte> Data = new List<byte>();
 			public bool IsComplete;
+			public bool IsCarriageReturn;
+			public StringBuilder Data = new StringBuilder();
 		}
 
 		private sealed class JsonInternalSingleQuotedStringState : JsonInternalStringState {

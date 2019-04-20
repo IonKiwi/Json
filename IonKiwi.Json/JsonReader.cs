@@ -100,6 +100,9 @@ namespace IonKiwi.Json {
 			else if (state is JsonInternalArrayItemState itemState) {
 				return HandleArrayItemState(itemState, block, out token);
 			}
+			else if (state is JsonInternalSingleQuotedStringState stringState) {
+				return HandleSingleQuotedStringState(stringState, block, out token);
+			}
 			else {
 				throw new InvalidOperationException(state.GetType().FullName);
 			}
@@ -682,6 +685,94 @@ namespace IonKiwi.Json {
 					state.Token = currentToken = JsonInternalArrayItemToken.Value;
 					_offset += i + 1;
 					return true;
+				}
+			}
+
+			// need more data
+			_offset += block.Length;
+			return false;
+		}
+
+		private bool HandleSingleQuotedStringState(JsonInternalSingleQuotedStringState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			bool isCarriageReturn = state.IsCarriageReturn;
+			bool isMultiByteSequence = state.IsMultiByteSequence;
+			var escapeToken = state.EscapeToken;
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+				int remaining = l - i - 1;
+
+				Char? cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (!cc.HasValue) {
+					continue;
+				}
+
+				_lineOffset++;
+				Char c = cc.Value;
+
+				if (isCarriageReturn) {
+					// assert i == 0
+					if (i != 0) {
+						throw new InvalidOperationException("Internal state corruption");
+					}
+
+					_lineIndex++;
+					_lineOffset = 0;
+					state.IsCarriageReturn = isCarriageReturn = false;
+
+					if (c != '\n') {
+						// reset
+						i = -1;
+					}
+
+					state.Data.Append(c);
+					continue;
+				}
+				else if (c == '\r') {
+					state.Data.Append(c);
+
+					if (remaining > 0) {
+						if (block[i + 1] == '\n') {
+							i++;
+						}
+
+						_lineIndex++;
+						_lineOffset = 0;
+						continue;
+					}
+					else {
+						state.IsCarriageReturn = isCarriageReturn = true;
+						// need more data
+						_offset += block.Length;
+						return false;
+					}
+				}
+				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
+					_lineIndex++;
+					_lineOffset = 0;
+					state.Data.Append(c);
+					continue;
+				}
+
+				bool isEscapeSequence = false;
+				if (escapeToken != JsonInternalEscapeToken.None) {
+					Char? cu = GetCharacterFromEscapeSequence(state, c, isMultiByteCharacter, ref escapeToken);
+					if (!cu.HasValue) {
+						continue;
+					}
+					c = cu.Value;
+					isEscapeSequence = true;
+				}
+
+				if (c == '\'' & !isEscapeSequence) {
+					token = JsonToken.String;
+					state.IsComplete = true;
+					_offset += i + 1;
+					return true;
+				}
+				else {
+					state.Data.Append(c);
 				}
 			}
 
