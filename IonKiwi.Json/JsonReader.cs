@@ -284,7 +284,7 @@ namespace IonKiwi.Json {
 
 				if (HandleNonePosition(state, c, ref token)) {
 					_offset += i + 1;
-					return true;
+					return token != JsonToken.None ? true : false;
 				}
 			}
 
@@ -602,7 +602,7 @@ namespace IonKiwi.Json {
 					}
 					state.Token = currentToken = JsonInternalObjectPropertyToken.Value;
 					_offset += i + 1;
-					return true;
+					return token != JsonToken.None ? true : false;
 				}
 			}
 
@@ -709,7 +709,7 @@ namespace IonKiwi.Json {
 
 					state.Token = currentToken = JsonInternalArrayItemToken.Value;
 					_offset += i + 1;
-					return true;
+					return token != JsonToken.None ? true : false;
 				}
 			}
 
@@ -1271,13 +1271,13 @@ namespace IonKiwi.Json {
 			else if (c == '\'') {
 				var newState = new JsonInternalSingleQuotedStringState() { Parent = state };
 				_currentState.Push(newState);
-				token = JsonToken.ArrayStart;
+				token = JsonToken.None;
 				return true;
 			}
 			else if (c == '"') {
 				var newState = new JsonInternalDoubleQuotedStringState() { Parent = state };
 				_currentState.Push(newState);
-				token = JsonToken.ArrayStart;
+				token = JsonToken.None;
 				return true;
 			}
 			// numeric
@@ -1285,7 +1285,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Dot, AfterDot = true };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Number;
+				token = JsonToken.None;
 				return true;
 			}
 			// numeric
@@ -1293,7 +1293,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Zero };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Number;
+				token = JsonToken.None;
 				return true;
 			}
 			// numeric
@@ -1301,7 +1301,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Digit };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Number;
+				token = JsonToken.None;
 				return true;
 			}
 			// numeric
@@ -1309,7 +1309,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Negative, Negative = true };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Number;
+				token = JsonToken.None;
 				return true;
 			}
 			// numeric
@@ -1317,7 +1317,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Positive };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Number;
+				token = JsonToken.None;
 				return true;
 			}
 			// Infinity
@@ -1325,7 +1325,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Infinity };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Number;
+				token = JsonToken.None;
 				return true;
 			}
 			// NaN
@@ -1333,7 +1333,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.NaN };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Number;
+				token = JsonToken.None;
 				return true;
 			}
 			// null
@@ -1341,7 +1341,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalNullState() { Parent = state };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Null;
+				token = JsonToken.None;
 				return true;
 			}
 			// true
@@ -1349,7 +1349,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalTrueState() { Parent = state };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Null;
+				token = JsonToken.None;
 				return true;
 			}
 			// false
@@ -1357,7 +1357,7 @@ namespace IonKiwi.Json {
 				var newState = new JsonInternalFalseState() { Parent = state };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
-				token = JsonToken.Null;
+				token = JsonToken.None;
 				return true;
 			}
 			else {
