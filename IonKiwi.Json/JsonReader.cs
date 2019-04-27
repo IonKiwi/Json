@@ -78,9 +78,6 @@ namespace IonKiwi.Json {
 				}
 				state = state.Parent;
 			}
-			if (sb.Length > 0 && sb[0] == '.') {
-				sb.Remove(0, 1);
-			}
 			return sb.ToString();
 		}
 
@@ -95,12 +92,14 @@ namespace IonKiwi.Json {
 		private async ValueTask<JsonToken> ReadInternal() {
 			JsonToken token = JsonToken.None;
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
-				if (_length - _offset == 0 && !await ReadEnsureData().NoSync()) {
+				if (_length - _offset == 0 && !await ReadData().NoSync()) {
 					if (_currentState.Count != 1) {
-						// special handling for numbers
+						// special handling for values
 						var state = _currentState.Peek();
-						if (state is JsonInternalNumberState numberState && !numberState.IsComplete) {
-							return HandleEndOfFileNumber(numberState);
+						if (state is JsonInternalStringState valueState) {
+							if (HandleEndOfFileValueState(valueState, ref token)) {
+								return token;
+							}
 						}
 						throw new MoreDataExpectedException();
 					}
@@ -113,12 +112,14 @@ namespace IonKiwi.Json {
 		private JsonToken ReadInternalSync() {
 			JsonToken token = JsonToken.None;
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
-				if (_length - _offset == 0 && !ReadEnsureDataSync()) {
+				if (_length - _offset == 0 && !ReadDataSync()) {
 					if (_currentState.Count != 1) {
-						// special handling for numbers
+						// special handling for values
 						var state = _currentState.Peek();
-						if (state is JsonInternalNumberState numberState && !numberState.IsComplete) {
-							return HandleEndOfFileNumber(numberState);
+						if (state is JsonInternalStringState valueState) {
+							if (HandleEndOfFileValueState(valueState, ref token)) {
+								return token;
+							}
 						}
 						throw new MoreDataExpectedException();
 					}
@@ -126,6 +127,21 @@ namespace IonKiwi.Json {
 				}
 			}
 			return token;
+		}
+
+		private bool HandleEndOfFileValueState(JsonInternalStringState state, ref JsonToken token) {
+			if (state is JsonInternalNumberState numberState && !numberState.IsComplete) {
+				ValidateNumberState(numberState);
+				state.IsComplete = true;
+				token = JsonToken.Number;
+				return true;
+			}
+			else if (state.IsComplete) {
+				_currentState.Pop();
+				token = JsonToken.None;
+				return true;
+			}
+			return false;
 		}
 
 		private bool HandleDataBlock(Span<byte> block, out JsonToken token) {
@@ -953,12 +969,6 @@ namespace IonKiwi.Json {
 			else if (state.Token == JsonInternalNumberToken.Exponent && !state.ExponentType.HasValue) {
 				throw new UnexpectedDataException();
 			}
-		}
-
-		private JsonToken HandleEndOfFileNumber(JsonInternalNumberState state) {
-			ValidateNumberState(state);
-			state.IsComplete = true;
-			return JsonToken.Number;
 		}
 
 		private bool HandleNumberState(JsonInternalNumberState state, Span<byte> block, out JsonToken token) {

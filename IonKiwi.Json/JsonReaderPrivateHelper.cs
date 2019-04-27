@@ -6,27 +6,8 @@ using System.Threading.Tasks;
 
 namespace IonKiwi.Json {
 	partial class JsonReader {
-		private async ValueTask<bool> ReadEnsureData() {
-			if (!await EnsureData().NoSync()) {
-				if (Depth != 0) {
-					throw new MoreDataExpectedException();
-				}
-				return false;
-			}
-			return true;
-		}
-
-		private bool ReadEnsureDataSync() {
-			if (!EnsureDataSync()) {
-				if (Depth != 0) {
-					throw new MoreDataExpectedException();
-				}
-				return false;
-			}
-			return true;
-		}
-
-		private async ValueTask<bool> EnsureData() {
+		
+		private async ValueTask<bool> ReadData() {
 			if (_length - _offset > 0) {
 				return true;
 			}
@@ -36,7 +17,7 @@ namespace IonKiwi.Json {
 			return bs != 0;
 		}
 
-		private bool EnsureDataSync() {
+		private bool ReadDataSync() {
 			if (_length - _offset > 0) {
 				return true;
 			}
