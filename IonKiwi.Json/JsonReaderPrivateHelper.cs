@@ -126,9 +126,7 @@ namespace IonKiwi.Json {
 				}
 				int v = (state.MultiByteSequence[0] & 0x1F) << 6;
 				v |= (b & 0x3F);
-				state.MultiByteSequence = null;
-				state.IsMultiByteSequence = isMultiByteSequence = false;
-
+				
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -143,6 +141,8 @@ namespace IonKiwi.Json {
 				if (chars.Length != 1) {
 					throw new InvalidOperationException("Expected one unicode character");
 				}
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
 				return chars[0];
 			}
 			else if (state.MultiByteIndex == 2 && state.MultiByteSequenceLength == 3) {
@@ -153,9 +153,7 @@ namespace IonKiwi.Json {
 				int v = (state.MultiByteSequence[0] & 0xF) << 12;
 				v |= (state.MultiByteSequence[1] & 0x3F) << 6;
 				v |= (b & 0x3F);
-				state.MultiByteSequence = null;
-				state.IsMultiByteSequence = isMultiByteSequence = false;
-
+				
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -170,6 +168,8 @@ namespace IonKiwi.Json {
 				if (chars.Length != 1) {
 					throw new InvalidOperationException("Expected one unicode character");
 				}
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
 				return chars[0];
 			}
 			else if (state.MultiByteIndex == 3 && state.MultiByteSequenceLength == 4) {
@@ -181,9 +181,7 @@ namespace IonKiwi.Json {
 				v |= (state.MultiByteSequence[1] & 0x3F) << 12;
 				v |= (state.MultiByteSequence[2] & 0x3F) << 6;
 				v |= (b & 0x3F);
-				state.MultiByteSequence = null;
-				state.IsMultiByteSequence = isMultiByteSequence = false;
-
+				
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -198,6 +196,8 @@ namespace IonKiwi.Json {
 				if (chars.Length != 1) {
 					throw new InvalidOperationException("Expected one unicode character");
 				}
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
 				return chars[0];
 			}
 			else if (state.MultiByteIndex == 4 && state.MultiByteSequenceLength == 5) {
@@ -210,9 +210,7 @@ namespace IonKiwi.Json {
 				v |= (state.MultiByteSequence[2] & 0x3F) << 12;
 				v |= (state.MultiByteSequence[3] & 0x3F) << 6;
 				v |= (b & 0x3F);
-				state.MultiByteSequence = null;
-				state.IsMultiByteSequence = isMultiByteSequence = false;
-
+				
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -227,6 +225,8 @@ namespace IonKiwi.Json {
 				if (chars.Length != 1) {
 					throw new InvalidOperationException("Expected one unicode character");
 				}
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
 				return chars[0];
 			}
 			else if (state.MultiByteIndex == 5 && state.MultiByteSequenceLength == 6) {
@@ -241,9 +241,7 @@ namespace IonKiwi.Json {
 				v |= (state.MultiByteSequence[3] & 0x3F) << 12;
 				v |= (state.MultiByteSequence[4] & 0x3F) << 6;
 				v |= (b & 0x3F);
-				state.MultiByteSequence = null;
-				state.IsMultiByteSequence = isMultiByteSequence = false;
-
+				
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -258,6 +256,8 @@ namespace IonKiwi.Json {
 				if (chars.Length != 1) {
 					throw new InvalidOperationException("Expected one unicode character");
 				}
+				state.MultiByteSequence = null;
+				state.IsMultiByteSequence = isMultiByteSequence = false;
 				return chars[0];
 			}
 			else if (state.MultiByteIndex < (state.MultiByteSequenceLength - 1)) {
