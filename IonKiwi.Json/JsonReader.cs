@@ -97,6 +97,13 @@ namespace IonKiwi.Json {
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
 				if (_length - _offset == 0 && !await ReadEnsureData().NoSync()) {
 					if (_currentState.Count != 1) {
+						// special handling for numbers
+						var state = _currentState.Peek();
+						if (state is JsonInternalNumberState numberState && !numberState.IsComplete) {
+							ValidateNumberState(numberState);
+							numberState.IsComplete = true;
+							return JsonToken.Number;
+						}
 						throw new MoreDataExpectedException();
 					}
 					return JsonToken.None;
@@ -110,6 +117,13 @@ namespace IonKiwi.Json {
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
 				if (_length - _offset == 0 && !ReadEnsureDataSync()) {
 					if (_currentState.Count != 1) {
+						// special handling for numbers
+						var state = _currentState.Peek();
+						if (state is JsonInternalNumberState numberState && !numberState.IsComplete) {
+							ValidateNumberState(numberState);
+							numberState.IsComplete = true;
+							return JsonToken.Number;
+						}
 						throw new MoreDataExpectedException();
 					}
 					return JsonToken.None;
@@ -752,6 +766,11 @@ namespace IonKiwi.Json {
 
 		private bool HandleSingleQuotedStringState(JsonInternalSingleQuotedStringState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
+			if (state.IsComplete) {
+				_currentState.Pop();
+				return false;
+			}
+
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			var escapeToken = state.EscapeToken;
@@ -942,6 +961,11 @@ namespace IonKiwi.Json {
 
 		private bool HandleNumberState(JsonInternalNumberState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
+			if (state.IsComplete) {
+				_currentState.Pop();
+				return false;
+			}
+
 			var currentToken = state.Token;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 
@@ -1163,6 +1187,11 @@ namespace IonKiwi.Json {
 
 		private bool HandleNullState(JsonInternalNullState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
+			if (state.IsComplete) {
+				_currentState.Pop();
+				return false;
+			}
+
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
@@ -1203,6 +1232,11 @@ namespace IonKiwi.Json {
 
 		private bool HandleTrueState(JsonInternalTrueState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
+			if (state.IsComplete) {
+				_currentState.Pop();
+				return false;
+			}
+
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
@@ -1243,6 +1277,11 @@ namespace IonKiwi.Json {
 
 		private bool HandleFalseState(JsonInternalFalseState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
+			if (state.IsComplete) {
+				_currentState.Pop();
+				return false;
+			}
+
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 
 			for (int i = 0, l = block.Length; i < l; i++) {
