@@ -63,7 +63,10 @@ namespace IonKiwi.Json {
 				}
 			}
 			else {
-				if (b >= 0 && b <= 0x1f) {
+				if (b == '\t' || b == '\r' || b == '\n') {
+					return (char)b;
+				}
+				else if (b >= 0 && b <= 0x1f) {
 					// C0 control block
 					throw new UnexpectedDataException();
 				}
@@ -119,6 +122,10 @@ namespace IonKiwi.Json {
 					state.MultiByteIndex = 1;
 					_lineOffset++;
 					return null;
+				}
+				else if (b == 0xFE || b == 0xFF || b == 0xEF || b == 0xBB || b == 0xBF) {
+					// BOM
+					return (char)b;
 				}
 				else if (b >= 0x00 && b <= 0x7F) {
 					// reamaining normal single byte => accept
