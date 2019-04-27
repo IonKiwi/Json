@@ -1005,6 +1005,7 @@ namespace IonKiwi.Json {
 					ValidateNumberState(state);
 					state.IsComplete = true;
 					_offset += i;
+					token = JsonToken.Number;
 					return true;
 				}
 				// control characters
@@ -1012,6 +1013,7 @@ namespace IonKiwi.Json {
 					ValidateNumberState(state);
 					state.IsComplete = true;
 					_offset += i;
+					token = JsonToken.Number;
 					return true;
 				}
 				else if (currentToken == JsonInternalNumberToken.Dot) {
@@ -1025,26 +1027,29 @@ namespace IonKiwi.Json {
 					}
 				}
 				else if (currentToken == JsonInternalNumberToken.Infinity) {
-					if (c == 'n' && (state.Data.Length == 1 || state.Data.Length == 4)) {
+					int offset = state.Data[0] == '-' || state.Data[0] == '+' ? 1 : 0;
+					int ll = state.Data.Length - offset;
+					if (c == 'n' && (ll == 1 || ll == 4)) {
 						state.Data.Append(c);
 						continue;
 					}
-					else if (c == 'f' && state.Data.Length == 2) {
+					else if (c == 'f' && ll == 2) {
 						state.Data.Append(c);
 						continue;
 					}
-					else if (c == 'i' && (state.Data.Length == 3 || state.Data.Length == 5)) {
+					else if (c == 'i' && (ll == 3 || ll == 5)) {
 						state.Data.Append(c);
 						continue;
 					}
-					else if (c == 't' && state.Data.Length == 6) {
+					else if (c == 't' && ll == 6) {
 						state.Data.Append(c);
 						continue;
 					}
-					else if (c == 'y' && state.Data.Length == 7) {
+					else if (c == 'y' && ll == 7) {
 						state.Data.Append(c);
 						state.IsComplete = true;
 						_offset += i + 1;
+						token = JsonToken.Number;
 						return true;
 					}
 					else {
@@ -1081,6 +1086,7 @@ namespace IonKiwi.Json {
 						state.Data.Append(c);
 						state.IsComplete = true;
 						_offset += i + 1;
+						token = JsonToken.Number;
 						return true;
 					}
 					else {
@@ -1199,6 +1205,7 @@ namespace IonKiwi.Json {
 						ValidateNumberState(state);
 						state.IsComplete = true;
 						_offset += i;
+						token = JsonToken.Number;
 						return true;
 					}
 					throw new UnexpectedDataException();
