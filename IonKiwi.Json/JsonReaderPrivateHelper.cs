@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace IonKiwi.Json {
 	partial class JsonReader {
-		
+
 		private async ValueTask<bool> ReadData() {
 			if (_length - _offset > 0) {
 				return true;
@@ -27,11 +27,11 @@ namespace IonKiwi.Json {
 			return bs != 0;
 		}
 
-		private Char? GetCharacterFromUtf8(JsonInternalState state, byte b, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+		private char[] GetCharacterFromUtf8(JsonInternalState state, byte b, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
 			isMultiByteCharacter = false;
 			if (isMultiByteSequence) {
 				var mbChar = HandleMultiByteSequence(state, b, ref isMultiByteSequence);
-				if (mbChar.HasValue) {
+				if (mbChar != null) {
 					_lineOffset--;
 					isMultiByteCharacter = true;
 					return mbChar;
@@ -45,7 +45,7 @@ namespace IonKiwi.Json {
 			}
 			else {
 				if (b == '\t' || b == '\r' || b == '\n') {
-					return (char)b;
+					return new char[1] { (char)b };
 				}
 				else if (b >= 0 && b <= 0x1f) {
 					// C0 control block
@@ -53,7 +53,7 @@ namespace IonKiwi.Json {
 				}
 				else if (b == 0x85) {
 					// NEL (newline)
-					return (char)b;
+					return new char[1] { (char)b };
 				}
 				else if (b >= 0x80 && b <= 0x9F) {
 					// C1 control block
@@ -106,11 +106,11 @@ namespace IonKiwi.Json {
 				}
 				else if (b == 0xFE || b == 0xFF || b == 0xEF || b == 0xBB || b == 0xBF) {
 					// BOM
-					return (char)b;
+					return new char[1] { (char)b };
 				}
 				else if (b >= 0x00 && b <= 0x7F) {
 					// reamaining normal single byte => accept
-					return (char)b;
+					return new char[1] { (char)b };
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -118,7 +118,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		private char? HandleMultiByteSequence(JsonInternalState state, byte b, ref bool isMultiByteSequence) {
+		private char[] HandleMultiByteSequence(JsonInternalState state, byte b, ref bool isMultiByteSequence) {
 			if (state.MultiByteIndex == 1 && state.MultiByteSequenceLength == 2) {
 				if ((b & 0xC0) != 0x80) {
 					// not a continuing byte in a multi-byte sequence
@@ -126,7 +126,7 @@ namespace IonKiwi.Json {
 				}
 				int v = (state.MultiByteSequence[0] & 0x1F) << 6;
 				v |= (b & 0x3F);
-				
+
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -138,12 +138,9 @@ namespace IonKiwi.Json {
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
 				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
-				if (chars.Length != 1) {
-					throw new InvalidOperationException("Expected one unicode character");
-				}
 				state.MultiByteSequence = null;
 				state.IsMultiByteSequence = isMultiByteSequence = false;
-				return chars[0];
+				return chars;
 			}
 			else if (state.MultiByteIndex == 2 && state.MultiByteSequenceLength == 3) {
 				if ((b & 0xC0) != 0x80) {
@@ -153,7 +150,7 @@ namespace IonKiwi.Json {
 				int v = (state.MultiByteSequence[0] & 0xF) << 12;
 				v |= (state.MultiByteSequence[1] & 0x3F) << 6;
 				v |= (b & 0x3F);
-				
+
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -165,12 +162,9 @@ namespace IonKiwi.Json {
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
 				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
-				if (chars.Length != 1) {
-					throw new InvalidOperationException("Expected one unicode character");
-				}
 				state.MultiByteSequence = null;
 				state.IsMultiByteSequence = isMultiByteSequence = false;
-				return chars[0];
+				return chars;
 			}
 			else if (state.MultiByteIndex == 3 && state.MultiByteSequenceLength == 4) {
 				if ((b & 0xC0) != 0x80) {
@@ -181,7 +175,7 @@ namespace IonKiwi.Json {
 				v |= (state.MultiByteSequence[1] & 0x3F) << 12;
 				v |= (state.MultiByteSequence[2] & 0x3F) << 6;
 				v |= (b & 0x3F);
-				
+
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -193,12 +187,9 @@ namespace IonKiwi.Json {
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
 				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
-				if (chars.Length != 1) {
-					throw new InvalidOperationException("Expected one unicode character");
-				}
 				state.MultiByteSequence = null;
 				state.IsMultiByteSequence = isMultiByteSequence = false;
-				return chars[0];
+				return chars;
 			}
 			else if (state.MultiByteIndex == 4 && state.MultiByteSequenceLength == 5) {
 				if ((b & 0xC0) != 0x80) {
@@ -210,7 +201,7 @@ namespace IonKiwi.Json {
 				v |= (state.MultiByteSequence[2] & 0x3F) << 12;
 				v |= (state.MultiByteSequence[3] & 0x3F) << 6;
 				v |= (b & 0x3F);
-				
+
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -222,12 +213,9 @@ namespace IonKiwi.Json {
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
 				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
-				if (chars.Length != 1) {
-					throw new InvalidOperationException("Expected one unicode character");
-				}
 				state.MultiByteSequence = null;
 				state.IsMultiByteSequence = isMultiByteSequence = false;
-				return chars[0];
+				return chars;
 			}
 			else if (state.MultiByteIndex == 5 && state.MultiByteSequenceLength == 6) {
 				if ((b & 0xC0) != 0x80) {
@@ -241,7 +229,7 @@ namespace IonKiwi.Json {
 				v |= (state.MultiByteSequence[3] & 0x3F) << 12;
 				v |= (state.MultiByteSequence[4] & 0x3F) << 6;
 				v |= (b & 0x3F);
-				
+
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
 					throw new UnexpectedDataException();
@@ -253,12 +241,9 @@ namespace IonKiwi.Json {
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
 				var chars = Encoding.UTF8.GetChars(state.MultiByteSequence);
-				if (chars.Length != 1) {
-					throw new InvalidOperationException("Expected one unicode character");
-				}
 				state.MultiByteSequence = null;
 				state.IsMultiByteSequence = isMultiByteSequence = false;
-				return chars[0];
+				return chars;
 			}
 			else if (state.MultiByteIndex < (state.MultiByteSequenceLength - 1)) {
 				if (!(b >= 0x80 && b <= 0xBF)) {
@@ -273,7 +258,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		private char? GetCharacterFromEscapeSequence(JsonInternalState state, char c, bool isMultiByteCharacter, ref JsonInternalEscapeToken escapeToken) {
+		private char[] GetCharacterFromEscapeSequence(JsonInternalState state, char c, bool isMultiByteCharacter, ref JsonInternalEscapeToken escapeToken) {
 			if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicode) {
 				if (isMultiByteCharacter) {
 					throw new UnexpectedDataException();
@@ -328,11 +313,8 @@ namespace IonKiwi.Json {
 					}
 
 					var utf16 = Char.ConvertFromUtf32(v);
-					if (utf16.Length != 1) {
-						throw new NotSupportedException("Expected one unicode character from escape sequence");
-					}
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return utf16[0];
+					return utf16.ToCharArray();
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -378,11 +360,8 @@ namespace IonKiwi.Json {
 
 					int utf16v = (v1 - 0xD800) * 0x400 + v2 - 0xDC00 + 0x10000;
 					var utf16 = Char.ConvertFromUtf32(utf16v);
-					if (utf16.Length != 1) {
-						throw new NotSupportedException("Expected one unicode character from escape sequence");
-					}
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return utf16[0];
+					return utf16.ToCharArray();
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -402,11 +381,8 @@ namespace IonKiwi.Json {
 					}
 					v |= GetByte(state.MultiByteSequence[state.MultiByteIndex - 1], out _);
 					var utf16 = Char.ConvertFromUtf32(v);
-					if (utf16.Length != 1) {
-						throw new NotSupportedException("Expected one unicode character from escape sequence");
-					}
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return utf16[0];
+					return utf16.ToCharArray();
 				}
 				else {
 					if (state.MultiByteIndex == state.MultiByteSequenceLength) {
@@ -433,11 +409,8 @@ namespace IonKiwi.Json {
 					int v = GetByte(state.MultiByteSequence[0], out _) << 4;
 					v |= GetByte(state.MultiByteSequence[1], out _);
 					var utf16 = Char.ConvertFromUtf32(v);
-					if (utf16.Length != 1) {
-						throw new NotSupportedException("Expected one unicode character from escape sequence");
-					}
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return utf16[0];
+					return utf16.ToCharArray();
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -457,47 +430,47 @@ namespace IonKiwi.Json {
 				}
 				else if (c == '\'') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '\'';
+					return new char[1] { '\'' };
 				}
 				else if (c == '"') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '"';
+					return new char[1] { '"' };
 				}
 				else if (c == '\\') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '\\';
+					return new char[1] { '\\' };
 				}
 				else if (c == 'b') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '\b';
+					return new char[1] { '\b' };
 				}
 				else if (c == 'f') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '\f';
+					return new char[1] { '\f' };
 				}
 				else if (c == 'n') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '\n';
+					return new char[1] { '\n' };
 				}
 				else if (c == 'r') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '\r';
+					return new char[1] { '\r' };
 				}
 				else if (c == 't') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '\t';
+					return new char[1] { '\t' };
 				}
 				else if (c == 'v') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '\v';
+					return new char[1] { '\v' };
 				}
 				else if (c == '0') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return '\0';
+					return new char[1] { '\0' };
 				}
 				else {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return c;
+					return new char[1] { c };
 				}
 			}
 			else {
