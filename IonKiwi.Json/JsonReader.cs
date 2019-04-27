@@ -1146,6 +1146,12 @@ namespace IonKiwi.Json {
 						state.Token = currentToken = JsonInternalNumberToken.Octal;
 						continue;
 					}
+					else if (c == '.') {
+						state.Data.Append(c);
+						state.AfterDot = true;
+						state.Token = currentToken = JsonInternalNumberToken.Dot;
+						continue;
+					}
 					else {
 						throw new UnexpectedDataException();
 					}
