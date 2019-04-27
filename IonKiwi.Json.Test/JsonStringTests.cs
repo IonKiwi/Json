@@ -167,5 +167,32 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal(12, reader.CharacterPosition);
 			Assert.Equal(1, reader.LineNumber);
 		}
+
+		[Fact]
+		public void TestString7() {
+			byte[] json = Encoding.UTF8.GetBytes("'\\uD834\\uDF06'");
+
+			JsonToken token;
+			var reader = new JsonReader(new Utf8ByteArrayInputReader(json));
+			Assert.Equal(0, reader.Depth);
+			Assert.Equal(string.Empty, reader.GetPath());
+			Assert.Equal(1, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.String, token);
+			Assert.Equal(1, reader.Depth);
+			Assert.Equal("", reader.GetPath());
+			Assert.Equal(15, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+			Assert.Equal("𝌆", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.None, token);
+			Assert.Equal(0, reader.Depth);
+			Assert.Equal("", reader.GetPath());
+			Assert.Equal(15, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+		}
 	}
 }

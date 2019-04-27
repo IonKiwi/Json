@@ -912,7 +912,7 @@ namespace IonKiwi.Json {
 					state.Data.Append(c);
 					continue;
 				}
-				else if (c == '\\') {
+				else if (c == '\\' && escapeToken == JsonInternalEscapeToken.None) {
 					escapeToken = JsonInternalEscapeToken.Detect;
 					continue;
 				}
@@ -1021,7 +1021,7 @@ namespace IonKiwi.Json {
 					state.Data.Append(c);
 					continue;
 				}
-				else if (c == '\\') {
+				else if (c == '\\' && escapeToken == JsonInternalEscapeToken.None) {
 					escapeToken = JsonInternalEscapeToken.Detect;
 					continue;
 				}

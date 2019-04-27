@@ -281,7 +281,8 @@ namespace IonKiwi.Json {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicodeHex;
 					state.MultiByteSequenceLength = 4;
 					state.MultiByteSequence = new byte[4];
-					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+					state.MultiByteSequence[0] = (byte)c;
+					state.MultiByteIndex = 1;
 					return 0;
 				}
 				else {
@@ -306,6 +307,7 @@ namespace IonKiwi.Json {
 					if (v >= 0xD800 && v <= 0xDBFF) {
 						byte[] tmp = state.MultiByteSequence;
 						state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicodeHexSurrogate;
+						state.MultiByteSequenceLength = 10;
 						state.MultiByteSequence = new byte[10];
 						state.MultiByteSequence[0] = tmp[0];
 						state.MultiByteSequence[1] = tmp[1];
