@@ -27,25 +27,29 @@ namespace IonKiwi.Json {
 			return bs != 0;
 		}
 
-		private char[] GetCharacterFromUtf8(JsonInternalState state, byte b, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+		private int GetCharacterFromUtf8(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
 			isMultiByteCharacter = false;
 			if (isMultiByteSequence) {
 				var mbChar = HandleMultiByteSequence(state, b, ref isMultiByteSequence);
 				if (mbChar != null) {
 					_lineOffset--;
 					isMultiByteCharacter = true;
-					return mbChar;
+					for (int i = 0; i < mbChar.Length; i++) {
+						result[i] = mbChar[i];
+					}
+					return mbChar.Length;
 				}
 				else if (!isMultiByteSequence) {
 					throw new InvalidOperationException("Internal state corruption");
 				}
 				else {
-					return null;
+					return 0;
 				}
 			}
 			else {
 				if (b == '\t' || b == '\r' || b == '\n') {
-					return new char[1] { (char)b };
+					result[0] = (char)b;
+					return 1;
 				}
 				else if (b >= 0 && b <= 0x1f) {
 					// C0 control block
@@ -53,7 +57,8 @@ namespace IonKiwi.Json {
 				}
 				else if (b == 0x85) {
 					// NEL (newline)
-					return new char[1] { (char)b };
+					result[0] = (char)b;
+					return 1;
 				}
 				else if (b >= 0x80 && b <= 0x9F) {
 					// C1 control block
@@ -66,7 +71,7 @@ namespace IonKiwi.Json {
 					state.MultiByteSequenceLength = 2;
 					state.MultiByteIndex = 1;
 					_lineOffset++;
-					return null;
+					return 0;
 				}
 				else if ((b & 0xF0) == 0xE0) {
 					state.IsMultiByteSequence = isMultiByteSequence = true;
@@ -75,7 +80,7 @@ namespace IonKiwi.Json {
 					state.MultiByteSequenceLength = 3;
 					state.MultiByteIndex = 1;
 					_lineOffset++;
-					return null;
+					return 0;
 				}
 				else if ((b & 0xF8) == 0xF0) {
 					state.IsMultiByteSequence = isMultiByteSequence = true;
@@ -84,7 +89,7 @@ namespace IonKiwi.Json {
 					state.MultiByteSequenceLength = 4;
 					state.MultiByteIndex = 1;
 					_lineOffset++;
-					return null;
+					return 0;
 				}
 				else if ((b & 0xFC) == 0xF8) {
 					state.IsMultiByteSequence = isMultiByteSequence = true;
@@ -93,7 +98,7 @@ namespace IonKiwi.Json {
 					state.MultiByteSequenceLength = 5;
 					state.MultiByteIndex = 1;
 					_lineOffset++;
-					return null;
+					return 0;
 				}
 				else if ((b & 0xFE) == 0xFC) {
 					state.IsMultiByteSequence = isMultiByteSequence = true;
@@ -102,15 +107,17 @@ namespace IonKiwi.Json {
 					state.MultiByteSequenceLength = 6;
 					state.MultiByteIndex = 1;
 					_lineOffset++;
-					return null;
+					return 0;
 				}
 				else if (b == 0xFE || b == 0xFF || b == 0xEF || b == 0xBB || b == 0xBF) {
 					// BOM
-					return new char[1] { (char)b };
+					result[0] = (char)b;
+					return 1;
 				}
 				else if (b >= 0x00 && b <= 0x7F) {
 					// reamaining normal single byte => accept
-					return new char[1] { (char)b };
+					result[0] = (char)b;
+					return 1;
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -258,7 +265,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		private char[] GetCharacterFromEscapeSequence(JsonInternalState state, char c, bool isMultiByteCharacter, ref JsonInternalEscapeToken escapeToken) {
+		private int GetCharacterFromEscapeSequence(JsonInternalState state, char c, ref char[] result, bool isMultiByteCharacter, ref JsonInternalEscapeToken escapeToken) {
 			if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicode) {
 				if (isMultiByteCharacter) {
 					throw new UnexpectedDataException();
@@ -268,14 +275,14 @@ namespace IonKiwi.Json {
 					state.MultiByteSequenceLength = 8;
 					state.MultiByteSequence = new byte[8];
 					state.MultiByteIndex = 0;
-					return null;
+					return 0;
 				}
 				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || c >= 'A' && c <= 'Z') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicodeHex;
 					state.MultiByteSequenceLength = 4;
 					state.MultiByteSequence = new byte[4];
 					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
-					return null;
+					return 0;
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -288,7 +295,7 @@ namespace IonKiwi.Json {
 				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
 					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
 					if (state.MultiByteIndex < state.MultiByteSequenceLength) {
-						return null;
+						return 0;
 					}
 					int v = GetByte(state.MultiByteSequence[0], out _) << 12;
 					v |= GetByte(state.MultiByteSequence[1], out _) << 8;
@@ -305,7 +312,7 @@ namespace IonKiwi.Json {
 						state.MultiByteSequence[2] = tmp[2];
 						state.MultiByteSequence[3] = tmp[3];
 						state.MultiByteIndex = 4;
-						return null;
+						return 0;
 					}
 					// low/trail surrogate
 					else if (v >= 0xDC00 && v <= 0xDFFF) {
@@ -314,7 +321,10 @@ namespace IonKiwi.Json {
 
 					var utf16 = Char.ConvertFromUtf32(v);
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return utf16.ToCharArray();
+					for (int i = 0; i < utf16.Length; i++) {
+						result[i] = utf16[i];
+					}
+					return utf16.Length;
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -329,19 +339,19 @@ namespace IonKiwi.Json {
 						throw new UnexpectedDataException("Expected unicode escape sequence for low surrogate");
 					}
 					state.MultiByteIndex++;
-					return null;
+					return 0;
 				}
 				else if (state.MultiByteIndex == 5) {
 					if (c != 'u') {
 						throw new UnexpectedDataException("Expected unicode escape sequence for low surrogate");
 					}
 					state.MultiByteIndex++;
-					return null;
+					return 0;
 				}
 				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
 					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
 					if (state.MultiByteIndex < state.MultiByteSequenceLength) {
-						return null;
+						return 0;
 					}
 
 					int v1 = GetByte(state.MultiByteSequence[0], out _) << 12;
@@ -361,7 +371,10 @@ namespace IonKiwi.Json {
 					int utf16v = (v1 - 0xD800) * 0x400 + v2 - 0xDC00 + 0x10000;
 					var utf16 = Char.ConvertFromUtf32(utf16v);
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return utf16.ToCharArray();
+					for (int i = 0; i < utf16.Length; i++) {
+						result[i] = utf16[i];
+					}
+					return utf16.Length;
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -382,7 +395,10 @@ namespace IonKiwi.Json {
 					v |= GetByte(state.MultiByteSequence[state.MultiByteIndex - 1], out _);
 					var utf16 = Char.ConvertFromUtf32(v);
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return utf16.ToCharArray();
+					for (int i = 0; i < utf16.Length; i++) {
+						result[i] = utf16[i];
+					}
+					return utf16.Length;
 				}
 				else {
 					if (state.MultiByteIndex == state.MultiByteSequenceLength) {
@@ -390,7 +406,7 @@ namespace IonKiwi.Json {
 					}
 					if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || c >= 'A' && c <= 'Z') {
 						state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
-						return null;
+						return 0;
 					}
 					else {
 						throw new UnexpectedDataException();
@@ -404,13 +420,16 @@ namespace IonKiwi.Json {
 				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
 					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
 					if (state.MultiByteIndex < state.MultiByteSequenceLength) {
-						return null;
+						return 0;
 					}
 					int v = GetByte(state.MultiByteSequence[0], out _) << 4;
 					v |= GetByte(state.MultiByteSequence[1], out _);
 					var utf16 = Char.ConvertFromUtf32(v);
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return utf16.ToCharArray();
+					for (int i = 0; i < utf16.Length; i++) {
+						result[i] = utf16[i];
+					}
+					return utf16.Length;
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -419,58 +438,69 @@ namespace IonKiwi.Json {
 			else if (escapeToken == JsonInternalEscapeToken.Detect) {
 				if (c == 'u') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicode;
-					return null;
+					return 0;
 				}
 				else if (c == 'x') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceHex;
 					state.MultiByteSequenceLength = 2;
 					state.MultiByteSequence = new byte[2];
 					state.MultiByteIndex = 0;
-					return null;
+					return 0;
 				}
 				else if (c == '\'') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '\'' };
+					result[0] = '\'';
+					return 1;
 				}
 				else if (c == '"') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '"' };
+					result[0] = '"';
+					return 1;
 				}
 				else if (c == '\\') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '\\' };
+					result[0] = '\\';
+					return 1;
 				}
 				else if (c == 'b') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '\b' };
+					result[0] = '\b';
+					return 1;
 				}
 				else if (c == 'f') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '\f' };
+					result[0] = '\f';
+					return 1;
 				}
 				else if (c == 'n') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '\n' };
+					result[0] = '\n';
+					return 1;
 				}
 				else if (c == 'r') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '\r' };
+					result[0] = '\r';
+					return 1;
 				}
 				else if (c == 't') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '\t' };
+					result[0] = '\t';
+					return 1;
 				}
 				else if (c == 'v') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '\v' };
+					result[0] = '\v';
+					return 1;
 				}
 				else if (c == '0') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { '\0' };
+					result[0] = '\0';
+					return 1;
 				}
 				else {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
-					return new char[1] { c };
+					result[0] = c;
+					return 1;
 				}
 			}
 			else {

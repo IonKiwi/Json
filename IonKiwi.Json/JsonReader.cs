@@ -192,6 +192,7 @@ namespace IonKiwi.Json {
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			var isMultiByteSequence = state.IsMultiByteSequence;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
@@ -302,20 +303,20 @@ namespace IonKiwi.Json {
 					}
 				}
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
-				else if (cc.Length > 1) {
+				else if (cl > 1) {
 					if (currentToken == JsonInternalRootToken.CarriageReturn) {
 						_lineIndex++;
-						_lineOffset = cc.Length;
+						_lineOffset = cl;
 						state.Token = currentToken = JsonInternalRootToken.None;
 					}
 					throw new UnexpectedDataException();
 				}
 
-				_lineOffset += cc.Length;
+				_lineOffset += cl;
 				Char c = cc[0];
 
 				if (currentToken == JsonInternalRootToken.CarriageReturn) {
@@ -374,26 +375,27 @@ namespace IonKiwi.Json {
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool expectUnicodeEscapeSequence = state.ExpectUnicodeEscapeSequence;
 			var escapeToken = state.EscapeToken;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
 
-				_lineOffset += cc.Length;
-				if (cc.Length > 1) {
+				_lineOffset += cl;
+				if (cl > 1) {
 					if (isCarriageReturn) {
 						_lineIndex++;
-						_lineOffset = cc.Length;
+						_lineOffset = cl;
 						state.IsCarriageReturn = isCarriageReturn = false;
 					}
 
 					if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier) {
-						state.CurrentProperty.Append(cc);
+						for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
 						continue;
 					}
 					//else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
@@ -471,13 +473,13 @@ namespace IonKiwi.Json {
 
 				bool isEscapeSequence = false;
 				if (escapeToken != JsonInternalEscapeToken.None) {
-					var cu = GetCharacterFromEscapeSequence(state, c, isMultiByteCharacter, ref escapeToken);
-					if (cu == null) {
+					cl = GetCharacterFromEscapeSequence(state, c, ref cc, isMultiByteCharacter, ref escapeToken);
+					if (cl == 0) {
 						continue;
 					}
-					if (cu.Length > 1) {
+					if (cl > 1) {
 						if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier) {
-							state.CurrentProperty.Append(cc);
+							for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
 							continue;
 						}
 						//else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
@@ -486,7 +488,7 @@ namespace IonKiwi.Json {
 						//}
 						throw new UnexpectedDataException();
 					}
-					c = cu[0];
+					c = cc[0];
 					isEscapeSequence = true;
 				}
 
@@ -636,21 +638,22 @@ namespace IonKiwi.Json {
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
 
-				_lineOffset += cc.Length;
-				if (cc.Length > 1) {
+				_lineOffset += cl;
+				if (cl > 1) {
 					if (isCarriageReturn) {
 						_lineIndex++;
-						_lineOffset = cc.Length;
+						_lineOffset = cl;
 						state.IsCarriageReturn = isCarriageReturn = false;
 					}
 					throw new UnexpectedDataException();
@@ -728,18 +731,19 @@ namespace IonKiwi.Json {
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
 
-				_lineOffset += cc.Length;
-				if (cc.Length > 1) {
+				_lineOffset += cl;
+				if (cl > 1) {
 					throw new UnexpectedDataException();
 				}
 				Char c = cc[0];
@@ -844,24 +848,25 @@ namespace IonKiwi.Json {
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			var escapeToken = state.EscapeToken;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
 
-				_lineOffset += cc.Length;
-				if (cc.Length > 1) {
+				_lineOffset += cl;
+				if (cl > 1) {
 					if (isCarriageReturn) {
 						_lineIndex++;
-						_lineOffset = cc.Length;
+						_lineOffset = cl;
 						state.IsCarriageReturn = isCarriageReturn = false;
 					}
-					state.Data.Append(cc);
+					for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
 					continue;
 				}
 				Char c = cc[0];
@@ -914,15 +919,15 @@ namespace IonKiwi.Json {
 
 				bool isEscapeSequence = false;
 				if (escapeToken != JsonInternalEscapeToken.None) {
-					var cu = GetCharacterFromEscapeSequence(state, c, isMultiByteCharacter, ref escapeToken);
-					if (cu == null) {
+					cl = GetCharacterFromEscapeSequence(state, c, ref cc, isMultiByteCharacter, ref escapeToken);
+					if (cl == 0) {
 						continue;
 					}
-					if (cu.Length > 1) {
-						state.Data.Append(cu);
+					if (cl > 1) {
+						for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
 						continue;
 					}
-					c = cu[0];
+					c = cc[0];
 					isEscapeSequence = true;
 				}
 
@@ -952,24 +957,25 @@ namespace IonKiwi.Json {
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			var escapeToken = state.EscapeToken;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
 
-				_lineOffset += cc.Length;
-				if (cc.Length > 1) {
+				_lineOffset += cl;
+				if (cl > 1) {
 					if (isCarriageReturn) {
 						_lineIndex++;
-						_lineOffset = cc.Length;
+						_lineOffset = cl;
 						state.IsCarriageReturn = isCarriageReturn = false;
 					}
-					state.Data.Append(cc);
+					for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
 					continue;
 				}
 				Char c = cc[0];
@@ -1022,15 +1028,15 @@ namespace IonKiwi.Json {
 
 				bool isEscapeSequence = false;
 				if (escapeToken != JsonInternalEscapeToken.None) {
-					var cu = GetCharacterFromEscapeSequence(state, c, isMultiByteCharacter, ref escapeToken);
-					if (cu == null) {
+					cl = GetCharacterFromEscapeSequence(state, c, ref cc, isMultiByteCharacter, ref escapeToken);
+					if (cl == 0) {
 						continue;
 					}
-					if (cu.Length > 1) {
-						state.Data.Append(cu);
+					if (cl > 1) {
+						for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
 						continue;
 					}
-					c = cu[0];
+					c = cc[0];
 					isEscapeSequence = true;
 				}
 
@@ -1074,18 +1080,19 @@ namespace IonKiwi.Json {
 
 			var currentToken = state.Token;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
 
-				_lineOffset += cc.Length;
-				if (cc.Length > 1) {
+				_lineOffset += cl;
+				if (cl > 1) {
 					throw new UnexpectedDataException();
 				}
 				Char c = cc[0];
@@ -1315,18 +1322,19 @@ namespace IonKiwi.Json {
 			}
 
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
 
-				_lineOffset += cc.Length;
-				if (cc.Length > 1) {
+				_lineOffset += cl;
+				if (cl > 1) {
 					throw new UnexpectedDataException();
 				}
 				Char c = cc[0];
@@ -1363,18 +1371,19 @@ namespace IonKiwi.Json {
 			}
 
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
 
-				_lineOffset += cc.Length;
-				if (cc.Length > 1) {
+				_lineOffset += cl;
+				if (cl > 1) {
 					throw new UnexpectedDataException();
 				}
 				Char c = cc[0];
@@ -1411,18 +1420,19 @@ namespace IonKiwi.Json {
 			}
 
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
 				byte bb = block[i];
 				int remaining = l - i - 1;
 
-				var cc = GetCharacterFromUtf8(state, bb, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cc == null) {
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
 					continue;
 				}
 
-				_lineOffset += cc.Length;
-				if (cc.Length > 1) {
+				_lineOffset += cl;
+				if (cl > 1) {
 					throw new UnexpectedDataException();
 				}
 				Char c = cc[0];
