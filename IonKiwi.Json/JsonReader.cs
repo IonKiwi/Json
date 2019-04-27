@@ -100,9 +100,7 @@ namespace IonKiwi.Json {
 						// special handling for numbers
 						var state = _currentState.Peek();
 						if (state is JsonInternalNumberState numberState && !numberState.IsComplete) {
-							ValidateNumberState(numberState);
-							numberState.IsComplete = true;
-							return JsonToken.Number;
+							return HandleEndOfFileNumber(numberState);
 						}
 						throw new MoreDataExpectedException();
 					}
@@ -120,9 +118,7 @@ namespace IonKiwi.Json {
 						// special handling for numbers
 						var state = _currentState.Peek();
 						if (state is JsonInternalNumberState numberState && !numberState.IsComplete) {
-							ValidateNumberState(numberState);
-							numberState.IsComplete = true;
-							return JsonToken.Number;
+							return HandleEndOfFileNumber(numberState);
 						}
 						throw new MoreDataExpectedException();
 					}
@@ -957,6 +953,12 @@ namespace IonKiwi.Json {
 			else if (state.Token == JsonInternalNumberToken.Exponent && !state.ExponentType.HasValue) {
 				throw new UnexpectedDataException();
 			}
+		}
+
+		private JsonToken HandleEndOfFileNumber(JsonInternalNumberState state) {
+			ValidateNumberState(state);
+			state.IsComplete = true;
+			return JsonToken.Number;
 		}
 
 		private bool HandleNumberState(JsonInternalNumberState state, Span<byte> block, out JsonToken token) {
