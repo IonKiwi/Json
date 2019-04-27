@@ -66,6 +66,7 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal(".property1", reader.GetPath());
 			Assert.Equal(15, reader.CharacterPosition);
 			Assert.Equal(2, reader.LineNumber);
+			Assert.Equal("property1", reader.GetValue());
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.String, token);
@@ -73,6 +74,7 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal(".property1", reader.GetPath());
 			Assert.Equal(24, reader.CharacterPosition);
 			Assert.Equal(2, reader.LineNumber);
+			Assert.Equal("value1", reader.GetValue());
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ObjectEnd, token);
@@ -108,6 +110,7 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal("", reader.GetPath());
 			Assert.Equal(3, reader.CharacterPosition);
 			Assert.Equal(1, reader.LineNumber);
+			Assert.Equal("42", reader.GetValue());
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.None, token);
@@ -140,6 +143,9 @@ namespace IonKiwi.Json.Test {
 				sb.AppendLine("Assert.Equal(\"" + reader.GetPath().Replace("\"", "\\\"") + "\", reader.GetPath());");
 				sb.AppendLine("Assert.Equal(" + reader.CharacterPosition.ToString(CultureInfo.InvariantCulture) + ", reader.CharacterPosition);");
 				sb.AppendLine("Assert.Equal(" + reader.LineNumber.ToString(CultureInfo.InvariantCulture) + ", reader.LineNumber);");
+				if (JsonReader.IsValueToken(token) || token == JsonToken.ObjectProperty) {
+					sb.AppendLine("Assert.Equal(\"" + reader.GetValue().Replace("\"", "\\\"") + "\", reader.GetValue());");
+				}
 
 				if (token == JsonToken.None) {
 					break;

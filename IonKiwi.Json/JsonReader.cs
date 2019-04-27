@@ -52,9 +52,16 @@ namespace IonKiwi.Json {
 				}
 				return stringState.Data.ToString();
 			}
+			else if (state is JsonInternalObjectPropertyState propertyState) {
+				return propertyState.PropertyName;
+			}
 			else {
 				throw new InvalidOperationException();
 			}
+		}
+
+		public static bool IsValueToken(JsonToken token) {
+			return token == JsonToken.String || token == JsonToken.Number || token == JsonToken.Boolean || token == JsonToken.Null;
 		}
 
 		public string GetPath() {
