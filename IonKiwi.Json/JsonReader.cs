@@ -78,6 +78,9 @@ namespace IonKiwi.Json {
 				}
 				state = state.Parent;
 			}
+			if (sb.Length > 0 && sb[0] == '.') {
+				sb.Remove(0, 1);
+			}
 			return sb.ToString();
 		}
 
@@ -834,6 +837,11 @@ namespace IonKiwi.Json {
 
 		private bool HandleDoubleQuotedStringState(JsonInternalDoubleQuotedStringState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
+			if (state.IsComplete) {
+				_currentState.Pop();
+				return false;
+			}
+
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			var escapeToken = state.EscapeToken;
