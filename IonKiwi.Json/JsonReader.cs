@@ -846,6 +846,10 @@ namespace IonKiwi.Json {
 					state.Data.Append(c);
 					continue;
 				}
+				else if (c == '\\') {
+					escapeToken = JsonInternalEscapeToken.Detect;
+					continue;
+				}
 
 				bool isEscapeSequence = false;
 				if (escapeToken != JsonInternalEscapeToken.None) {
@@ -934,6 +938,10 @@ namespace IonKiwi.Json {
 					_lineIndex++;
 					_lineOffset = 0;
 					state.Data.Append(c);
+					continue;
+				}
+				else if (c == '\\') {
+					escapeToken = JsonInternalEscapeToken.Detect;
 					continue;
 				}
 
