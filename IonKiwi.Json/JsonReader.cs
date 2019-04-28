@@ -969,15 +969,17 @@ namespace IonKiwi.Json {
 					_lineIndex++;
 					_lineOffset = 0;
 					state.IsCarriageReturn = isCarriageReturn = false;
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 
 					if (c == '\n') {
-						state.Data.Append(c);
 						continue;
 					}
 					_lineOffset = 1;
 				}
 				else if (c == '\r') {
-					state.Data.Append(c);
+					if (escapeToken != JsonInternalEscapeToken.Detect) {
+						throw new UnexpectedDataException();
+					}
 
 					if (remaining > 0) {
 						if (block[i + 1] == '\n') {
@@ -986,6 +988,7 @@ namespace IonKiwi.Json {
 
 						_lineIndex++;
 						_lineOffset = 0;
+						state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 						continue;
 					}
 					else {
@@ -996,13 +999,16 @@ namespace IonKiwi.Json {
 					}
 				}
 				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
+					if (escapeToken != JsonInternalEscapeToken.Detect) {
+						throw new UnexpectedDataException();
+					}
 					_lineIndex++;
 					_lineOffset = 0;
-					state.Data.Append(c);
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					continue;
 				}
 				else if (c == '\\' && escapeToken == JsonInternalEscapeToken.None) {
-					escapeToken = JsonInternalEscapeToken.Detect;
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.Detect;
 					continue;
 				}
 
@@ -1078,15 +1084,17 @@ namespace IonKiwi.Json {
 					_lineIndex++;
 					_lineOffset = 0;
 					state.IsCarriageReturn = isCarriageReturn = false;
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 
 					if (c == '\n') {
-						state.Data.Append(c);
 						continue;
 					}
 					_lineOffset = 1;
 				}
 				else if (c == '\r') {
-					state.Data.Append(c);
+					if (escapeToken != JsonInternalEscapeToken.Detect) {
+						throw new UnexpectedDataException();
+					}
 
 					if (remaining > 0) {
 						if (block[i + 1] == '\n') {
@@ -1095,6 +1103,7 @@ namespace IonKiwi.Json {
 
 						_lineIndex++;
 						_lineOffset = 0;
+						state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 						continue;
 					}
 					else {
@@ -1105,13 +1114,16 @@ namespace IonKiwi.Json {
 					}
 				}
 				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
+					if (escapeToken != JsonInternalEscapeToken.Detect) {
+						throw new UnexpectedDataException();
+					}
 					_lineIndex++;
 					_lineOffset = 0;
-					state.Data.Append(c);
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					continue;
 				}
 				else if (c == '\\' && escapeToken == JsonInternalEscapeToken.None) {
-					escapeToken = JsonInternalEscapeToken.Detect;
+					state.EscapeToken = escapeToken = JsonInternalEscapeToken.Detect;
 					continue;
 				}
 
