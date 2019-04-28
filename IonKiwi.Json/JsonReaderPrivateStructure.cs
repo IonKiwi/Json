@@ -9,6 +9,7 @@ namespace IonKiwi.Json {
 			None,
 			ByteOrderMark,
 			CarriageReturn,
+			ForwardSlash,
 		}
 
 		private enum JsonInternalObjectToken {
@@ -83,6 +84,7 @@ namespace IonKiwi.Json {
 		private sealed class JsonInternalObjectState : JsonInternalState {
 			public JsonInternalObjectToken Token = JsonInternalObjectToken.BeforeProperty;
 			public bool IsCarriageReturn;
+			public bool IsForwardSlash;
 			public bool ExpectUnicodeEscapeSequence;
 			public StringBuilder CurrentProperty = new StringBuilder();
 			public Dictionary<string, JsonInternalObjectPropertyState> Properties = new Dictionary<string, JsonInternalObjectPropertyState>(StringComparer.Ordinal);
@@ -92,6 +94,7 @@ namespace IonKiwi.Json {
 			public JsonInternalObjectPropertyToken Token = JsonInternalObjectPropertyToken.BeforeValue;
 			public string PropertyName;
 			public bool IsCarriageReturn;
+			public bool IsForwardSlash;
 		}
 
 		private sealed class JsonInternalArrayState : JsonInternalState {
@@ -101,6 +104,14 @@ namespace IonKiwi.Json {
 		private abstract class JsonInternalStringState : JsonInternalState {
 			public bool IsComplete;
 			public StringBuilder Data = new StringBuilder();
+		}
+
+		private sealed class JsonInternalSingleLineCommentState : JsonInternalStringState {
+
+		}
+
+		private sealed class JsonInternalMultiLineCommentState : JsonInternalStringState {
+			public bool IsAsterisk;
 		}
 
 		private sealed class JsonInternalSingleQuotedStringState : JsonInternalStringState {
@@ -115,6 +126,7 @@ namespace IonKiwi.Json {
 			public JsonInternalArrayItemToken Token = JsonInternalArrayItemToken.BeforeValue;
 			public int Index;
 			public bool IsCarriageReturn;
+			public bool IsForwardSlash;
 		}
 
 		private sealed class JsonInternalNumberState : JsonInternalStringState {
@@ -123,18 +135,19 @@ namespace IonKiwi.Json {
 			public bool AfterDot;
 			public bool IsExponent;
 			public bool? ExponentType;
+			public bool IsForwardSlash;
 		}
 
 		private sealed class JsonInternalNullState : JsonInternalStringState {
-
+			public bool IsForwardSlash;
 		}
 
 		private sealed class JsonInternalTrueState : JsonInternalStringState {
-
+			public bool IsForwardSlash;
 		}
 
 		private sealed class JsonInternalFalseState : JsonInternalStringState {
-
+			public bool IsForwardSlash;
 		}
 	}
 }

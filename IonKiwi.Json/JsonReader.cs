@@ -183,6 +183,12 @@ namespace IonKiwi.Json {
 			else if (state is JsonInternalFalseState falseState) {
 				return HandleFalseState(falseState, block, out token);
 			}
+			else if (state is JsonInternalSingleLineCommentState commentState1) {
+				return HandleSingleLineCommentState(commentState1, block, out token);
+			}
+			else if (state is JsonInternalMultiLineCommentState commentState2) {
+				return HandleMultiLineCommentState(commentState2, block, out token);
+			}
 			else {
 				throw new InvalidOperationException(state.GetType().FullName);
 			}
@@ -334,6 +340,22 @@ namespace IonKiwi.Json {
 					}
 					_lineOffset = 1;
 				}
+				else if (currentToken == JsonInternalRootToken.ForwardSlash) {
+					state.Token = currentToken = JsonInternalRootToken.None;
+					if (c == '*') {
+						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					else if (c == '/') {
+						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					throw new UnexpectedDataException();
+				}
 				else if (c == '\r') {
 					if (remaining > 0) {
 						if (block[i + 1] == '\n') {
@@ -356,6 +378,10 @@ namespace IonKiwi.Json {
 					_lineOffset = 0;
 					continue;
 				}
+				else if (c == '/') {
+					state.Token = currentToken = JsonInternalRootToken.ForwardSlash;
+					continue;
+				}
 
 				if (HandleNonePosition(state, c, ref token)) {
 					_offset += i + 1;
@@ -372,6 +398,7 @@ namespace IonKiwi.Json {
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
+			bool isForwardSlash = state.IsForwardSlash;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool expectUnicodeEscapeSequence = state.ExpectUnicodeEscapeSequence;
 			var escapeToken = state.EscapeToken;
@@ -427,6 +454,22 @@ namespace IonKiwi.Json {
 					}
 					_lineOffset = 1;
 				}
+				else if (isForwardSlash) {
+					state.IsForwardSlash = isForwardSlash = false;
+					if (c == '*') {
+						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					else if (c == '/') {
+						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					throw new UnexpectedDataException();
+				}
 				else if (c == '\r') {
 					if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier) {
 						state.CurrentProperty.Append(c);
@@ -460,6 +503,10 @@ namespace IonKiwi.Json {
 					else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
 						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
 					}
+					continue;
+				}
+				else if (c == '/') {
+					state.IsForwardSlash = isForwardSlash = true;
 					continue;
 				}
 				else if (expectUnicodeEscapeSequence) {
@@ -638,6 +685,7 @@ namespace IonKiwi.Json {
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			bool isForwardSlash = state.IsForwardSlash;
 			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
@@ -675,6 +723,22 @@ namespace IonKiwi.Json {
 					}
 					_lineOffset = 1;
 				}
+				else if (isForwardSlash) {
+					state.IsForwardSlash = isForwardSlash = false;
+					if (c == '*') {
+						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					else if (c == '/') {
+						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					throw new UnexpectedDataException();
+				}
 				else if (c == '\r') {
 					if (remaining > 0) {
 						if (block[i + 1] == '\n') {
@@ -695,6 +759,10 @@ namespace IonKiwi.Json {
 				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
 					_lineIndex++;
 					_lineOffset = 0;
+					continue;
+				}
+				else if (c == '/') {
+					state.IsForwardSlash = isForwardSlash = true;
 					continue;
 				}
 
@@ -731,6 +799,7 @@ namespace IonKiwi.Json {
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			bool isForwardSlash = state.IsForwardSlash;
 			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
@@ -763,6 +832,22 @@ namespace IonKiwi.Json {
 					}
 					_lineOffset = 1;
 				}
+				else if (isForwardSlash) {
+					state.IsForwardSlash = isForwardSlash = false;
+					if (c == '*') {
+						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					else if (c == '/') {
+						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					throw new UnexpectedDataException();
+				}
 				else if (c == '\r') {
 					if (remaining > 0) {
 						if (block[i + 1] == '\n') {
@@ -783,6 +868,10 @@ namespace IonKiwi.Json {
 				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
 					_lineIndex++;
 					_lineOffset = 0;
+					continue;
+				}
+				else if (c == '/') {
+					state.IsForwardSlash = isForwardSlash = true;
 					continue;
 				}
 
@@ -1080,6 +1169,7 @@ namespace IonKiwi.Json {
 
 			var currentToken = state.Token;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			bool isForwardSlash = state.IsForwardSlash;
 			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
@@ -1098,7 +1188,23 @@ namespace IonKiwi.Json {
 				Char c = cc[0];
 
 				// white-space
-				if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == '\uFEFF' || c == '\r' || c == '\n' || c == '\u2028' || c == '\u2029') {
+				if (isForwardSlash) {
+					state.IsForwardSlash = isForwardSlash = false;
+					if (c == '*') {
+						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					else if (c == '/') {
+						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					throw new UnexpectedDataException();
+				}
+				else if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == '\uFEFF' || c == '\r' || c == '\n' || c == '\u2028' || c == '\u2029') {
 					ValidateNumberState(state);
 					state.IsComplete = true;
 					_offset += i;
@@ -1112,6 +1218,10 @@ namespace IonKiwi.Json {
 					_offset += i;
 					token = JsonToken.Number;
 					return true;
+				}
+				else if (c == '/') {
+					state.IsForwardSlash = isForwardSlash = true;
+					continue;
 				}
 				else if (currentToken == JsonInternalNumberToken.Dot) {
 					if (c >= '0' && c <= '9') {
@@ -1322,6 +1432,7 @@ namespace IonKiwi.Json {
 			}
 
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			bool isForwardSlash = state.IsForwardSlash;
 			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
@@ -1339,7 +1450,23 @@ namespace IonKiwi.Json {
 				}
 				Char c = cc[0];
 
-				if (c == 'u' && state.Data.Length == 1) {
+				if (isForwardSlash) {
+					state.IsForwardSlash = isForwardSlash = false;
+					if (c == '*') {
+						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					else if (c == '/') {
+						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					throw new UnexpectedDataException();
+				}
+				else if (c == 'u' && state.Data.Length == 1) {
 					state.Data.Append(c);
 					continue;
 				}
@@ -1351,7 +1478,12 @@ namespace IonKiwi.Json {
 					state.Data.Append(c);
 					state.IsComplete = true;
 					token = JsonToken.Null;
+					_offset += i + 1;
 					return true;
+				}
+				else if (c == '/') {
+					state.IsForwardSlash = isForwardSlash = true;
+					continue;
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -1371,6 +1503,7 @@ namespace IonKiwi.Json {
 			}
 
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			bool isForwardSlash = state.IsForwardSlash;
 			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
@@ -1388,7 +1521,23 @@ namespace IonKiwi.Json {
 				}
 				Char c = cc[0];
 
-				if (c == 'r' && state.Data.Length == 1) {
+				if (isForwardSlash) {
+					state.IsForwardSlash = isForwardSlash = false;
+					if (c == '*') {
+						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					else if (c == '/') {
+						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					throw new UnexpectedDataException();
+				}
+				else if (c == 'r' && state.Data.Length == 1) {
 					state.Data.Append(c);
 					continue;
 				}
@@ -1400,7 +1549,12 @@ namespace IonKiwi.Json {
 					state.Data.Append(c);
 					state.IsComplete = true;
 					token = JsonToken.Null;
+					_offset += i + 1;
 					return true;
+				}
+				else if (c == '/') {
+					state.IsForwardSlash = isForwardSlash = true;
+					continue;
 				}
 				else {
 					throw new UnexpectedDataException();
@@ -1420,6 +1574,7 @@ namespace IonKiwi.Json {
 			}
 
 			bool isMultiByteSequence = state.IsMultiByteSequence;
+			bool isForwardSlash = state.IsForwardSlash;
 			var cc = new char[2];
 
 			for (int i = 0, l = block.Length; i < l; i++) {
@@ -1437,7 +1592,23 @@ namespace IonKiwi.Json {
 				}
 				Char c = cc[0];
 
-				if (c == 'a' && state.Data.Length == 1) {
+				if (isForwardSlash) {
+					state.IsForwardSlash = isForwardSlash = false;
+					if (c == '*') {
+						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					else if (c == '/') {
+						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return false;
+					}
+					throw new UnexpectedDataException();
+				}
+				else if (c == 'a' && state.Data.Length == 1) {
 					state.Data.Append(c);
 					continue;
 				}
@@ -1453,10 +1624,108 @@ namespace IonKiwi.Json {
 					state.Data.Append(c);
 					state.IsComplete = true;
 					token = JsonToken.Null;
+					_offset += i + 1;
 					return true;
+				}
+				else if (c == '/') {
+					state.IsForwardSlash = isForwardSlash = true;
+					continue;
 				}
 				else {
 					throw new UnexpectedDataException();
+				}
+			}
+
+			// need more data
+			_offset += block.Length;
+			return false;
+		}
+
+		private bool HandleSingleLineCommentState(JsonInternalSingleLineCommentState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			if (state.IsComplete) {
+				_currentState.Pop();
+				return false;
+			}
+
+			bool isMultiByteSequence = state.IsMultiByteSequence;
+			var cc = new char[2];
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
+					continue;
+				}
+
+				_lineOffset += cl;
+				if (cl > 1) {
+					for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
+					continue;
+				}
+				Char c = cc[0];
+
+				if (c == '\r' || c == '\n' || c == '\u2028' || c == '\u2029') {
+					state.IsComplete = true;
+					token = JsonToken.Comment;
+					_offset += i;
+					return true;
+				}
+				else {
+					state.Data.Append(c);
+				}
+			}
+
+			// need more data
+			_offset += block.Length;
+			return false;
+		}
+
+		private bool HandleMultiLineCommentState(JsonInternalMultiLineCommentState state, Span<byte> block, out JsonToken token) {
+			token = JsonToken.None;
+			if (state.IsComplete) {
+				_currentState.Pop();
+				return false;
+			}
+
+			bool isMultiByteSequence = state.IsMultiByteSequence;
+			bool isAsterisk = state.IsAsterisk;
+			var cc = new char[2];
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
+					continue;
+				}
+
+				_lineOffset += cl;
+				if (cl > 1) {
+					for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
+					continue;
+				}
+				Char c = cc[0];
+
+				if (isAsterisk) {
+					if (c == '/') {
+						state.IsComplete = true;
+						token = JsonToken.Comment;
+						_offset += i + 1;
+						return true;
+					}
+					else {
+						state.IsAsterisk = isAsterisk = false;
+					}
+				}
+
+				if (c == '*') {
+					state.IsAsterisk = isAsterisk = true;
+					continue;
+				}
+				else {
+					state.Data.Append(c);
 				}
 			}
 

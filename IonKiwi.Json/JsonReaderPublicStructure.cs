@@ -18,6 +18,7 @@ namespace IonKiwi.Json {
 			Number,
 			Boolean,
 			Null,
+			Comment,
 		}
 
 		public sealed class MoreDataExpectedException : Exception {
