@@ -73,7 +73,7 @@ namespace IonKiwi.Json {
 						if (!valid) { return false; }
 					}
 					else {
-						valid = UnicodeExtension.ID_Continue(c);
+						valid = UnicodeExtension.ID_Continue(c) || c == '\u200C' || c == '\u200D';
 						if (!valid) { return false; }
 					}
 				}

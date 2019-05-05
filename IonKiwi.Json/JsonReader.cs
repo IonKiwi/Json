@@ -795,7 +795,7 @@ namespace IonKiwi.Json {
 							state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
 							continue;
 						}
-						else if (UnicodeExtension.ID_Continue(c)) {
+						else if (UnicodeExtension.ID_Continue(c) || c == '\u200C' || c == '\u200D') {
 							state.CurrentProperty.Append(c);
 							continue;
 						}
