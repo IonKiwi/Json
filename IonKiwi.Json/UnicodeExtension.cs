@@ -7,10 +7,8 @@ namespace IonKiwi.Json {
 	internal static class UnicodeExtension {
 
 		private static readonly object _lock = new object();
-		private static HashSet<char> _ID_Start1 = new HashSet<char>();
-		private static Dictionary<char, HashSet<char>> _ID_Start2 = new Dictionary<char, HashSet<char>>();
-		private static HashSet<char> _ID_Continue1 = new HashSet<char>();
-		private static Dictionary<char, HashSet<char>> _ID_Continue2 = new Dictionary<char, HashSet<char>>();
+		private static HashSet<int> _ID_Start = new HashSet<int>();
+		private static HashSet<int> _ID_Continue = new HashSet<int>();
 		private static bool _initialized;
 
 		private static void EnsureInitialized() {
@@ -35,72 +33,20 @@ namespace IonKiwi.Json {
 
 		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
 		private static void InitializeInternal() {
-			HashSet<char> target1 = new HashSet<char>();
-			Dictionary<char, HashSet<char>> target2 = new Dictionary<char, HashSet<char>>();
-			HandleData(GetStringData("ID_Start.bin"), target1, target2);
-			_ID_Start1 = target1;
-			_ID_Start2 = target2;
-			target1 = new HashSet<char>();
-			target2 = new Dictionary<char, HashSet<char>>();
-			HandleData(GetStringData("ID_Continue.bin"), target1, target2);
-			_ID_Continue1 = target1;
-			_ID_Continue2 = target2;
+			_ID_Start = HandleData(GetStringData("ID_Start.bin"));
+			_ID_Continue = HandleData(GetStringData("ID_Continue.bin"));
 		}
 
-		private static void HandleData(Stream input, HashSet<char> target1, Dictionary<char, HashSet<char>> target2) {
-			Span<char> buffer = new char[100];
-			char[] current = new char[2];
-			int index = 0;
-			using (var ID_StartData = input) {
-				using (StreamReader sr = new StreamReader(ID_StartData, Encoding.UTF8, false)) {
-					while (true) {
-						int r = sr.Read(buffer);
-						if (r == 0) {
-							if (index == 1) {
-								target1.Add(current[0]);
-							}
-							else if (index == 2) {
-								if (!target2.TryGetValue(current[0], out var v2)) {
-									v2 = new HashSet<char>();
-									target2.Add(current[0], v2);
-								}
-								v2.Add(current[1]);
-							}
-							else {
-								throw new InvalidOperationException();
-							}
-							break;
-						}
-						for (int i = 0; i < r; i++) {
-							char c = buffer[i];
-							if (c == ',') {
-								if (index == 1) {
-									target1.Add(current[0]);
-								}
-								else if (index == 2) {
-									if (!target2.TryGetValue(current[0], out var v2)) {
-										v2 = new HashSet<char>();
-										target2.Add(current[0], v2);
-									}
-									v2.Add(current[1]);
-								}
-								else {
-									throw new InvalidOperationException();
-								}
-								index = 0;
-							}
-							else {
-								current[index++] = c;
-							}
-						}
-					}
-				}
+		private static HashSet<int> HandleData(Stream input) {
+			using (input) {
+				var bf = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+				return (HashSet<int>)bf.Deserialize(input);
 			}
 		}
 
 		public static bool ID_Start(char c) {
 			EnsureInitialized();
-			return _ID_Start1.Contains(c);
+			return _ID_Start.Contains(c);
 		}
 
 		public static bool ID_Start(char[] c) {
@@ -109,10 +55,11 @@ namespace IonKiwi.Json {
 				throw new ArgumentNullException(nameof(c));
 			}
 			else if (c.Length == 1) {
-				return _ID_Start1.Contains(c[0]);
+				return _ID_Start.Contains(c[0]);
 			}
 			else if (c.Length == 2) {
-				return _ID_Start2.TryGetValue(c[0], out var v2) && v2.Contains(c[1]);
+				int v = Char.ConvertToUtf32(c[0], c[1]);
+				return _ID_Start.Contains(v);
 			}
 			else {
 				throw new InvalidOperationException();
@@ -121,7 +68,7 @@ namespace IonKiwi.Json {
 
 		public static bool ID_Continue(char c) {
 			EnsureInitialized();
-			return _ID_Continue1.Contains(c);
+			return _ID_Continue.Contains(c);
 		}
 
 		public static bool ID_Continue(char[] c) {
@@ -130,10 +77,11 @@ namespace IonKiwi.Json {
 				throw new ArgumentNullException(nameof(c));
 			}
 			else if (c.Length == 1) {
-				return _ID_Continue1.Contains(c[0]);
+				return _ID_Continue.Contains(c[0]);
 			}
 			else if (c.Length == 2) {
-				return _ID_Continue2.TryGetValue(c[0], out var v2) && v2.Contains(c[1]);
+				int v = Char.ConvertToUtf32(c[0], c[1]);
+				return _ID_Continue.Contains(v);
 			}
 			else {
 				throw new InvalidOperationException();
