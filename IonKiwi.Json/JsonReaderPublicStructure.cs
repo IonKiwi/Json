@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
@@ -54,7 +55,7 @@ namespace IonKiwi.Json {
 		}
 
 		public sealed class Utf8ByteArrayInputReader : IInputReader {
-			private readonly byte[] _buffer;
+			private readonly Memory<byte> _buffer;
 			private int _offset;
 
 			public Utf8ByteArrayInputReader(byte[] data) {
@@ -63,14 +64,16 @@ namespace IonKiwi.Json {
 
 			ValueTask<int> IInputReader.ReadBlock(Memory<byte> buffer) {
 				var bs = Math.Min(_buffer.Length - _offset, buffer.Length);
-				_buffer.CopyTo(buffer);
+				var slice = _buffer.Slice(_offset, bs);
+				slice.CopyTo(buffer);
 				_offset += bs;
 				return new ValueTask<int>(bs);
 			}
 
 			int IInputReader.ReadBlockSync(Span<byte> buffer) {
 				var bs = Math.Min(_buffer.Length - _offset, buffer.Length);
-				_buffer.CopyTo(buffer);
+				var slice = _buffer.Slice(_offset, bs);
+				slice.Span.CopyTo(buffer);
 				_offset += bs;
 				return bs;
 			}

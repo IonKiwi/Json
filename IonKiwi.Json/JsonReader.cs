@@ -578,6 +578,11 @@ namespace IonKiwi.Json {
 							state.CurrentProperty.Append(c);
 							continue;
 						}
+						else if (UnicodeExtension.ID_Start(c)) {
+							state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+							state.CurrentProperty.Append(c);
+							continue;
+						}
 						throw new UnexpectedDataException();
 					}
 				}
@@ -643,14 +648,25 @@ namespace IonKiwi.Json {
 				}
 				else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
 					if (c == '\\') {
-						state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+						//state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
 						state.ExpectUnicodeEscapeSequence = expectUnicodeEscapeSequence = true;
 						continue;
 					}
 					else if (c == '$' || c == '_' || isEscapeSequence) {
-						state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+						//state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
 						state.CurrentProperty.Append(c);
 						continue;
+					}
+					else if (c == ':') {
+						// does not necessarily have AfterIdentifier state
+
+						state.Token = currentToken = JsonInternalObjectToken.AfterColon;
+						var newState = new JsonInternalObjectPropertyState() { Parent = state, PropertyName = state.CurrentProperty.ToString() };
+						//state.Properties.Add(newState);
+						_currentState.Push(newState);
+						token = JsonToken.ObjectProperty;
+						_offset += i + 1;
+						return true;
 					}
 					// white-space
 					else if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == '\uFEFF') {
@@ -667,7 +683,12 @@ namespace IonKiwi.Json {
 						// TODO: add ID_Start & ID_Continue
 						var isValidIdentifier = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber;
 						if (isValidIdentifier) {
-							state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+							//state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+							state.CurrentProperty.Append(c);
+							continue;
+						}
+						else if (UnicodeExtension.ID_Continue(c)) {
+							//state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
 							state.CurrentProperty.Append(c);
 							continue;
 						}

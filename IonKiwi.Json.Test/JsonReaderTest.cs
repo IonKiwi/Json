@@ -94,7 +94,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
-		private void TestArray1() {
+		public void TestArray1() {
 			string json = "[0,1,2,3]";
 
 			JsonToken token;
@@ -159,7 +159,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
-		private void TestArray2() {
+		public void TestArray2() {
 			string json = "[0,1,2,3,]";
 
 			JsonToken token;
@@ -224,8 +224,195 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
+		public void TestObject2() {
+			byte[] json = Helper.GetStringData("Object2.js");
+
+			JsonToken token;
+			var reader = new JsonReader(new Utf8ByteArrayInputReader(json));
+			Assert.Equal(0, reader.Depth);
+			Assert.Equal(string.Empty, reader.GetPath());
+			Assert.Equal(1, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectStart, token);
+			Assert.Equal(1, reader.Depth);
+			Assert.Equal("", reader.GetPath());
+			Assert.Equal(2, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectProperty, token);
+			Assert.Equal(2, reader.Depth);
+			Assert.Equal(".value1", reader.GetPath());
+			Assert.Equal(9, reader.CharacterPosition);
+			Assert.Equal(2, reader.LineNumber);
+			Assert.Equal("value1", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.String, token);
+			Assert.Equal(3, reader.Depth);
+			Assert.Equal(".value1", reader.GetPath());
+			Assert.Equal(14, reader.CharacterPosition);
+			Assert.Equal(2, reader.LineNumber);
+			Assert.Equal("v1", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectProperty, token);
+			Assert.Equal(2, reader.Depth);
+			Assert.Equal(".value1value2", reader.GetPath());
+			Assert.Equal(9, reader.CharacterPosition);
+			Assert.Equal(3, reader.LineNumber);
+			Assert.Equal("value1value2", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ArrayStart, token);
+			Assert.Equal(4, reader.Depth);
+			Assert.Equal(".value1value2[0]", reader.GetPath());
+			Assert.Equal(11, reader.CharacterPosition);
+			Assert.Equal(3, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.String, token);
+			Assert.Equal(5, reader.Depth);
+			Assert.Equal(".value1value2[0]", reader.GetPath());
+			Assert.Equal(15, reader.CharacterPosition);
+			Assert.Equal(3, reader.LineNumber);
+			Assert.Equal("v1", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.String, token);
+			Assert.Equal(5, reader.Depth);
+			Assert.Equal(".value1value2[1]", reader.GetPath());
+			Assert.Equal(21, reader.CharacterPosition);
+			Assert.Equal(3, reader.LineNumber);
+			Assert.Equal("v2", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.Number, token);
+			Assert.Equal(5, reader.Depth);
+			Assert.Equal(".value1value2[2]", reader.GetPath());
+			Assert.Equal(26, reader.CharacterPosition);
+			Assert.Equal(3, reader.LineNumber);
+			Assert.Equal("42", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ArrayEnd, token);
+			Assert.Equal(2, reader.Depth);
+			Assert.Equal(".value1value2", reader.GetPath());
+			Assert.Equal(27, reader.CharacterPosition);
+			Assert.Equal(3, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectProperty, token);
+			Assert.Equal(2, reader.Depth);
+			Assert.Equal(".value1value2value3", reader.GetPath());
+			Assert.Equal(9, reader.CharacterPosition);
+			Assert.Equal(4, reader.LineNumber);
+			Assert.Equal("value1value2value3", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectStart, token);
+			Assert.Equal(3, reader.Depth);
+			Assert.Equal(".value1value2value3", reader.GetPath());
+			Assert.Equal(11, reader.CharacterPosition);
+			Assert.Equal(4, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectProperty, token);
+			Assert.Equal(4, reader.Depth);
+			Assert.Equal(".value1value2value3.inner1", reader.GetPath());
+			Assert.Equal(10, reader.CharacterPosition);
+			Assert.Equal(5, reader.LineNumber);
+			Assert.Equal("inner1", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.String, token);
+			Assert.Equal(5, reader.Depth);
+			Assert.Equal(".value1value2value3.inner1", reader.GetPath());
+			Assert.Equal(16, reader.CharacterPosition);
+			Assert.Equal(5, reader.LineNumber);
+			Assert.Equal("abc", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectProperty, token);
+			Assert.Equal(4, reader.Depth);
+			Assert.Equal(".value1value2value3.inner1inner2", reader.GetPath());
+			Assert.Equal(10, reader.CharacterPosition);
+			Assert.Equal(6, reader.LineNumber);
+			Assert.Equal("inner1inner2", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ArrayStart, token);
+			Assert.Equal(6, reader.Depth);
+			Assert.Equal(".value1value2value3.inner1inner2[0]", reader.GetPath());
+			Assert.Equal(12, reader.CharacterPosition);
+			Assert.Equal(6, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.String, token);
+			Assert.Equal(7, reader.Depth);
+			Assert.Equal(".value1value2value3.inner1inner2[0]", reader.GetPath());
+			Assert.Equal(16, reader.CharacterPosition);
+			Assert.Equal(6, reader.LineNumber);
+			Assert.Equal("i1", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.Number, token);
+			Assert.Equal(7, reader.Depth);
+			Assert.Equal(".value1value2value3.inner1inner2[1]", reader.GetPath());
+			Assert.Equal(21, reader.CharacterPosition);
+			Assert.Equal(6, reader.LineNumber);
+			Assert.Equal("42", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ArrayEnd, token);
+			Assert.Equal(4, reader.Depth);
+			Assert.Equal(".value1value2value3.inner1inner2", reader.GetPath());
+			Assert.Equal(22, reader.CharacterPosition);
+			Assert.Equal(6, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectProperty, token);
+			Assert.Equal(4, reader.Depth);
+			Assert.Equal(".value1value2value3.inner1inner2inner3", reader.GetPath());
+			Assert.Equal(10, reader.CharacterPosition);
+			Assert.Equal(7, reader.LineNumber);
+			Assert.Equal("inner1inner2inner3", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.Number, token);
+			Assert.Equal(5, reader.Depth);
+			Assert.Equal(".value1value2value3.inner1inner2inner3", reader.GetPath());
+			Assert.Equal(15, reader.CharacterPosition);
+			Assert.Equal(7, reader.LineNumber);
+			Assert.Equal("42.", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectEnd, token);
+			Assert.Equal(2, reader.Depth);
+			Assert.Equal(".value1value2value3", reader.GetPath());
+			Assert.Equal(4, reader.CharacterPosition);
+			Assert.Equal(8, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ObjectEnd, token);
+			Assert.Equal(0, reader.Depth);
+			Assert.Equal("", reader.GetPath());
+			Assert.Equal(2, reader.CharacterPosition);
+			Assert.Equal(9, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.None, token);
+			Assert.Equal(0, reader.Depth);
+			Assert.Equal("", reader.GetPath());
+			Assert.Equal(2, reader.CharacterPosition);
+			Assert.Equal(9, reader.LineNumber);
+		}
+
+		[Fact]
 		public void CreateTest() {
-			byte[] json = Helper.GetStringData("Array1.json");
+			byte[] json = Helper.GetStringData("Object2.js");
 
 			var reader = new JsonReader(new Utf8ByteArrayInputReader(json));
 

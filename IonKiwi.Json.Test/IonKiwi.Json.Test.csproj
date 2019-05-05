@@ -7,14 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Resources\Array1.json" />
+    <None Remove="Resources\ID_Continue.js" />
+    <None Remove="Resources\ID_Start.js" />
     <None Remove="Resources\Object1.json" />
+    <None Remove="Resources\Object2.js" />
     <None Remove="Resources\String1.json" />
     <None Remove="Resources\String2.js" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\Array1.json" />
+    <EmbeddedResource Include="Resources\ID_Start.js" />
+    <EmbeddedResource Include="Resources\ID_Continue.js" />
+    <EmbeddedResource Include="Resources\Object2.js" />
     <EmbeddedResource Include="Resources\String2.js" />
     <EmbeddedResource Include="Resources\String1.json" />
     <EmbeddedResource Include="Resources\Object1.json" />

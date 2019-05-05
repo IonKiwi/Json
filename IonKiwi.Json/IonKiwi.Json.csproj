@@ -4,4 +4,14 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Resources\ID_Continue.bin" />
+    <None Remove="Resources\ID_Start.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\ID_Continue.bin" />
+    <EmbeddedResource Include="Resources\ID_Start.bin" />
+  </ItemGroup>
+
 </Project>
