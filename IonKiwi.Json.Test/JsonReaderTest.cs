@@ -94,8 +94,73 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
+		private void TestArray1() {
+			string json = "[0,1,2,3]";
+
+			JsonToken token;
+			var reader = new JsonReader(new Utf8ByteArrayInputReader(Encoding.UTF8.GetBytes(json)));
+			Assert.Equal(0, reader.Depth);
+			Assert.Equal(string.Empty, reader.GetPath());
+			Assert.Equal(1, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ArrayStart, token);
+			Assert.Equal(2, reader.Depth);
+			Assert.Equal("[0]", reader.GetPath());
+			Assert.Equal(2, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.Number, token);
+			Assert.Equal(3, reader.Depth);
+			Assert.Equal("[0]", reader.GetPath());
+			Assert.Equal(4, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+			Assert.Equal("0", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.Number, token);
+			Assert.Equal(3, reader.Depth);
+			Assert.Equal("[1]", reader.GetPath());
+			Assert.Equal(7, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+			Assert.Equal("1", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.Number, token);
+			Assert.Equal(3, reader.Depth);
+			Assert.Equal("[2]", reader.GetPath());
+			Assert.Equal(10, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+			Assert.Equal("2", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.Number, token);
+			Assert.Equal(3, reader.Depth);
+			Assert.Equal("[3]", reader.GetPath());
+			Assert.Equal(13, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+			Assert.Equal("3", reader.GetValue());
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.ArrayEnd, token);
+			Assert.Equal(0, reader.Depth);
+			Assert.Equal("", reader.GetPath());
+			Assert.Equal(14, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+
+			token = reader.ReadSync();
+			Assert.Equal(JsonToken.None, token);
+			Assert.Equal(0, reader.Depth);
+			Assert.Equal("", reader.GetPath());
+			Assert.Equal(14, reader.CharacterPosition);
+			Assert.Equal(1, reader.LineNumber);
+		}
+
+		[Fact]
 		public void CreateTest() {
-			byte[] json = Helper.GetStringData("Object1.json");
+			byte[] json = Helper.GetStringData("Array1.json");
 
 			var reader = new JsonReader(new Utf8ByteArrayInputReader(json));
 

@@ -597,6 +597,7 @@ namespace IonKiwi.Json {
 					if (c == ':') {
 						state.Token = currentToken = JsonInternalObjectToken.AfterColon;
 						var newState = new JsonInternalObjectPropertyState() { Parent = state, PropertyName = state.CurrentProperty.ToString() };
+						//state.Properties.Add(newState);
 						_currentState.Push(newState);
 						token = JsonToken.ObjectProperty;
 						_offset += i + 1;
@@ -885,7 +886,8 @@ namespace IonKiwi.Json {
 						throw new InvalidOperationException("Internal state corruption");
 					}
 
-					var newState = new JsonInternalArrayItemState() { Parent = arrayState, Index = arrayState.Items.Count };
+					var newState = new JsonInternalArrayItemState() { Parent = arrayState, Index = arrayState.ItemCount++ };
+					//arrayState.Items.Add(newState);
 					_currentState.Pop();
 					_currentState.Push(newState);
 
@@ -901,7 +903,8 @@ namespace IonKiwi.Json {
 					// allow trailing comma
 					if (currentToken != JsonInternalArrayItemToken.Value) {
 						// remove empty value
-						arrayState.Items.RemoveAt(arrayState.Items.Count - 1);
+						//arrayState.Items.RemoveAt(arrayState.Items.Count - 1);
+						arrayState.ItemCount--;
 					}
 
 					_currentState.Pop(); // item
@@ -1164,7 +1167,7 @@ namespace IonKiwi.Json {
 			else if (state.Token == JsonInternalNumberToken.Positive || state.Token == JsonInternalNumberToken.Negative) {
 				throw new UnexpectedDataException();
 			}
-			else if (state.Token == JsonInternalNumberToken.Digit && state.Data.Length == 1) {
+			else if (state.Token == JsonInternalNumberToken.Dot && state.Data.Length == 1) {
 				throw new UnexpectedDataException();
 			}
 			else if (state.Token == JsonInternalNumberToken.Exponent && !state.ExponentType.HasValue) {
@@ -1761,7 +1764,8 @@ namespace IonKiwi.Json {
 			else if (c == '[') {
 				var newState1 = new JsonInternalArrayState() { Parent = state };
 				_currentState.Push(newState1);
-				var newState2 = new JsonInternalArrayItemState() { Parent = newState1, Index = 0 };
+				var newState2 = new JsonInternalArrayItemState() { Parent = newState1, Index = newState1.ItemCount++ };
+				//newState1.Items.Add(newState2);
 				_currentState.Push(newState2);
 				token = JsonToken.ArrayStart;
 				return true;
