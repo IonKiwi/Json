@@ -19,7 +19,7 @@ namespace IonKiwi.Json.Test {
 			ParseImport(json1, ID_Start);
 			ParseImport(json2, ID_Continue);
 
-			Export(ID_Start, ID_Continue);
+			//Export(ID_Start, ID_Continue);
 		}
 
 		private void Export(HashSet<int> ID_Start, HashSet<int> ID_Continue) {
