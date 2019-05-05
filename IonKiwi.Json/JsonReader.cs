@@ -69,10 +69,13 @@ namespace IonKiwi.Json {
 				return string.Empty;
 			}
 			StringBuilder sb = new StringBuilder();
-			var state = _currentState.Peek();
+			var topState = _currentState.Peek();
+			var state = topState;
 			while (state != null) {
 				if (state is JsonInternalArrayItemState arrayItemState) {
-					sb.Insert(0, "[" + arrayItemState.Index.ToString(CultureInfo.InvariantCulture) + "]");
+					if (!(topState == state && arrayItemState.Index == 0 && arrayItemState.Token == JsonInternalArrayItemToken.BeforeValue)) {
+						sb.Insert(0, "[" + arrayItemState.Index.ToString(CultureInfo.InvariantCulture) + "]");
+					}
 				}
 				else if (state is JsonInternalObjectPropertyState propertyState) {
 					sb.Insert(0, '.' + propertyState.PropertyName);
@@ -589,6 +592,7 @@ namespace IonKiwi.Json {
 				else if (currentToken == JsonInternalObjectToken.AfterColon) {
 					if (c == ',') {
 						state.Token = currentToken = JsonInternalObjectToken.BeforeProperty;
+						state.CurrentProperty.Clear();
 						continue;
 					}
 					else if (c == '}') {
