@@ -20,7 +20,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		internal static Stream GetStringData(string resourceName) {
+		private static Stream GetStringData(string resourceName) {
 			var asm = typeof(UnicodeExtension).Assembly;
 			var asmName = asm.GetName(false);
 			var fullResourceName = asmName.Name + ".Resources." + resourceName;
