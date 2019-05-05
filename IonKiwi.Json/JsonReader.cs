@@ -542,10 +542,19 @@ namespace IonKiwi.Json {
 						for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
 						continue;
 					}
-					//else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
-					//	state.CurrentProperty.Append(cc);
-					//	continue;
-					//}
+					else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
+						if (UnicodeExtension.ID_Continue(cc)) {
+							for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
+							continue;
+						}
+					}
+					else if (currentToken == JsonInternalObjectToken.BeforeProperty) {
+						if (UnicodeExtension.ID_Start(cc)) {
+							state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+							for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
+							continue;
+						}
+					}
 					throw new UnexpectedDataException();
 				}
 				Char c = cc[0];
@@ -642,14 +651,10 @@ namespace IonKiwi.Json {
 						continue;
 					}
 					if (cl > 1) {
-						if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier) {
+						if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier || currentToken == JsonInternalObjectToken.PlainIdentifier) {
 							for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
 							continue;
 						}
-						//else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
-						//	state.CurrentProperty.Append(cc);
-						//	continue;
-						//}
 						throw new UnexpectedDataException();
 					}
 					c = cc[0];
@@ -687,15 +692,7 @@ namespace IonKiwi.Json {
 						continue;
 					}
 					else {
-						var ccat = Char.GetUnicodeCategory(c);
-						// TODO: add ID_Start & ID_Continue
-						var isValidIdentifier = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber;
-						if (isValidIdentifier) {
-							state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
-							state.CurrentProperty.Append(c);
-							continue;
-						}
-						else if (UnicodeExtension.ID_Start(c)) {
+						if (UnicodeExtension.ID_Start(c)) {
 							state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
 							state.CurrentProperty.Append(c);
 							continue;
@@ -798,15 +795,7 @@ namespace IonKiwi.Json {
 							state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
 							continue;
 						}
-						// TODO: add ID_Start & ID_Continue
-						var isValidIdentifier = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber;
-						if (isValidIdentifier) {
-							//state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
-							state.CurrentProperty.Append(c);
-							continue;
-						}
 						else if (UnicodeExtension.ID_Continue(c)) {
-							//state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
 							state.CurrentProperty.Append(c);
 							continue;
 						}

@@ -26,16 +26,8 @@ namespace IonKiwi.Json {
 			}
 
 			var start = identifier[0];
-			var validStart = start == '$' || start == '_';
-			if (!validStart) {
-				var startCategory = Char.GetUnicodeCategory(start);
-				validStart = startCategory == UnicodeCategory.UppercaseLetter || startCategory == UnicodeCategory.LowercaseLetter || startCategory == UnicodeCategory.TitlecaseLetter || startCategory == UnicodeCategory.ModifierLetter || startCategory == UnicodeCategory.OtherLetter || startCategory == UnicodeCategory.LetterNumber;
-			}
-
-			// TODO: add ID_Start
-
 			int i = 1;
-			if (!validStart && start == '\\') {
+			if (start == '\\') {
 				if (identifier.Length < 6) { return false; }
 				if (identifier[1] != 'u') { return false; }
 				if (Char.IsDigit(identifier[2])) { return false; }
@@ -44,37 +36,46 @@ namespace IonKiwi.Json {
 				if (Char.IsDigit(identifier[5])) { return false; }
 				i += 5;
 			}
+			else {
+				bool validStart = false;
+				if (Char.IsLowSurrogate(start)) {
+					if (!Char.IsHighSurrogate(identifier[1])) {
+						return false;
+					}
+					validStart = UnicodeExtension.ID_Start(new char[] { start, identifier[1] });
+					if (!validStart) {
+						return false;
+					}
+				}
 
-			if (!validStart) {
-				return false;
+				validStart = start == '$' || start == '_' || UnicodeExtension.ID_Start(start);
+				if (!validStart) {
+					return false;
+				}
 			}
 
 			for (int l = identifier.Length; i < l; i++) {
 				var c = identifier[i];
 				var valid = c == '$' || c == '_';
 				if (!valid) {
-					var cc = Char.GetUnicodeCategory(c);
-					valid =
-						cc == UnicodeCategory.UppercaseLetter || cc == UnicodeCategory.LowercaseLetter || cc == UnicodeCategory.TitlecaseLetter || cc == UnicodeCategory.ModifierLetter || cc == UnicodeCategory.OtherLetter || cc == UnicodeCategory.LetterNumber ||
-						cc == UnicodeCategory.NonSpacingMark || cc == UnicodeCategory.SpacingCombiningMark ||
-						cc == UnicodeCategory.DecimalDigitNumber ||
-						cc == UnicodeCategory.ConnectorPunctuation ||
-						c == '\u200C' || c == '\u200D';
-				}
-
-				// TODO: add ID_Continue
-
-				if (!valid && c == '\\') {
-					if (i + 5 > l) { return false; }
-					if (identifier[i + 1] != 'u') { return false; }
-					if (Char.IsDigit(identifier[i + 2])) { return false; }
-					if (Char.IsDigit(identifier[i + 3])) { return false; }
-					if (Char.IsDigit(identifier[i + 4])) { return false; }
-					if (Char.IsDigit(identifier[i + 5])) { return false; }
-					i += 5;
-				}
-				if (!valid) {
-					return false;
+					if (c == '\\') {
+						if (l <= i + 6) { return false; }
+						if (identifier[i + 1] != 'u') { return false; }
+						if (Char.IsDigit(identifier[i + 2])) { return false; }
+						if (Char.IsDigit(identifier[i + 3])) { return false; }
+						if (Char.IsDigit(identifier[i + 4])) { return false; }
+						if (Char.IsDigit(identifier[i + 5])) { return false; }
+						i += 5;
+					}
+					else if (Char.IsLowSurrogate(c)) {
+						if (l <= i + 1 || !Char.IsHighSurrogate(identifier[i + 1])) { return false; }
+						valid = UnicodeExtension.ID_Continue(new char[] { c, identifier[i + 1] });
+						if (!valid) { return false; }
+					}
+					else {
+						valid = UnicodeExtension.ID_Continue(c);
+						if (!valid) { return false; }
+					}
 				}
 			}
 
