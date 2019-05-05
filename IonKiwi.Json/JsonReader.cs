@@ -692,7 +692,14 @@ namespace IonKiwi.Json {
 						continue;
 					}
 					else {
-						if (UnicodeExtension.ID_Start(c)) {
+						var ccat = Char.GetUnicodeCategory(c);
+						var isValidIdentifier = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber;
+						if (isValidIdentifier) {
+							state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
+							state.CurrentProperty.Append(c);
+							continue;
+						}
+						else if (UnicodeExtension.ID_Start(c)) {
 							state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
 							state.CurrentProperty.Append(c);
 							continue;
@@ -795,7 +802,15 @@ namespace IonKiwi.Json {
 							state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
 							continue;
 						}
-						else if (UnicodeExtension.ID_Continue(c) || c == '\u200C' || c == '\u200D') {
+						else if (ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber ||
+							ccat == UnicodeCategory.NonSpacingMark || ccat == UnicodeCategory.SpacingCombiningMark ||
+							ccat == UnicodeCategory.DecimalDigitNumber ||
+							ccat == UnicodeCategory.ConnectorPunctuation ||
+							c == '\u200C' || c == '\u200D') {
+							state.CurrentProperty.Append(c);
+							continue;
+						}
+						else if (UnicodeExtension.ID_Continue(c)) {
 							state.CurrentProperty.Append(c);
 							continue;
 						}
