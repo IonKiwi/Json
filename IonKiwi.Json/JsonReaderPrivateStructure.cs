@@ -10,6 +10,7 @@ namespace IonKiwi.Json {
 			ByteOrderMark,
 			CarriageReturn,
 			ForwardSlash,
+			Value,
 		}
 
 		private enum JsonInternalObjectToken {
@@ -65,6 +66,7 @@ namespace IonKiwi.Json {
 
 		private abstract class JsonInternalState {
 			public JsonInternalState Parent;
+			public bool IsComplete;
 
 			public bool IsMultiByteSequence;
 			public JsonInternalEscapeToken EscapeToken;
@@ -103,7 +105,6 @@ namespace IonKiwi.Json {
 		}
 
 		private abstract class JsonInternalStringState : JsonInternalState {
-			public bool IsComplete;
 			public StringBuilder Data = new StringBuilder();
 		}
 

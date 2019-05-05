@@ -30,7 +30,14 @@ namespace IonKiwi.Json {
 		}
 
 		public int Depth {
-			get { return _currentState.Count - 1; }
+			get {
+				var state = _currentState.Peek();
+				int offset = 0;
+				if (state is JsonInternalArrayItemState arrayItemState && arrayItemState.Index == 0 && arrayItemState.Token == JsonInternalArrayItemToken.BeforeValue) {
+					offset = 1;
+				}
+				return _currentState.Count - 1 - offset;
+			}
 		}
 
 		public long LineNumber {
@@ -103,17 +110,8 @@ namespace IonKiwi.Json {
 			JsonToken token = JsonToken.None;
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
 				if (_length - _offset == 0 && !await ReadData().NoSync()) {
-					if (_currentState.Count != 1) {
-						// special handling for values
-						var state = _currentState.Peek();
-						if (state is JsonInternalStringState valueState) {
-							if (HandleEndOfFileValueState(valueState, ref token)) {
-								return token;
-							}
-						}
-						throw new MoreDataExpectedException();
-					}
-					return JsonToken.None;
+					HandleEndOfFile(ref token);
+					return token;
 				}
 			}
 			return token;
@@ -123,23 +121,44 @@ namespace IonKiwi.Json {
 			JsonToken token = JsonToken.None;
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
 				if (_length - _offset == 0 && !ReadDataSync()) {
-					if (_currentState.Count != 1) {
-						// special handling for values
-						var state = _currentState.Peek();
-						if (state is JsonInternalStringState valueState) {
-							if (HandleEndOfFileValueState(valueState, ref token)) {
-								return token;
-							}
-						}
-						throw new MoreDataExpectedException();
-					}
-					return JsonToken.None;
+					HandleEndOfFile(ref token);
+					return token;
 				}
 			}
 			return token;
 		}
 
-		private bool HandleEndOfFileValueState(JsonInternalStringState state, ref JsonToken token) {
+		private void HandleEndOfFile(ref JsonToken token) {
+			if (_currentState.Count > 2) {
+				throw new MoreDataExpectedException();
+			}
+			else if (_currentState.Count == 2) {
+				var state = _currentState.Peek();
+				if (!HandleEndOfFileValueState(state, ref token)) {
+					throw new MoreDataExpectedException();
+				}
+			}
+			else if (_currentState.Count == 1) {
+				var state = _currentState.Peek();
+				if (state is JsonInternalRootState rootState) {
+					if (!state.IsComplete) {
+						if (rootState.Token != JsonInternalRootToken.Value) {
+							throw new MoreDataExpectedException();
+						}
+						state.IsComplete = true;
+					}
+					token = JsonToken.None;
+				}
+				else {
+					throw new Exception("Internal state corruption");
+				}
+			}
+			else {
+				throw new Exception("Internal state corruption");
+			}
+		}
+
+		private bool HandleEndOfFileValueState(JsonInternalState state, ref JsonToken token) {
 			if (state is JsonInternalNumberState numberState && !numberState.IsComplete) {
 				ValidateNumberState(numberState);
 				state.IsComplete = true;
@@ -156,6 +175,14 @@ namespace IonKiwi.Json {
 
 		private bool HandleDataBlock(Span<byte> block, out JsonToken token) {
 			var state = _currentState.Peek();
+			if (state.IsComplete) {
+				_currentState.Pop();
+				state = _currentState.Peek();
+				if (state.IsComplete) {
+					throw new Exception("Internal state corruption");
+				}
+			}
+
 			if (state is JsonInternalRootState rootState) {
 				return HandleRootState(rootState, block, out token);
 			}
@@ -199,6 +226,13 @@ namespace IonKiwi.Json {
 
 		private bool HandleRootState(JsonInternalRootState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
+
+			if (state.Token == JsonInternalRootToken.Value) {
+				// trailing white-space
+				HandleTrailingWhiteSpace(state, block);
+				return false;
+			}
+
 			var currentToken = state.Token;
 			var isMultiByteSequence = state.IsMultiByteSequence;
 			var cc = new char[2];
@@ -388,13 +422,93 @@ namespace IonKiwi.Json {
 
 				if (HandleNonePosition(state, c, ref token)) {
 					_offset += i + 1;
-					return token != JsonToken.None ? true : false;
+					if (token != JsonToken.None) {
+						state.Token = JsonInternalRootToken.Value;
+						return true;
+					}
+					return false;
 				}
 			}
 
 			// need more data
 			_offset += block.Length;
 			return false;
+		}
+
+		private void HandleTrailingWhiteSpace(JsonInternalRootState state, Span<byte> block) {
+			var currentToken = state.Token;
+			var isMultiByteSequence = state.IsMultiByteSequence;
+			var cc = new char[2];
+
+			for (int i = 0, l = block.Length; i < l; i++) {
+				byte bb = block[i];
+				int remaining = l - i - 1;
+
+				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
+				if (cl == 0) {
+					continue;
+				}
+				else if (cl > 1) {
+					if (currentToken == JsonInternalRootToken.CarriageReturn) {
+						_lineIndex++;
+						_lineOffset = cl;
+						state.Token = currentToken = JsonInternalRootToken.None;
+					}
+					throw new UnexpectedDataException();
+				}
+
+				_lineOffset += cl;
+				Char c = cc[0];
+
+				if (currentToken == JsonInternalRootToken.CarriageReturn) {
+					// assert i == 0
+					if (i != 0) {
+						throw new InvalidOperationException("Internal state corruption");
+					}
+
+					_lineIndex++;
+					_lineOffset = 0;
+					state.Token = currentToken = JsonInternalRootToken.None;
+
+					if (c == '\n') {
+						continue;
+					}
+					_lineOffset = 1;
+				}
+				else if (c == '\r') {
+					if (remaining > 0) {
+						if (block[i + 1] == '\n') {
+							i++;
+						}
+
+						_lineIndex++;
+						_lineOffset = 0;
+						continue;
+					}
+					else {
+						state.Token = currentToken = JsonInternalRootToken.CarriageReturn;
+						// need more data
+						_offset += block.Length;
+						return;
+					}
+				}
+				else if (c == '\n' || c == '\u2028' || c == '\u2029') {
+					_lineIndex++;
+					_lineOffset = 0;
+					continue;
+				}
+
+				// white-space
+				if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == '\uFEFF') {
+					continue;
+				}
+				else {
+					throw new UnexpectedDataException();
+				}
+			}
+
+			_offset += block.Length;
+			return;
 		}
 
 		private bool HandleObjectState(JsonInternalObjectState state, Span<byte> block, out JsonToken token) {
@@ -550,7 +664,7 @@ namespace IonKiwi.Json {
 					else if (c == '}') {
 						// allow trailing comma => state.Properties.Count > 0
 						token = JsonToken.ObjectEnd;
-						_currentState.Pop();
+						state.IsComplete = true;
 						_offset += i + 1;
 						return true;
 					}
@@ -597,7 +711,7 @@ namespace IonKiwi.Json {
 					}
 					else if (c == '}') {
 						token = JsonToken.ObjectEnd;
-						_currentState.Pop();
+						state.IsComplete = true;
 						_offset += i + 1;
 						return true;
 					}
@@ -796,11 +910,13 @@ namespace IonKiwi.Json {
 					if (currentToken != JsonInternalObjectPropertyToken.Value) {
 						throw new UnexpectedDataException();
 					}
+					state.IsComplete = true;
 					_currentState.Pop();
 					_offset += i;
 					return false;
 				}
 				else if (c == '}') {
+					state.IsComplete = true;
 					_currentState.Pop();
 					_offset += i;
 					return false;
@@ -913,6 +1029,7 @@ namespace IonKiwi.Json {
 
 					var newState = new JsonInternalArrayItemState() { Parent = arrayState, Index = arrayState.ItemCount++ };
 					//arrayState.Items.Add(newState);
+					state.IsComplete = true;
 					_currentState.Pop();
 					_currentState.Push(newState);
 
@@ -925,6 +1042,8 @@ namespace IonKiwi.Json {
 						throw new InvalidOperationException("Internal state corruption");
 					}
 
+					state.IsComplete = true;
+
 					// allow trailing comma
 					if (currentToken != JsonInternalArrayItemToken.Value) {
 						// remove empty value
@@ -933,7 +1052,7 @@ namespace IonKiwi.Json {
 					}
 
 					_currentState.Pop(); // item
-					_currentState.Pop(); // array
+					arrayState.IsComplete = true;
 
 					_offset += i + 1;
 					token = JsonToken.ArrayEnd;
@@ -957,11 +1076,6 @@ namespace IonKiwi.Json {
 
 		private bool HandleSingleQuotedStringState(JsonInternalSingleQuotedStringState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
-			if (state.IsComplete) {
-				_currentState.Pop();
-				return false;
-			}
-
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			var escapeToken = state.EscapeToken;
@@ -1072,11 +1186,6 @@ namespace IonKiwi.Json {
 
 		private bool HandleDoubleQuotedStringState(JsonInternalDoubleQuotedStringState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
-			if (state.IsComplete) {
-				_currentState.Pop();
-				return false;
-			}
-
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			var escapeToken = state.EscapeToken;
@@ -1202,11 +1311,6 @@ namespace IonKiwi.Json {
 
 		private bool HandleNumberState(JsonInternalNumberState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
-			if (state.IsComplete) {
-				_currentState.Pop();
-				return false;
-			}
-
 			var currentToken = state.Token;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool isForwardSlash = state.IsForwardSlash;
@@ -1466,11 +1570,6 @@ namespace IonKiwi.Json {
 
 		private bool HandleNullState(JsonInternalNullState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
-			if (state.IsComplete) {
-				_currentState.Pop();
-				return false;
-			}
-
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool isForwardSlash = state.IsForwardSlash;
 			var cc = new char[2];
@@ -1537,11 +1636,6 @@ namespace IonKiwi.Json {
 
 		private bool HandleTrueState(JsonInternalTrueState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
-			if (state.IsComplete) {
-				_currentState.Pop();
-				return false;
-			}
-
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool isForwardSlash = state.IsForwardSlash;
 			var cc = new char[2];
@@ -1608,11 +1702,6 @@ namespace IonKiwi.Json {
 
 		private bool HandleFalseState(JsonInternalFalseState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
-			if (state.IsComplete) {
-				_currentState.Pop();
-				return false;
-			}
-
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool isForwardSlash = state.IsForwardSlash;
 			var cc = new char[2];
@@ -1683,11 +1772,6 @@ namespace IonKiwi.Json {
 
 		private bool HandleSingleLineCommentState(JsonInternalSingleLineCommentState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
-			if (state.IsComplete) {
-				_currentState.Pop();
-				return false;
-			}
-
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			var cc = new char[2];
 
@@ -1724,11 +1808,6 @@ namespace IonKiwi.Json {
 
 		private bool HandleMultiLineCommentState(JsonInternalMultiLineCommentState state, Span<byte> block, out JsonToken token) {
 			token = JsonToken.None;
-			if (state.IsComplete) {
-				_currentState.Pop();
-				return false;
-			}
-
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool isAsterisk = state.IsAsterisk;
 			var cc = new char[2];

@@ -26,7 +26,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ObjectEnd, token);
-			Assert.Equal(0, reader.Depth);
+			Assert.Equal(1, reader.Depth);
 			Assert.Equal(string.Empty, reader.GetPath());
 			Assert.Equal(3, reader.CharacterPosition);
 			Assert.Equal(1, reader.LineNumber);
@@ -78,7 +78,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ObjectEnd, token);
-			Assert.Equal(0, reader.Depth);
+			Assert.Equal(1, reader.Depth);
 			Assert.Equal("", reader.GetPath());
 			Assert.Equal(3, reader.CharacterPosition);
 			Assert.Equal(3, reader.LineNumber);
@@ -106,7 +106,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ArrayStart, token);
-			Assert.Equal(2, reader.Depth);
+			Assert.Equal(1, reader.Depth);
 			Assert.Equal("", reader.GetPath());
 			Assert.Equal(2, reader.CharacterPosition);
 			Assert.Equal(1, reader.LineNumber);
@@ -145,7 +145,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ArrayEnd, token);
-			Assert.Equal(0, reader.Depth);
+			Assert.Equal(1, reader.Depth);
 			Assert.Equal("", reader.GetPath());
 			Assert.Equal(14, reader.CharacterPosition);
 			Assert.Equal(1, reader.LineNumber);
@@ -171,7 +171,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ArrayStart, token);
-			Assert.Equal(2, reader.Depth);
+			Assert.Equal(1, reader.Depth);
 			Assert.Equal("", reader.GetPath());
 			Assert.Equal(2, reader.CharacterPosition);
 			Assert.Equal(1, reader.LineNumber);
@@ -210,7 +210,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ArrayEnd, token);
-			Assert.Equal(0, reader.Depth);
+			Assert.Equal(1, reader.Depth);
 			Assert.Equal("", reader.GetPath());
 			Assert.Equal(15, reader.CharacterPosition);
 			Assert.Equal(1, reader.LineNumber);
@@ -267,7 +267,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ArrayStart, token);
-			Assert.Equal(4, reader.Depth);
+			Assert.Equal(3, reader.Depth);
 			Assert.Equal(".value2", reader.GetPath());
 			Assert.Equal(11, reader.CharacterPosition);
 			Assert.Equal(3, reader.LineNumber);
@@ -298,7 +298,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ArrayEnd, token);
-			Assert.Equal(2, reader.Depth);
+			Assert.Equal(3, reader.Depth);
 			Assert.Equal(".value2", reader.GetPath());
 			Assert.Equal(27, reader.CharacterPosition);
 			Assert.Equal(3, reader.LineNumber);
@@ -344,7 +344,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ArrayStart, token);
-			Assert.Equal(6, reader.Depth);
+			Assert.Equal(5, reader.Depth);
 			Assert.Equal(".value3.inner2", reader.GetPath());
 			Assert.Equal(12, reader.CharacterPosition);
 			Assert.Equal(6, reader.LineNumber);
@@ -367,7 +367,7 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ArrayEnd, token);
-			Assert.Equal(4, reader.Depth);
+			Assert.Equal(5, reader.Depth);
 			Assert.Equal(".value3.inner2", reader.GetPath());
 			Assert.Equal(22, reader.CharacterPosition);
 			Assert.Equal(6, reader.LineNumber);
@@ -390,14 +390,14 @@ namespace IonKiwi.Json.Test {
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ObjectEnd, token);
-			Assert.Equal(2, reader.Depth);
+			Assert.Equal(3, reader.Depth);
 			Assert.Equal(".value3", reader.GetPath());
 			Assert.Equal(4, reader.CharacterPosition);
 			Assert.Equal(8, reader.LineNumber);
 
 			token = reader.ReadSync();
 			Assert.Equal(JsonToken.ObjectEnd, token);
-			Assert.Equal(0, reader.Depth);
+			Assert.Equal(1, reader.Depth);
 			Assert.Equal("", reader.GetPath());
 			Assert.Equal(2, reader.CharacterPosition);
 			Assert.Equal(9, reader.LineNumber);
