@@ -45,6 +45,9 @@ namespace IonKiwi.Json {
 					validStart = UnicodeExtension.ID_Start(new char[] { start, identifier[1] });
 				}
 				else {
+					if (Char.IsHighSurrogate(start)) {
+						return false;
+					}
 					validStart = start == '$' || start == '_';
 					if (!validStart) {
 						var ccat = Char.GetUnicodeCategory(start);
@@ -78,6 +81,9 @@ namespace IonKiwi.Json {
 						if (!valid) { return false; }
 					}
 					else {
+						if (Char.IsHighSurrogate(c)) {
+							return false;
+						}
 						var ccat = Char.GetUnicodeCategory(c);
 						valid = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber ||
 							ccat == UnicodeCategory.NonSpacingMark || ccat == UnicodeCategory.SpacingCombiningMark ||
