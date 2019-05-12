@@ -53,6 +53,9 @@ namespace IonKiwi.Json {
 
 			if (ti.IsSimpleValue) { return ti; }
 
+			var md = new JsonMetaDataEventArgs();
+			JsonMetaData.OnMetaData(md);
+
 			var objectInfo = t.GetCustomAttribute<JsonObjectAttribute>(false);
 			var collectionInfo = t.GetCustomAttribute<JsonCollectionAttribute>(false);
 			var dictInfo = t.GetCustomAttribute<JsonDictionaryAttribute>(false);
