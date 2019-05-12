@@ -48,6 +48,13 @@ namespace IonKiwi.Json.Test {
 			s2_2(v2_2, 42);
 			s2_3(v2_3, 42);
 
+			var v2_4 = new Test2() { Value1 = 1 };
+			object v2_4o = v2_4;
+			s2_3(v2_4o, 42);
+			s2_2(v2_4o, 41);
+
+			var v5 = s2_1(v2_4o, 41);
+
 			return;
 		}
 
