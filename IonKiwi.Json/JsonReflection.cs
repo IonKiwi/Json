@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -16,6 +17,13 @@ namespace IonKiwi.Json {
 			public Type RootType;
 			public Type ItemType;
 			public bool IsSimpleValue;
+			public Dictionary<string, JsonPropertInfo> Properties = new Dictionary<string, JsonPropertInfo>(StringComparer.Ordinal);
+		}
+
+		internal class JsonPropertInfo {
+			public Type PropertyType;
+			public Func<object, object, object> Setter1;
+			public Action<object, object> Setter2;
 		}
 
 		public static JsonTypeInfo GetTypeInfo(Type t) {
@@ -53,26 +61,41 @@ namespace IonKiwi.Json {
 
 			if (ti.IsSimpleValue) { return ti; }
 
-			var md = new JsonMetaDataEventArgs();
-			JsonMetaData.OnMetaData(md);
-
 			var objectInfo = t.GetCustomAttribute<JsonObjectAttribute>(false);
 			var collectionInfo = t.GetCustomAttribute<JsonCollectionAttribute>(false);
 			var dictInfo = t.GetCustomAttribute<JsonDictionaryAttribute>(false);
+
+			Dictionary<string, JsonMetaDataEventArgs.PropertyInfo> customProperties = null;
 
 			if (t.IsArray) {
 				throw new NotImplementedException();
 			}
 			else if (objectInfo == null && collectionInfo == null && dictInfo == null) {
 
+				var md = new JsonMetaDataEventArgs(t);
+				JsonMetaData.OnMetaData(md);
+
+				if (md.ObjectAttribute != null) {
+					objectInfo = md.ObjectAttribute;
+					customProperties = md.Properties;
+				}
+				if (md.CollectionAttribute != null) {
+					collectionInfo = md.CollectionAttribute;
+				}
+				if (md.DictionaryAttribute != null) {
+					dictInfo = md.DictionaryAttribute;
+				}
+
 				// non explicit json type support
-				if (t.IsGenericType) {
-					var td = t.GetGenericTypeDefinition();
-					if (td == typeof(List<>)) {
-						collectionInfo = new JsonCollectionAttribute();
-					}
-					else if (td == typeof(Dictionary<,>)) {
-						dictInfo = new JsonDictionaryAttribute();
+				if (objectInfo == null && collectionInfo == null && dictInfo == null) {
+					if (t.IsGenericType) {
+						var td = t.GetGenericTypeDefinition();
+						if (td == typeof(List<>)) {
+							collectionInfo = new JsonCollectionAttribute();
+						}
+						else if (td == typeof(Dictionary<,>)) {
+							dictInfo = new JsonDictionaryAttribute();
+						}
 					}
 				}
 
@@ -88,16 +111,62 @@ namespace IonKiwi.Json {
 
 			}
 			else if (objectInfo != null) {
-				foreach (var p in t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-					var propInfo = p.GetCustomAttribute<JsonPropertyAttribute>(false);
-					if (propInfo != null) {
 
+				if (customProperties != null) {
+					foreach (var cp in customProperties) {
+						ti.Properties.Add(cp.Key, new JsonPropertInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter });
 					}
 				}
-				foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-					var propInfo = f.GetCustomAttribute<JsonPropertyAttribute>(false);
-					if (propInfo != null) {
+				else {
+					foreach (var p in t.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+						var propInfo = p.GetCustomAttribute<JsonPropertyAttribute>(false);
+						if (propInfo != null) {
+							string name = propInfo.Name;
+							if (string.IsNullOrEmpty(name)) {
+								name = p.Name;
+							}
 
+							var p1 = Expression.Parameter(typeof(object), "p1");
+							var p2 = Expression.Parameter(typeof(object), "p2");
+							var callExpr = Expression.Call(Expression.Convert(p1, t), p.GetSetMethod(true), Expression.Convert(p2, p.PropertyType));
+							var callLambda = Expression.Lambda<Action<object, object>>(callExpr, p1, p2).Compile();
+
+							ti.Properties.Add(name, new JsonPropertInfo() {
+								PropertyType = p.PropertyType,
+								Setter2 = callLambda
+							});
+						}
+					}
+					foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+						var propInfo = f.GetCustomAttribute<JsonPropertyAttribute>(false);
+						if (propInfo != null) {
+							string name = propInfo.Name;
+							if (string.IsNullOrEmpty(name)) {
+								name = f.Name;
+							}
+
+							JsonPropertInfo pi = new JsonPropertInfo();
+							pi.PropertyType = f.FieldType;
+							if (t.IsValueType) {
+								var p1 = Expression.Parameter(typeof(object), "p1");
+								var p2 = Expression.Parameter(typeof(object), "p2");
+								var p3 = Expression.Parameter(typeof(object), "p3");
+								var field = Expression.Field(Expression.Convert(p1, t), f);
+								var callExpr = Expression.Assign(field, Expression.Convert(p2, f.FieldType));
+								var blockExpr = Expression.Block(callExpr, p1);
+								var callLambda = Expression.Lambda<Func<object, object, object>>(blockExpr, p1, p2, p3).Compile();
+								pi.Setter1 = callLambda;
+							}
+							else {
+								var p1 = Expression.Parameter(typeof(object), "p1");
+								var p2 = Expression.Parameter(typeof(object), "p2");
+								var field = Expression.Field(Expression.Convert(p1, t), f);
+								var callExpr = Expression.Assign(field, Expression.Convert(p2, f.FieldType));
+								var callLambda = Expression.Lambda<Action<object, object>>(callExpr, p1, p2).Compile();
+								pi.Setter2 = callLambda;
+							}
+							ti.Properties.Add(name, pi);
+						}
 					}
 				}
 			}
