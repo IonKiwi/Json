@@ -23,6 +23,7 @@ namespace IonKiwi.Json {
 
 		internal class JsonPropertInfo {
 			public Type PropertyType;
+			public bool Required;
 			public Func<object, object, object> Setter1;
 			public Action<object, object> Setter2;
 		}
@@ -125,7 +126,7 @@ namespace IonKiwi.Json {
 
 				if (customProperties != null) {
 					foreach (var cp in customProperties) {
-						ti.Properties.Add(cp.Key, new JsonPropertInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter });
+						ti.Properties.Add(cp.Key, new JsonPropertInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter, Required = cp.Value.Required });
 					}
 				}
 				else {

@@ -32,7 +32,8 @@ namespace IonKiwi.Json.Newtonsoft {
 							continue;
 						}
 						else if (propAttr != null || reqAttr != null) {
-							e.AddProperty(string.IsNullOrEmpty(propAttr?.PropertyName) ? p.Name : propAttr.PropertyName, p);
+							e.AddProperty(string.IsNullOrEmpty(propAttr?.PropertyName) ? p.Name : propAttr.PropertyName, p,
+								required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always);
 						}
 					}
 					foreach (var f in e.RootType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
@@ -43,7 +44,8 @@ namespace IonKiwi.Json.Newtonsoft {
 							continue;
 						}
 						else if (propAttr != null || reqAttr != null) {
-							e.AddField(string.IsNullOrEmpty(propAttr?.PropertyName) ? f.Name : propAttr.PropertyName, f);
+							e.AddField(string.IsNullOrEmpty(propAttr?.PropertyName) ? f.Name : propAttr.PropertyName, f,
+								required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always);
 						}
 					}
 				}

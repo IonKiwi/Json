@@ -27,7 +27,7 @@ namespace IonKiwi.Json.MetaData {
 
 		public void IsObject(JsonObjectAttribute objectAttribute) { ObjectAttribute = objectAttribute; }
 
-		public void AddProperty<TValue, TProperty>(string name, Func<TValue, TProperty, TValue> setter) {
+		public void AddProperty<TValue, TProperty>(string name, Func<TValue, TProperty, TValue> setter, bool required = false) {
 
 			var valueType = typeof(TValue);
 			if (valueType != RootType) {
@@ -40,18 +40,20 @@ namespace IonKiwi.Json.MetaData {
 			if (Properties.ContainsKey(name)) {
 				Properties[name] = new PropertyInfo() {
 					PropertyType = propertyType,
+					Required = required,
 					Setter = setterWrapper,
 				};
 			}
 			else {
 				Properties.Add(name, new PropertyInfo() {
 					PropertyType = propertyType,
+					Required = required,
 					Setter = setterWrapper,
 				});
 			}
 		}
 
-		public void AddProperty(string name, System.Reflection.PropertyInfo pi) {
+		public void AddProperty(string name, System.Reflection.PropertyInfo pi, bool required = false) {
 
 			var validProperty = pi.DeclaringType == RootType;
 			if (!validProperty) {
@@ -70,18 +72,20 @@ namespace IonKiwi.Json.MetaData {
 			if (Properties.ContainsKey(name)) {
 				Properties[name] = new PropertyInfo() {
 					PropertyType = pi.PropertyType,
+					Required = required,
 					Setter = ReflectionUtility.CreatePropertySetterFunc<object, object>(pi),
 				};
 			}
 			else {
 				Properties.Add(name, new PropertyInfo() {
 					PropertyType = pi.PropertyType,
+					Required = required,
 					Setter = ReflectionUtility.CreatePropertySetterFunc<object, object>(pi),
 				});
 			}
 		}
 
-		public void AddField(string name, System.Reflection.FieldInfo fi) {
+		public void AddField(string name, System.Reflection.FieldInfo fi, bool required = false) {
 
 			var validProperty = fi.DeclaringType == RootType;
 			if (!validProperty) {
@@ -100,12 +104,14 @@ namespace IonKiwi.Json.MetaData {
 			if (Properties.ContainsKey(name)) {
 				Properties[name] = new PropertyInfo() {
 					PropertyType = fi.FieldType,
+					Required = required,
 					Setter = ReflectionUtility.CreateFieldSetterFunc<object, object>(fi),
 				};
 			}
 			else {
 				Properties.Add(name, new PropertyInfo() {
 					PropertyType = fi.FieldType,
+					Required = required,
 					Setter = ReflectionUtility.CreateFieldSetterFunc<object, object>(fi),
 				});
 			}
@@ -113,6 +119,7 @@ namespace IonKiwi.Json.MetaData {
 
 		internal class PropertyInfo {
 			public Type PropertyType;
+			public bool Required;
 			public Func<object, object, object> Setter;
 		}
 	}
