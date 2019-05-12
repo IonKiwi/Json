@@ -20,12 +20,9 @@ namespace IonKiwi.Json {
 
 			JsonParserRootState state = new JsonParserRootState();
 
-			JsonToken token;
-			do {
-				token = await reader.Read().NoSync();
-				HandleToken(token);
+			while (await reader.Read().NoSync() != JsonToken.None) {
+				HandleToken(reader.Token);
 			}
-			while (token != JsonToken.None);
 
 			return (T)state.Value;
 		}
@@ -33,12 +30,9 @@ namespace IonKiwi.Json {
 		public static T ParseSync<T>(JsonReader reader, Type objectType) {
 			JsonParserRootState state = new JsonParserRootState();
 
-			JsonToken token;
-			do {
-				token = reader.ReadSync();
-				HandleToken(token);
+			while (reader.ReadSync() != JsonToken.None) {
+				HandleToken(reader.Token);
 			}
-			while (token != JsonToken.None);
 
 			return (T)state.Value;
 		}

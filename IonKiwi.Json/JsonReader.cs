@@ -11,6 +11,7 @@ namespace IonKiwi.Json {
 		private readonly IInputReader _dataReader;
 
 		private Stack<JsonInternalState> _currentState = new Stack<JsonInternalState>();
+		private JsonToken _token;
 
 		private byte[] _buffer = new byte[4096];
 		private int _offset = 0;
@@ -38,6 +39,10 @@ namespace IonKiwi.Json {
 				}
 				return _currentState.Count - 1 - offset;
 			}
+		}
+
+		public JsonToken Token {
+			get { return _token; }
 		}
 
 		public long LineNumber {
@@ -98,12 +103,12 @@ namespace IonKiwi.Json {
 			return sb.ToString();
 		}
 
-		public ValueTask<JsonToken> Read() {
-			return ReadInternal();
+		public async ValueTask<JsonToken> Read() {
+			return _token = await ReadInternal().NoSync();
 		}
 
 		public JsonToken ReadSync() {
-			return ReadInternalSync();
+			return _token = ReadInternalSync();
 		}
 
 		private async ValueTask<JsonToken> ReadInternal() {
