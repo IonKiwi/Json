@@ -1,5 +1,7 @@
-﻿using System;
+﻿using IonKiwi.Json.Utilities;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace IonKiwi.Json.MetaData {
@@ -45,6 +47,66 @@ namespace IonKiwi.Json.MetaData {
 				Properties.Add(name, new PropertyInfo() {
 					PropertyType = propertyType,
 					Setter = setterWrapper,
+				});
+			}
+		}
+
+		public void AddProperty(string name, System.Reflection.PropertyInfo pi) {
+
+			var validProperty = pi.DeclaringType == RootType;
+			if (!validProperty) {
+				if (pi.DeclaringType.IsInterface) {
+					validProperty = RootType.GetInterfaces().Contains(pi.DeclaringType);
+				}
+				else if (RootType.IsSubclassOf(pi.DeclaringType)) {
+					validProperty = true;
+				}
+			}
+
+			if (!validProperty) {
+				throw new InvalidOperationException("Invalid property");
+			}
+
+			if (Properties.ContainsKey(name)) {
+				Properties[name] = new PropertyInfo() {
+					PropertyType = pi.PropertyType,
+					Setter = ReflectionUtility.CreatePropertySetterFunc<object, object>(pi),
+				};
+			}
+			else {
+				Properties.Add(name, new PropertyInfo() {
+					PropertyType = pi.PropertyType,
+					Setter = ReflectionUtility.CreatePropertySetterFunc<object, object>(pi),
+				});
+			}
+		}
+
+		public void AddField(string name, System.Reflection.FieldInfo fi) {
+
+			var validProperty = fi.DeclaringType == RootType;
+			if (!validProperty) {
+				if (fi.DeclaringType.IsInterface) {
+					validProperty = RootType.GetInterfaces().Contains(fi.DeclaringType);
+				}
+				else if (RootType.IsSubclassOf(fi.DeclaringType)) {
+					validProperty = true;
+				}
+			}
+
+			if (!validProperty) {
+				throw new InvalidOperationException("Invalid property");
+			}
+
+			if (Properties.ContainsKey(name)) {
+				Properties[name] = new PropertyInfo() {
+					PropertyType = fi.FieldType,
+					Setter = ReflectionUtility.CreateFieldSetterFunc<object, object>(fi),
+				};
+			}
+			else {
+				Properties.Add(name, new PropertyInfo() {
+					PropertyType = fi.FieldType,
+					Setter = ReflectionUtility.CreateFieldSetterFunc<object, object>(fi),
 				});
 			}
 		}

@@ -1,4 +1,5 @@
 ﻿using IonKiwi.Json.MetaData;
+using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -139,21 +140,10 @@ namespace IonKiwi.Json {
 							JsonPropertInfo pi = new JsonPropertInfo();
 							pi.PropertyType = p.PropertyType;
 							if (t.IsValueType) {
-								var p1 = Expression.Parameter(typeof(object), "p1");
-								var p2 = Expression.Parameter(typeof(object), "p2");
-								var var = Expression.Variable(t, "v");
-								var varValue = Expression.Assign(var, Expression.Convert(p1, t));
-								var callExpr = Expression.Call(var, p.GetSetMethod(true), Expression.Convert(p2, p.PropertyType));
-								var blockExpr = Expression.Block(new List<ParameterExpression>() { var }, varValue, callExpr, Expression.Convert(var, typeof(object)));
-								var callLambda = Expression.Lambda<Func<object, object, object>>(blockExpr, p1, p2).Compile();
-								pi.Setter1 = callLambda;
+								pi.Setter1 = ReflectionUtility.CreatePropertySetterFunc<object, object>(p);
 							}
 							else {
-								var p1 = Expression.Parameter(typeof(object), "p1");
-								var p2 = Expression.Parameter(typeof(object), "p2");
-								var callExpr = Expression.Call(t.IsValueType ? Expression.Unbox(p1, t) : Expression.Convert(p1, t), p.GetSetMethod(true), Expression.Convert(p2, p.PropertyType));
-								var callLambda = Expression.Lambda<Action<object, object>>(callExpr, p1, p2).Compile();
-								pi.Setter2 = callLambda;
+								pi.Setter2 = ReflectionUtility.CreatePropertySetterAction<object, object>(p);
 							}
 							ti.Properties.Add(name, pi);
 						}
@@ -169,23 +159,10 @@ namespace IonKiwi.Json {
 							JsonPropertInfo pi = new JsonPropertInfo();
 							pi.PropertyType = f.FieldType;
 							if (t.IsValueType) {
-								var p1 = Expression.Parameter(typeof(object), "p1");
-								var p2 = Expression.Parameter(typeof(object), "p2");
-								var var = Expression.Variable(t, "v");
-								var varValue = Expression.Assign(var, Expression.Convert(p1, t));
-								var field = Expression.Field(var, f);
-								var callExpr = Expression.Assign(field, Expression.Convert(p2, f.FieldType));
-								var blockExpr = Expression.Block(new List<ParameterExpression>() { var }, varValue, callExpr, Expression.Convert(var, typeof(object)));
-								var callLambda = Expression.Lambda<Func<object, object, object>>(blockExpr, p1, p2).Compile();
-								pi.Setter1 = callLambda;
+								pi.Setter1 = ReflectionUtility.CreateFieldSetterFunc<object, object>(f);
 							}
 							else {
-								var p1 = Expression.Parameter(typeof(object), "p1");
-								var p2 = Expression.Parameter(typeof(object), "p2");
-								var field = Expression.Field(t.IsValueType ? Expression.Unbox(p1, t) : Expression.Convert(p1, t), f);
-								var callExpr = Expression.Assign(field, Expression.Convert(p2, f.FieldType));
-								var callLambda = Expression.Lambda<Action<object, object>>(callExpr, p1, p2).Compile();
-								pi.Setter2 = callLambda;
+								pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
 							}
 							ti.Properties.Add(name, pi);
 						}
