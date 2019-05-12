@@ -104,11 +104,21 @@ namespace IonKiwi.Json {
 
 			if (dictInfo != null) {
 				var dictInterfaces = t.GetInterfaces().Where(z => z.IsGenericType && z.GetGenericTypeDefinition() == typeof(IDictionary<,>)).ToArray();
-
+				if (dictInterfaces.Length != 1) {
+					throw new NotSupportedException();
+				}
+				else {
+					ti.ItemType = dictInterfaces[0].GenericTypeArguments[0];
+				}
 			}
 			else if (collectionInfo != null) {
 				var collInterfaces = t.GetInterfaces().Where(z => z.IsGenericType && z.GetGenericTypeDefinition() == typeof(IEnumerable<>)).ToArray();
-
+				if (collInterfaces.Length != 1) {
+					throw new NotSupportedException();
+				}
+				else {
+					ti.ItemType = collInterfaces[0].GenericTypeArguments[0];
+				}
 			}
 			else if (objectInfo != null) {
 
