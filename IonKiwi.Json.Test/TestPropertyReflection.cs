@@ -41,19 +41,21 @@ namespace IonKiwi.Json.Test {
 			var s2_2 = GetSetter2(typeof(Test2), p2);
 			var s2_3 = GetSetter3(typeof(Test2), p2);
 
+			// by ref
 			var v3 = s1_1(v1_1, 42);
 			s1_2(v1_2, 42);
 			s1_3(v1_3, 42);
-			var v4 = s2_1(v2_1, 42);
-			s2_2(v2_2, 42);
-			s2_3(v2_3, 42);
+			// by val
+			var v4 = s2_1(v2_1, 42); // v4 => 42
+			s2_2(v2_2, 42); // v2_2 => 1, copied by boxing, copied again by unbox.any
+			s2_3(v2_3, 42); // v2_3 => 1, copied by boxing
 
 			var v2_4 = new Test2() { Value1 = 1 };
 			object v2_4o = v2_4;
-			s2_3(v2_4o, 42);
-			s2_2(v2_4o, 41);
+			s2_3(v2_4o, 42); // v2_4o => 42, boxed value passed by ref, unbox returns a pointer to the struct
+			s2_2(v2_4o, 41); // v2_4o => 42, boxed value passed by ref, copied by unbox.any
 
-			var v5 = s2_1(v2_4o, 41);
+			var v5 = s2_1(v2_4o, 41); // v5 => 51, boxed value passed by ref, copied
 
 			return;
 		}
