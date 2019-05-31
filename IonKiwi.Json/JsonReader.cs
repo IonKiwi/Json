@@ -10,10 +10,10 @@ namespace IonKiwi.Json {
 	public partial class JsonReader {
 		private readonly IInputReader _dataReader;
 
-		private Stack<JsonInternalState> _currentState = new Stack<JsonInternalState>();
+		private readonly Stack<JsonInternalState> _currentState = new Stack<JsonInternalState>();
 		private JsonToken _token;
 
-		private byte[] _buffer = new byte[4096];
+		private readonly byte[] _buffer = new byte[4096];
 		private int _offset = 0;
 		private int _length = 0;
 		private long _lineIndex = 0;
@@ -109,6 +109,106 @@ namespace IonKiwi.Json {
 
 		public JsonToken ReadSync() {
 			return _token = ReadInternalSync();
+		}
+
+		public async ValueTask Skip() {
+			var token = _token;
+			if (IsValueToken(token) || token == JsonToken.Comment) {
+				await Read().NoSync();
+			}
+			else if (token == JsonToken.ObjectStart) {
+				int depth = Depth;
+				do {
+					token = await Read().NoSync();
+					if (token == JsonToken.ObjectEnd && depth == Depth) {
+						return;
+					}
+				}
+				while (token != JsonToken.None);
+
+				throw new MoreDataExpectedException();
+			}
+			else if (token == JsonToken.ObjectStart) {
+				int depth = Depth;
+				do {
+					token = await Read().NoSync();
+					if (token == JsonToken.ObjectEnd && depth == Depth) {
+						return;
+					}
+				}
+				while (token != JsonToken.None);
+
+				throw new MoreDataExpectedException();
+			}
+			else if (token == JsonToken.ArrayStart) {
+				int depth = Depth;
+				do {
+					token = await Read().NoSync();
+					if (token == JsonToken.ArrayEnd && depth == Depth) {
+						return;
+					}
+				}
+				while (token != JsonToken.None);
+
+				throw new MoreDataExpectedException();
+			}
+			else if (token == JsonToken.ObjectProperty) {
+				await Read().NoSync();
+				await Skip().NoSync();
+			}
+			else {
+				throw new InvalidOperationException("Reader is not at a skippable position. token: " + _token);
+			}
+		}
+
+		public void SkipSync() {
+			var token = _token;
+			if (IsValueToken(token) || token == JsonToken.Comment) {
+				ReadSync();
+			}
+			else if (token == JsonToken.ObjectStart) {
+				int depth = Depth;
+				do {
+					token = ReadSync();
+					if (token == JsonToken.ObjectEnd && depth == Depth) {
+						return;
+					}
+				}
+				while (token != JsonToken.None);
+
+				throw new MoreDataExpectedException();
+			}
+			else if (token == JsonToken.ObjectStart) {
+				int depth = Depth;
+				do {
+					token = ReadSync();
+					if (token == JsonToken.ObjectEnd && depth == Depth) {
+						return;
+					}
+				}
+				while (token != JsonToken.None);
+
+				throw new MoreDataExpectedException();
+			}
+			else if (token == JsonToken.ArrayStart) {
+				int depth = Depth;
+				do {
+					token = ReadSync();
+					if (token == JsonToken.ArrayEnd && depth == Depth) {
+						return;
+					}
+				}
+				while (token != JsonToken.None);
+
+				throw new MoreDataExpectedException();
+			}
+			else if (token == JsonToken.ObjectProperty) {
+				ReadSync();
+				SkipSync();
+			}
+			else {
+				throw new InvalidOperationException("Reader is not at a skippable position. token: " + _token);
+			}
 		}
 
 		private async ValueTask<JsonToken> ReadInternal() {

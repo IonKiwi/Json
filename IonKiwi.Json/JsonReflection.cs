@@ -27,10 +27,10 @@ namespace IonKiwi.Json {
 			public Type ItemType;
 			public bool IsSimpleValue;
 			public JsonObjectType ObjectType;
-			public Dictionary<string, JsonPropertInfo> Properties = new Dictionary<string, JsonPropertInfo>(StringComparer.Ordinal);
+			public Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
 		}
 
-		internal class JsonPropertInfo {
+		internal class JsonPropertyInfo {
 			public Type PropertyType;
 			public bool Required;
 			public Func<object, object, object> Setter1;
@@ -168,7 +168,7 @@ namespace IonKiwi.Json {
 
 				if (customProperties != null) {
 					foreach (var cp in customProperties) {
-						ti.Properties.Add(cp.Key, new JsonPropertInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter, Required = cp.Value.Required });
+						ti.Properties.Add(cp.Key, new JsonPropertyInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter, Required = cp.Value.Required });
 					}
 				}
 				else {
@@ -193,7 +193,7 @@ namespace IonKiwi.Json {
 									name = p.Name;
 								}
 
-								JsonPropertInfo pi = new JsonPropertInfo();
+								JsonPropertyInfo pi = new JsonPropertyInfo();
 								pi.PropertyType = p.PropertyType;
 								if (t.IsValueType) {
 									pi.Setter1 = ReflectionUtility.CreatePropertySetterFunc<object, object>(p);
@@ -212,7 +212,7 @@ namespace IonKiwi.Json {
 									name = f.Name;
 								}
 
-								JsonPropertInfo pi = new JsonPropertInfo();
+								JsonPropertyInfo pi = new JsonPropertyInfo();
 								pi.PropertyType = f.FieldType;
 								if (t.IsValueType) {
 									pi.Setter1 = ReflectionUtility.CreateFieldSetterFunc<object, object>(f);

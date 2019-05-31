@@ -25,7 +25,7 @@ namespace IonKiwi.Json {
 			int startDepth = reader.Depth;
 
 			while (await reader.Read().NoSync() != JsonToken.None) {
-				parser.HandleToken(reader.Token);
+				parser.HandleToken(reader);
 			}
 
 			int endDepth = reader.Depth;
@@ -45,7 +45,7 @@ namespace IonKiwi.Json {
 			int startDepth = reader.Depth;
 
 			while (reader.ReadSync() != JsonToken.None) {
-				parser.HandleToken(reader.Token);
+				parser.HandleTokenSync(reader);
 			}
 
 			EnsureValidPosition(reader, startDepth);
@@ -57,23 +57,6 @@ namespace IonKiwi.Json {
 			int endDepth = reader.Depth;
 			if (endDepth != startDepth) {
 				throw new Exception("Parser left the reader at an invalid position");
-			}
-		}
-
-		private sealed class JsonInternalParser {
-
-			private readonly JsonTypeInfo _rootType;
-
-			public JsonInternalParser(JsonTypeInfo typeInfo) {
-				_rootType = typeInfo;
-			}
-
-			public void HandleToken(JsonToken token) {
-
-			}
-
-			public T GetValue<T>() {
-				throw new NotImplementedException();
 			}
 		}
 	}
