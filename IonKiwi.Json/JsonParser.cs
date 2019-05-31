@@ -10,27 +10,33 @@ using static IonKiwi.Json.JsonReflection;
 namespace IonKiwi.Json {
 	public static partial class JsonParser {
 
-		public static ValueTask<T> Parse<T>(JsonReader reader) {
-			return Parse<T>(reader, typeof(T));
+		private static readonly JsonParserSettings _defaultSettings = new JsonParserSettings() {
+			DateTimeHandling = DateTimeHandling.Utc,
+			UnspecifiedDateTimeHandling = UnspecifiedDateTimeHandling.AssumeLocal
+		}.Seal();
+
+		public static JsonParserSettings DefaultSettings {
+			get {
+				return _defaultSettings;
+			}
 		}
 
-		public static T ParseSync<T>(JsonReader reader) {
-			return ParseSync<T>(reader, typeof(T));
+		public static ValueTask<T> Parse<T>(JsonReader reader, JsonParserSettings parserSettings = null) {
+			return Parse<T>(reader, typeof(T), parserSettings);
 		}
 
-		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType) {
+		public static T ParseSync<T>(JsonReader reader, JsonParserSettings parserSettings = null) {
+			return ParseSync<T>(reader, typeof(T), parserSettings);
+		}
 
-			JsonInternalParser parser = new JsonInternalParser(JsonReflection.GetTypeInfo(objectType));
+		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType, JsonParserSettings parserSettings = null) {
+
+			JsonInternalParser parser = new JsonInternalParser(parserSettings ?? _defaultSettings, JsonReflection.GetTypeInfo(objectType));
 
 			int startDepth = reader.Depth;
 
 			while (await reader.Read().NoSync() != JsonToken.None) {
-				parser.HandleToken(reader);
-			}
-
-			int endDepth = reader.Depth;
-			if (endDepth != startDepth) {
-				throw new Exception("Parser left the reader at an invalid position");
+				await parser.HandleToken(reader).NoSync();
 			}
 
 			EnsureValidPosition(reader, startDepth);
@@ -38,9 +44,9 @@ namespace IonKiwi.Json {
 			return parser.GetValue<T>();
 		}
 
-		public static T ParseSync<T>(JsonReader reader, Type objectType) {
+		public static T ParseSync<T>(JsonReader reader, Type objectType, JsonParserSettings parserSettings = null) {
 
-			JsonInternalParser parser = new JsonInternalParser(JsonReflection.GetTypeInfo(objectType));
+			JsonInternalParser parser = new JsonInternalParser(parserSettings ?? _defaultSettings, JsonReflection.GetTypeInfo(objectType));
 
 			int startDepth = reader.Depth;
 

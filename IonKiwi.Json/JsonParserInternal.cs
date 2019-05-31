@@ -9,11 +9,13 @@ using static IonKiwi.Json.JsonReflection;
 
 namespace IonKiwi.Json {
 	partial class JsonParser {
-		private sealed class JsonInternalParser {
+		private sealed partial class JsonInternalParser {
 
+			private readonly JsonParserSettings _settings;
 			private readonly Stack<JsonParserInternalState> _currentState = new Stack<JsonParserInternalState>();
 
-			public JsonInternalParser(JsonTypeInfo typeInfo) {
+			public JsonInternalParser(JsonParserSettings settings, JsonTypeInfo typeInfo) {
+				_settings = settings;
 				_currentState.Push(new JsonParserRootState() { TypeInfo = typeInfo });
 			}
 
@@ -49,7 +51,7 @@ namespace IonKiwi.Json {
 			}
 
 			private HandleStateResult HandlePropertyState(JsonParserObjectPropertyState propertyState, JsonReader reader) {
-				
+				throw new NotImplementedException();
 			}
 
 			private HandleStateResult HandleObjectState(JsonParserObjectState objectState, JsonReader reader) {
