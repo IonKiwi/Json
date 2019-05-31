@@ -1,4 +1,5 @@
-﻿using System;
+﻿using IonKiwi.Json.MetaData;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using static IonKiwi.Json.JsonReflection;
@@ -31,7 +32,18 @@ namespace IonKiwi.Json {
 			//public int StartDepth;
 		}
 
+		private sealed class JsonParserArrayItemState : JsonParserInternalState {
+			public JsonTypeInfo TypeInfo;
+			//public int StartDepth;
+		}
+
 		private sealed class JsonParserDictionaryState : JsonParserInternalState {
+			public JsonTypeInfo TypeInfo;
+			//public int StartDepth;
+			public bool IsStringDictionary;
+		}
+
+		private sealed class JsonParserDictionaryValueState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
 			//public int StartDepth;
 			public bool IsStringDictionary;
@@ -40,6 +52,24 @@ namespace IonKiwi.Json {
 		private sealed class JsonParserObjectPropertyState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
 			public JsonPropertyInfo PropertyInfo;
+		}
+
+		private interface IIntermediateDictionaryItem {
+			object Key { get; }
+			object Value { get; }
+		}
+
+		[JsonObject]
+		private sealed class IntermediateDictionaryItem<TKey, TValue> : IIntermediateDictionaryItem {
+			[JsonProperty]
+			public TKey Key { get; set; }
+
+			[JsonProperty]
+			public TValue Value { get; set; }
+
+			object IIntermediateDictionaryItem.Key => Key;
+
+			object IIntermediateDictionaryItem.Value => Value;
 		}
 	}
 }

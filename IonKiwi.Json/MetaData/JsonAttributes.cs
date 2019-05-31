@@ -31,8 +31,9 @@ namespace IonKiwi.Json.MetaData {
 
 		public JsonPropertyAttribute() { }
 
-		public JsonPropertyAttribute(string name = null, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType) {
+		public JsonPropertyAttribute(string name = null, bool required = true, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType) {
 			Name = name;
+			Required = required;
 			EmitTypeName = emitTypeName;
 		}
 
@@ -41,5 +42,7 @@ namespace IonKiwi.Json.MetaData {
 		public JsonEmitTypeName EmitTypeName { get; set; }
 
 		public bool IsSingleOrArrayValue { get; set; }
+
+		public bool Required { get; set; } = true;
 	}
 }

@@ -47,10 +47,28 @@ namespace IonKiwi.Json {
 				else if (state is JsonParserArrayState arrayState) {
 					return HandleArrayState(arrayState, reader);
 				}
+				else if (state is JsonParserDictionaryState dictionaryState) {
+					return HandleDictionaryState(dictionaryState, reader);
+				}
 				else {
 					ThrowUnhandledType(state.GetType());
 					return HandleStateResult.None;
 				}
+			}
+
+			private HandleStateResult HandleDictionaryState(JsonParserDictionaryState dictionaryState, JsonReader reader) {
+				EnsureNotComplete(dictionaryState);
+				if (dictionaryState.IsStringDictionary) {
+					HandleValueState(dictionaryState, reader, JsonReflection.GetTypeInfo(dictionaryState.TypeInfo.ItemType));
+				}
+				else {
+					var itemState = new JsonParserArrayItemState();
+					itemState.Parent = dictionaryState;
+					itemState.TypeInfo = JsonReflection.GetTypeInfo(typeof(IntermediateDictionaryItem<,>).MakeGenericType(dictionaryState.TypeInfo.KeyType, dictionaryState.TypeInfo.ItemType));
+					//objectState.StartDepth = reader.Depth;
+					_currentState.Push(itemState);
+				}
+				return HandleStateResult.None;
 			}
 
 			private HandleStateResult HandleArrayState(JsonParserArrayState arrayState, JsonReader reader) {
@@ -59,7 +77,14 @@ namespace IonKiwi.Json {
 					CompleteArray(arrayState);
 					return HandleStateResult.None;
 				}
-				HandleValueState(arrayState, reader, arrayState.TypeInfo);
+
+				var itemState = new JsonParserArrayItemState();
+				itemState.Parent = arrayState;
+				itemState.TypeInfo = JsonReflection.GetTypeInfo(arrayState.TypeInfo.ItemType);
+				//objectState.StartDepth = reader.Depth;
+				_currentState.Push(itemState);
+
+				HandleValueState(itemState, reader, itemState.TypeInfo);
 				return HandleStateResult.None;
 			}
 
@@ -100,7 +125,12 @@ namespace IonKiwi.Json {
 				if (object.ReferenceEquals(null, objectState.Value)) {
 					objectState.Value = TypeInstantiator.Instantiate(objectState.TypeInfo.RootType);
 				}
-				// TODO: call finalizers
+				if (objectState.TypeInfo.FinalizeAction != null) {
+					objectState.Value = objectState.TypeInfo.FinalizeAction(objectState.Value);
+				}
+				foreach (var a in objectState.TypeInfo.OnDeserialized) {
+					a(objectState.Value, new System.Runtime.Serialization.StreamingContext());
+				}
 
 				objectState.IsComplete = true;
 			}
@@ -109,7 +139,12 @@ namespace IonKiwi.Json {
 				if (object.ReferenceEquals(null, arrayState.Value)) {
 					arrayState.Value = TypeInstantiator.Instantiate(arrayState.TypeInfo.RootType);
 				}
-				// TODO: call finalizers
+				if (arrayState.TypeInfo.FinalizeAction != null) {
+					arrayState.Value = arrayState.TypeInfo.FinalizeAction(arrayState.Value);
+				}
+				foreach (var a in arrayState.TypeInfo.OnDeserialized) {
+					a(arrayState.Value, new System.Runtime.Serialization.StreamingContext());
+				}
 
 				arrayState.IsComplete = true;
 			}
@@ -177,8 +212,13 @@ namespace IonKiwi.Json {
 					}
 				}
 				else if (typeInfo.ObjectType == JsonObjectType.SimpleValue) {
-					parentState.Value = GetSimpleValue(reader, reader.Token, typeInfo.RootType);
+					object v = GetSimpleValue(reader, reader.Token, typeInfo.RootType);
+					if (typeInfo.FinalizeAction != null) {
+						v = typeInfo.FinalizeAction(v);
+					}
+					parentState.Value = v;
 					parentState.IsComplete = true;
+					HandleStateCompletion(parentState);
 				}
 				else {
 					throw new NotImplementedException();
@@ -187,13 +227,23 @@ namespace IonKiwi.Json {
 
 			private void HandleStateCompletion(JsonParserInternalState state) {
 				if (state is JsonParserObjectPropertyState propertyState) {
-					SetPropertyValue(propertyState);
+					if (state.Parent is JsonParserDictionaryState dictionaryState) {
+						AddDictionaryKeyValue(dictionaryState, propertyState);
+					}
+					else {
+						SetPropertyValue(propertyState);
+					}
 				}
-				else if (state is JsonParserArrayState arrayState) {
-					AddArrayItem(arrayState);
+				else if (state is JsonParserArrayItemState arrayState) {
+					if (state.Parent is JsonParserDictionaryState dictionaryState) {
+						AddDictionaryKeyValue(dictionaryState, arrayState);
+					}
+					else {
+						AddArrayItem(arrayState);
+					}
 				}
-				else if (state is JsonParserDictionaryState dictionaryState) {
-					AddDictionaryKeyValue(dictionaryState);
+				else if (state is JsonParserObjectState objectState) {
+
 				}
 				else {
 					ThrowUnhandledType(state.GetType());
@@ -211,12 +261,18 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private void AddArrayItem(JsonParserArrayState arrayState) {
-
+			private void AddArrayItem(JsonParserArrayItemState arrayState) {
+				var parent = (JsonParserArrayState)arrayState.Parent;
+				parent.TypeInfo.CollectionAddMethod(parent.Value, arrayState.Value);
 			}
 
-			private void AddDictionaryKeyValue(JsonParserDictionaryState dictionaryState) {
+			private void AddDictionaryKeyValue(JsonParserDictionaryState dictionaryState, JsonParserObjectPropertyState propertyState) {
+				dictionaryState.TypeInfo.DictionaryAddMethod(dictionaryState.Value, propertyState.PropertyInfo.Name, propertyState.Value);
+			}
 
+			private void AddDictionaryKeyValue(JsonParserDictionaryState dictionaryState, JsonParserArrayItemState itemState) {
+				IIntermediateDictionaryItem item = (IIntermediateDictionaryItem)itemState.Value;
+				dictionaryState.TypeInfo.DictionaryAddMethod(dictionaryState.Value, item.Key, item.Value);
 			}
 
 			private void EnsureNotComplete(JsonParserInternalState state) {

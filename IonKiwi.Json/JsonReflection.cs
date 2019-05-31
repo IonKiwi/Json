@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 
@@ -28,9 +29,17 @@ namespace IonKiwi.Json {
 			public bool IsSimpleValue;
 			public JsonObjectType ObjectType;
 			public Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
+			public Action<object, object> CollectionAddMethod;
+			public Action<object, object, object> DictionaryAddMethod;
+			public Func<object, object> FinalizeAction;
+
+			public readonly List<Action<object, StreamingContext>> OnDeserialized = new List<Action<object, StreamingContext>>();
+			public readonly List<Action<object, StreamingContext>> OnDeserializing = new List<Action<object, StreamingContext>>();
 		}
 
 		internal class JsonPropertyInfo {
+			public string Name;
+			public string OriginalName;
 			public Type PropertyType;
 			public bool Required;
 			public Func<object, object, object> Setter1;
@@ -83,7 +92,10 @@ namespace IonKiwi.Json {
 
 			if (t.IsArray) {
 				ti.ObjectType = JsonObjectType.Array;
-				throw new NotImplementedException();
+				ti.ItemType = t.GetElementType();
+				ti.RootType = typeof(List<>).MakeGenericType(ti.ItemType);
+				ti.FinalizeAction = ReflectionUtility.CreateToArray<object, object>(ti.RootType);
+				return ti;
 			}
 			else if (objectInfo == null && collectionInfo == null && dictInfo == null) {
 
@@ -115,6 +127,16 @@ namespace IonKiwi.Json {
 				}
 			}
 
+			var typeHierarchy = new List<Type>() { t };
+			var parentType = t.BaseType;
+			while (parentType != null) {
+				if (parentType == typeof(object) || parentType == typeof(ValueType)) {
+					break;
+				}
+				typeHierarchy.Add(parentType);
+				parentType = parentType.BaseType;
+			}
+
 			if (dictInfo != null) {
 				ti.ObjectType = JsonObjectType.Dictionary;
 
@@ -138,8 +160,8 @@ namespace IonKiwi.Json {
 
 				ti.KeyType = dictionaryInterface.GenericTypeArguments[0];
 				ti.ItemType = dictionaryInterface.GenericTypeArguments[1];
-
 				ti.ObjectType = JsonObjectType.Dictionary;
+				ti.DictionaryAddMethod = ReflectionUtility.CreateDictionaryAdd<object, object, object>(t, ti.KeyType, ti.ItemType);
 			}
 			else if (collectionInfo != null) {
 
@@ -163,25 +185,17 @@ namespace IonKiwi.Json {
 
 				ti.ItemType = collectionInterface.GenericTypeArguments[0];
 				ti.ObjectType = JsonObjectType.Array;
+				ti.CollectionAddMethod = ReflectionUtility.CreateCollectionAdd<object, object>(t, ti.ItemType);
 			}
 			else if (objectInfo != null) {
 
 				if (customProperties != null) {
 					foreach (var cp in customProperties) {
-						ti.Properties.Add(cp.Key, new JsonPropertyInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter, Required = cp.Value.Required });
+						// note OriginalName is not set
+						ti.Properties.Add(cp.Key, new JsonPropertyInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter, Required = cp.Value.Required, Name = cp.Key });
 					}
 				}
 				else {
-
-					var typeHierarchy = new List<Type>() { t };
-					var parentType = t.BaseType;
-					while (parentType != null) {
-						if (parentType == typeof(object) || parentType == typeof(ValueType)) {
-							break;
-						}
-						typeHierarchy.Add(parentType);
-						parentType = parentType.BaseType;
-					}
 
 					for (int i = typeHierarchy.Count - 1; i >= 0; i--) {
 						var currentType = typeHierarchy[i];
@@ -194,6 +208,8 @@ namespace IonKiwi.Json {
 								}
 
 								JsonPropertyInfo pi = new JsonPropertyInfo();
+								pi.Name = name;
+								pi.OriginalName = p.Name;
 								pi.PropertyType = p.PropertyType;
 								if (t.IsValueType) {
 									pi.Setter1 = ReflectionUtility.CreatePropertySetterFunc<object, object>(p);
@@ -213,6 +229,8 @@ namespace IonKiwi.Json {
 								}
 
 								JsonPropertyInfo pi = new JsonPropertyInfo();
+								pi.Name = name;
+								pi.OriginalName = f.Name;
 								pi.PropertyType = f.FieldType;
 								if (t.IsValueType) {
 									pi.Setter1 = ReflectionUtility.CreateFieldSetterFunc<object, object>(f);
@@ -232,7 +250,34 @@ namespace IonKiwi.Json {
 				throw new NotSupportedException("Unsupported type '" + ReflectionUtility.GetTypeName(t) + "'.");
 			}
 
+			for (int i = typeHierarchy.Count - 1; i >= 0; i--) {
+				var currentType = typeHierarchy[i];
+				var m = currentType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+				foreach (MethodInfo mi in m) {
+					var l2 = mi.GetCustomAttributes(typeof(OnDeserializingAttribute), false);
+					if (l2 != null && l2.Length > 0) {
+						ti.OnDeserializing.Add(CreateCallbackAction(mi));
+					}
+
+					var l1 = mi.GetCustomAttributes(typeof(OnDeserializedAttribute), false);
+					if (l1 != null && l1.Length > 0) {
+						ti.OnDeserialized.Add(CreateCallbackAction(mi));
+					}
+				}
+			}
+
 			return ti;
+		}
+
+		private static Action<object, StreamingContext> CreateCallbackAction(MethodInfo mi) {
+			ParameterExpression p1 = Expression.Parameter(typeof(object), "p1");
+			var p2 = Expression.Convert(p1, mi.DeclaringType);
+			ParameterExpression p3 = Expression.Parameter(typeof(StreamingContext), "p2");
+
+			MethodCallExpression methodCall = Expression.Call(p2, mi, p3);
+			Expression methodExpression = Expression.Lambda(methodCall, p1, p3);
+			Expression<Action<object, StreamingContext>> methodLambda = (Expression<Action<object, StreamingContext>>)methodExpression;
+			return methodLambda.Compile();
 		}
 	}
 }

@@ -349,5 +349,109 @@ namespace IonKiwi.Json.Utilities {
 			var callLambda = Expression.Lambda<Func<TType, TValue, TType>>(blockExpr, p1, p2).Compile();
 			return callLambda;
 		}
+
+		public static Action<TIn, TValue> CreateCollectionAdd<TIn, TValue>(Type listType, Type valueType) {
+			var mi = listType.GetMethod("Add", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { valueType }, null);
+			var p = mi.GetParameters();
+			if (p.Length != 1) {
+				throw new Exception("Expected 1 parameter for Add method");
+			}
+
+			Type inType = typeof(TIn);
+			Type valueTypeX = typeof(TValue);
+
+			ParameterExpression p1 = Expression.Parameter(inType, "p1");
+			Expression p2;
+			if (inType != mi.DeclaringType) {
+				p2 = Expression.Convert(p1, mi.DeclaringType);
+			}
+			else {
+				p2 = p1;
+			}
+
+			ParameterExpression p3 = Expression.Parameter(valueTypeX, "p2");
+			Expression p4;
+			if (valueTypeX != p[0].ParameterType) {
+				p4 = Expression.Convert(p3, p[0].ParameterType);
+			}
+			else {
+				p4 = p3;
+			}
+
+			MethodCallExpression methodCall = Expression.Call(p2, mi, p4);
+			var methodLambda = Expression.Lambda<Action<TIn, TValue>>(methodCall, p1, p3);
+			return methodLambda.Compile();
+		}
+
+		public static Func<TIn, TOut> CreateToArray<TIn, TOut>(Type listType) {
+			Type inType = typeof(TIn);
+			Type outType = typeof(TOut);
+
+			var mi = listType.GetMethod("ToArray", BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
+
+			ParameterExpression p1 = Expression.Parameter(inType, "p1");
+			Expression p2;
+			if (inType != listType) {
+				p2 = Expression.Convert(p1, listType);
+			}
+			else {
+				p2 = p1;
+			}
+
+			MethodCallExpression methodCall = Expression.Call(p2, mi);
+			Expression result;
+			if (outType != mi.ReturnType) {
+				result = Expression.Convert(methodCall, outType);
+			}
+			else {
+				result = methodCall;
+			}
+
+			var methodLambda = Expression.Lambda<Func<TIn, TOut>>(result, p1);
+			return methodLambda.Compile();
+		}
+
+		public static Action<TIn, TValue1, TValue2> CreateDictionaryAdd<TIn, TValue1, TValue2>(Type dictionaryType, Type keyType, Type valueType) {
+			var mi = dictionaryType.GetMethod("Add", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { keyType, valueType }, null);
+			var p = mi.GetParameters();
+			if (p.Length != 2) {
+				throw new Exception("Expected 2 parameters for Dictionary Add method");
+			}
+
+			Type inType = typeof(TIn);
+			Type valueType1 = typeof(TValue1);
+			Type valueType2 = typeof(TValue2);
+
+			ParameterExpression p1 = Expression.Parameter(inType, "p1");
+			Expression p2;
+			if (inType != mi.DeclaringType) {
+				p2 = Expression.Convert(p1, mi.DeclaringType);
+			}
+			else {
+				p2 = p1;
+			}
+
+			ParameterExpression p3 = Expression.Parameter(valueType1, "p2");
+			Expression p4;
+			if (valueType1 != p[0].ParameterType) {
+				p4 = Expression.Convert(p3, p[0].ParameterType);
+			}
+			else {
+				p4 = p3;
+			}
+
+			ParameterExpression p5 = Expression.Parameter(valueType2, "p3");
+			Expression p6;
+			if (valueType2 != p[1].ParameterType) {
+				p6 = Expression.Convert(p5, p[1].ParameterType);
+			}
+			else {
+				p6 = p5;
+			}
+
+			MethodCallExpression methodCall = Expression.Call(p2, mi, p4, p6);
+			var methodLambda = Expression.Lambda<Action<TIn, TValue1, TValue2>>(methodCall, p1, p3, p5);
+			return methodLambda.Compile();
+		}
 	}
 }
