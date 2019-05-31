@@ -20,27 +20,32 @@ namespace IonKiwi.Json {
 
 		private sealed class JsonParserRootState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
+			public TupleContextInfoWrapper TupleContext;
 		}
 
 		private sealed class JsonParserObjectState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
+			public TupleContextInfoWrapper TupleContext;
 			//public int StartDepth;
 			public bool IsFirst = true;
 		}
 
 		private sealed class JsonParserArrayState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
+			public TupleContextInfoWrapper TupleContext;
 			//public int StartDepth;
 			public bool IsFirst = true;
 		}
 
 		private sealed class JsonParserArrayItemState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
+			public TupleContextInfoWrapper TupleContext;
 			//public int StartDepth;
 		}
 
 		private sealed class JsonParserDictionaryState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
+			public TupleContextInfoWrapper TupleContext;
 			//public int StartDepth;
 			public bool IsStringDictionary;
 			public bool IsFirst = true;
@@ -52,12 +57,14 @@ namespace IonKiwi.Json {
 
 		private sealed class JsonParserDictionaryValueState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
+			public TupleContextInfoWrapper TupleContext;
 			//public int StartDepth;
 			public string PropertyName;
 		}
 
 		private sealed class JsonParserObjectPropertyState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
+			public TupleContextInfoWrapper TupleContext;
 			public JsonPropertyInfo PropertyInfo;
 		}
 

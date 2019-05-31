@@ -21,17 +21,17 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public static ValueTask<T> Parse<T>(JsonReader reader, JsonParserSettings parserSettings = null) {
-			return Parse<T>(reader, typeof(T), parserSettings);
+		public static ValueTask<T> Parse<T>(JsonReader reader, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+			return Parse<T>(reader, typeof(T), tupleNames, parserSettings);
 		}
 
-		public static T ParseSync<T>(JsonReader reader, JsonParserSettings parserSettings = null) {
-			return ParseSync<T>(reader, typeof(T), parserSettings);
+		public static T ParseSync<T>(JsonReader reader, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+			return ParseSync<T>(reader, typeof(T), tupleNames, parserSettings);
 		}
 
-		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType, JsonParserSettings parserSettings = null) {
+		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 
-			JsonInternalParser parser = new JsonInternalParser(parserSettings ?? _defaultSettings, JsonReflection.GetTypeInfo(objectType));
+			JsonInternalParser parser = new JsonInternalParser(parserSettings ?? _defaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
 
 			int startDepth = reader.Depth;
 
@@ -44,9 +44,9 @@ namespace IonKiwi.Json {
 			return parser.GetValue<T>();
 		}
 
-		public static T ParseSync<T>(JsonReader reader, Type objectType, JsonParserSettings parserSettings = null) {
+		public static T ParseSync<T>(JsonReader reader, Type objectType, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 
-			JsonInternalParser parser = new JsonInternalParser(parserSettings ?? _defaultSettings, JsonReflection.GetTypeInfo(objectType));
+			JsonInternalParser parser = new JsonInternalParser(parserSettings ?? _defaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
 
 			int startDepth = reader.Depth;
 

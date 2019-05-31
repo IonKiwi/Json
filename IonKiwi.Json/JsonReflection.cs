@@ -2,15 +2,17 @@
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 
 namespace IonKiwi.Json {
-	internal static class JsonReflection {
+	internal static partial class JsonReflection {
 
 		private static readonly object _syncRoot = new object();
 		private static Dictionary<Type, JsonTypeInfo> _typeInfo = new Dictionary<Type, JsonTypeInfo>();
@@ -22,24 +24,24 @@ namespace IonKiwi.Json {
 			SimpleValue,
 		}
 
-		internal class JsonTypeInfo {
+		internal sealed class JsonTypeInfo {
 			public Type RootType;
 			public Type KeyType;
 			public Type ItemType;
 			public bool IsSimpleValue;
+			public bool IsTuple;
 			public JsonObjectType ObjectType;
-			public Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
+			public readonly Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
 			public Action<object, object> CollectionAddMethod;
 			public Action<object, object, object> DictionaryAddMethod;
 			public Func<object, object> FinalizeAction;
-
+			public TupleContextInfo TupleContext;
 			public readonly List<Action<object>> OnDeserialized = new List<Action<object>>();
 			public readonly List<Action<object>> OnDeserializing = new List<Action<object>>();
 		}
 
-		internal class JsonPropertyInfo {
+		internal sealed class JsonPropertyInfo {
 			public string Name;
-			public string OriginalName;
 			public Type PropertyType;
 			public bool Required;
 			public Func<object, object, object> Setter1;
@@ -95,6 +97,37 @@ namespace IonKiwi.Json {
 				ti.ItemType = t.GetElementType();
 				ti.RootType = typeof(List<>).MakeGenericType(ti.ItemType);
 				ti.FinalizeAction = ReflectionUtility.CreateToArray<object, object>(ti.RootType);
+				return ti;
+			}
+			else if (IsTupleType(t, out var tupleRank, out var isNullable, out var placeHolderType, out var finalizeMethod)) {
+				ti.IsTuple = true;
+				ti.RootType = placeHolderType;
+				ti.ObjectType = JsonObjectType.Object;
+
+				var finalizeMethodParameter = Expression.Parameter(typeof(object), "p1");
+				var finalizeMethodExprCall = Expression.Call(Expression.Convert(finalizeMethodParameter, placeHolderType), finalizeMethod);
+				var finalizeMethodExprResult = Expression.Convert(finalizeMethodExprCall, typeof(object));
+				ti.FinalizeAction = Expression.Lambda<Func<object, object>>(finalizeMethodExprResult, finalizeMethodParameter).Compile();
+
+				var properties = placeHolderType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+				foreach (PropertyInfo p in properties) {
+					JsonPropertyInfo pi = new JsonPropertyInfo();
+					pi.Name = p.Name;
+					pi.PropertyType = p.PropertyType;
+					pi.Setter2 = ReflectionUtility.CreatePropertySetterAction<object, object>(p);
+					ti.Properties.Add(pi.Name, pi);
+				}
+
+				var fields = placeHolderType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+				foreach (FieldInfo f in fields) {
+					JsonPropertyInfo pi = new JsonPropertyInfo();
+					pi.Name = f.Name;
+					pi.PropertyType = f.FieldType;
+					pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
+					ti.Properties.Add(pi.Name, pi);
+				}
+
+				ti.TupleContext = CreateTupleContextInfo(t);
 				return ti;
 			}
 			else if (objectInfo == null && collectionInfo == null && dictInfo == null) {
@@ -191,7 +224,6 @@ namespace IonKiwi.Json {
 
 				if (customProperties != null) {
 					foreach (var cp in customProperties) {
-						// note OriginalName is not set
 						ti.Properties.Add(cp.Key, new JsonPropertyInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter, Required = cp.Value.Required, Name = cp.Key });
 					}
 				}
@@ -209,13 +241,15 @@ namespace IonKiwi.Json {
 
 								JsonPropertyInfo pi = new JsonPropertyInfo();
 								pi.Name = name;
-								pi.OriginalName = p.Name;
 								pi.PropertyType = p.PropertyType;
 								if (t.IsValueType) {
 									pi.Setter1 = ReflectionUtility.CreatePropertySetterFunc<object, object>(p);
 								}
 								else {
 									pi.Setter2 = ReflectionUtility.CreatePropertySetterAction<object, object>(p);
+								}
+								if (ti.Properties.ContainsKey(name)) {
+									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
 								}
 								ti.Properties.Add(name, pi);
 							}
@@ -230,13 +264,15 @@ namespace IonKiwi.Json {
 
 								JsonPropertyInfo pi = new JsonPropertyInfo();
 								pi.Name = name;
-								pi.OriginalName = f.Name;
 								pi.PropertyType = f.FieldType;
 								if (t.IsValueType) {
 									pi.Setter1 = ReflectionUtility.CreateFieldSetterFunc<object, object>(f);
 								}
 								else {
 									pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
+								}
+								if (ti.Properties.ContainsKey(name)) {
+									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
 								}
 								ti.Properties.Add(name, pi);
 							}
@@ -266,6 +302,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
+			ti.TupleContext = CreateTupleContextInfo(t);
 			return ti;
 		}
 

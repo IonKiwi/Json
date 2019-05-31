@@ -36,6 +36,36 @@ namespace IonKiwi.Json.Utilities {
 			return false;
 		}
 
+		internal static bool HasInterface(Type t, Type interfaceType, out Type actualInterface) {
+			if (t == null) {
+				throw new ArgumentNullException(nameof(t));
+			}
+			else if (interfaceType == null) {
+				throw new ArgumentNullException(nameof(interfaceType));
+			}
+			else if (!interfaceType.IsInterface) {
+				throw new InvalidOperationException($"'{GetTypeName(interfaceType)}' is not an interface");
+			}
+
+
+			bool isGenericTypeDefinition = interfaceType.IsGenericTypeDefinition;
+			var interfaces = t.GetInterfaces();
+			foreach (Type x in interfaces) {
+				if (x == interfaceType) {
+					actualInterface = x;
+					return true;
+				}
+				else if (isGenericTypeDefinition && x.IsGenericType) {
+					if (x.GetGenericTypeDefinition() == interfaceType) {
+						actualInterface = x;
+						return true;
+					}
+				}
+			}
+			actualInterface = null;
+			return false;
+		}
+
 		public static string GetTypeName(Type t) {
 			if (t == null) {
 				throw new ArgumentNullException(nameof(t));
@@ -452,6 +482,35 @@ namespace IonKiwi.Json.Utilities {
 			MethodCallExpression methodCall = Expression.Call(p2, mi, p4, p6);
 			var methodLambda = Expression.Lambda<Action<TIn, TValue1, TValue2>>(methodCall, p1, p3, p5);
 			return methodLambda.Compile();
+		}
+
+		public static bool IsTupleType(Type valueType, out int tupleRank, out bool isNullable) {
+			tupleRank = 0;
+			isNullable = false;
+
+			// NOTE: keep in sync with other IsTupleType()
+			if (!valueType.IsGenericType) {
+				return false;
+			}
+			var td = valueType.GetGenericTypeDefinition();
+			if (td == typeof(Nullable<>)) {
+				var isTuple = IsTupleType(valueType.GenericTypeArguments[0], out tupleRank, out _);
+				isNullable = true;
+				return isTuple;
+			}
+			else if (td == typeof(Tuple<>) || td == typeof(Tuple<,>) || td == typeof(Tuple<,,>) || td == typeof(Tuple<,,,>) || td == typeof(Tuple<,,,,>) || td == typeof(Tuple<,,,,,>) || td == typeof(Tuple<,,,,,,>) || td == typeof(Tuple<,,,,,,,>)) {
+				tupleRank = valueType.GenericTypeArguments.Length;
+				return true;
+			}
+			else if (td == typeof(ValueTuple<>) || td == typeof(ValueTuple<,>) || td == typeof(ValueTuple<,,>) || td == typeof(ValueTuple<,,,>) || td == typeof(ValueTuple<,,,,>) || td == typeof(ValueTuple<,,,,,>) || td == typeof(ValueTuple<,,,,,,>) || td == typeof(ValueTuple<,,,,,,,>)) {
+				tupleRank = valueType.GenericTypeArguments.Length;
+				return true;
+			}
+			else if (td == typeof(KeyValuePair<,>)) {
+				tupleRank = 2;
+				return true;
+			}
+			return false;
 		}
 	}
 }

@@ -128,18 +128,6 @@ namespace IonKiwi.Json {
 
 				throw new MoreDataExpectedException();
 			}
-			else if (token == JsonToken.ObjectStart) {
-				int depth = Depth;
-				do {
-					token = await Read().NoSync();
-					if (token == JsonToken.ObjectEnd && depth == Depth) {
-						return;
-					}
-				}
-				while (token != JsonToken.None);
-
-				throw new MoreDataExpectedException();
-			}
 			else if (token == JsonToken.ArrayStart) {
 				int depth = Depth;
 				do {
@@ -154,7 +142,6 @@ namespace IonKiwi.Json {
 			}
 			else if (token == JsonToken.ObjectProperty) {
 				await Read().NoSync();
-				await Skip().NoSync();
 			}
 			else {
 				throw new InvalidOperationException("Reader is not at a skippable position. token: " + _token);
@@ -178,18 +165,6 @@ namespace IonKiwi.Json {
 
 				throw new MoreDataExpectedException();
 			}
-			else if (token == JsonToken.ObjectStart) {
-				int depth = Depth;
-				do {
-					token = ReadSync();
-					if (token == JsonToken.ObjectEnd && depth == Depth) {
-						return;
-					}
-				}
-				while (token != JsonToken.None);
-
-				throw new MoreDataExpectedException();
-			}
 			else if (token == JsonToken.ArrayStart) {
 				int depth = Depth;
 				do {
@@ -204,7 +179,6 @@ namespace IonKiwi.Json {
 			}
 			else if (token == JsonToken.ObjectProperty) {
 				ReadSync();
-				SkipSync();
 			}
 			else {
 				throw new InvalidOperationException("Reader is not at a skippable position. token: " + _token);
