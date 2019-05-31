@@ -37,6 +37,21 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
+		public void TestArray2() {
+			string json = "[{Property1:\"value1\"},{Property1:\"value2\"}]";
+			var v = JsonParser.ParseSync<List<Object1>>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.Equal(2, v.Count);
+			Assert.NotNull(v[0]);
+			Assert.NotNull(v[0].Property1);
+			Assert.Equal("value1", v[0].Property1);
+			Assert.NotNull(v[1]);
+			Assert.NotNull(v[1].Property1);
+			Assert.Equal("value2", v[1].Property1);
+			return;
+		}
+
+		[Fact]
 		public void TestDictionary1() {
 			string json = "{Key1:\"value1\",Key2:\"value2\"}";
 			var v = JsonParser.ParseSync<Dictionary<string, string>>(new JsonReader(Encoding.UTF8.GetBytes(json)));
