@@ -6,6 +6,77 @@ using System.Text;
 
 namespace IonKiwi.Json.Utilities {
 	public static class ReflectionUtility {
+
+		public static bool HasInterface(Type t, Type interfaceType) {
+			if (t == null) {
+				throw new ArgumentNullException(nameof(t));
+			}
+			if (interfaceType == null) {
+				throw new ArgumentNullException(nameof(interfaceType));
+			}
+			if (!interfaceType.IsInterface) {
+				throw new InvalidOperationException($"'{GetTypeName(interfaceType)}' is not an interface");
+			}
+
+			bool isGenericTypeDefinition = interfaceType.IsGenericTypeDefinition;
+			var interfaces = t.GetInterfaces();
+			foreach (Type x in interfaces) {
+				if (x == interfaceType) {
+					return true;
+				}
+				else if (isGenericTypeDefinition && x.IsGenericType) {
+					if (x.GetGenericTypeDefinition() == interfaceType) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		public static string GetTypeName(Type t) {
+			if (t == null) {
+				throw new ArgumentNullException(nameof(t));
+			}
+
+			StringBuilder sb = new StringBuilder();
+			if (t.IsGenericType) {
+				sb.Append(t.GetGenericTypeDefinition().FullName);
+			}
+			else {
+				sb.Append(t.FullName);
+			}
+			if (t.IsGenericType) {
+				AddGenericParameters(sb, t);
+			}
+			return sb.ToString();
+		}
+
+		private static void AddGenericParameters(StringBuilder sb, Type t) {
+			sb.Append("[");
+			Type[] arguments = t.GetGenericArguments();
+			for (int i = 0; i < arguments.Length; i++) {
+				Type gt = arguments[i];
+				if (i > 0) {
+					sb.Append(", ");
+				}
+				if (gt.IsGenericParameter) {
+					sb.Append(gt.Name);
+				}
+				else {
+					if (gt.IsGenericType) {
+						sb.Append(gt.GetGenericTypeDefinition().FullName);
+					}
+					else {
+						sb.Append(gt.FullName);
+					}
+					if (gt.IsGenericType) {
+						AddGenericParameters(sb, gt);
+					}
+				}
+			}
+			sb.Append("]");
+		}
+
 		public static Action<TType, TValue> CreatePropertySetterAction<TType, TValue>(PropertyInfo property) {
 			var t = typeof(TType);
 			var v = typeof(TValue);

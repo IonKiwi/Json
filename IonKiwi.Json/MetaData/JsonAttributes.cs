@@ -6,17 +6,18 @@ namespace IonKiwi.Json.MetaData {
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 	public class JsonObjectAttribute : Attribute {
-
+		public bool IsSingleOrArrayValue { get; set; }
 	}
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 	public class JsonCollectionAttribute : Attribute {
-
+		public Type CollectionInterface { get; set; }
 	}
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 	public class JsonDictionaryAttribute : Attribute {
 
+		public Type DictionaryInterface { get; set; }
 	}
 
 	public enum JsonEmitTypeName {
@@ -38,5 +39,7 @@ namespace IonKiwi.Json.MetaData {
 		public string Name { get; set; }
 
 		public JsonEmitTypeName EmitTypeName { get; set; }
+
+		public bool IsSingleOrArrayValue { get; set; }
 	}
 }
