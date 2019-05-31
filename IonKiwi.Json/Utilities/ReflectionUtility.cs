@@ -11,10 +11,10 @@ namespace IonKiwi.Json.Utilities {
 			if (t == null) {
 				throw new ArgumentNullException(nameof(t));
 			}
-			if (interfaceType == null) {
+			else if (interfaceType == null) {
 				throw new ArgumentNullException(nameof(interfaceType));
 			}
-			if (!interfaceType.IsInterface) {
+			else if (!interfaceType.IsInterface) {
 				throw new InvalidOperationException($"'{GetTypeName(interfaceType)}' is not an interface");
 			}
 

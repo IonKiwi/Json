@@ -1,9 +1,11 @@
 ﻿using IonKiwi.Extenions;
+using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using static IonKiwi.Json.JsonReader;
+using static IonKiwi.Json.JsonReflection;
 
 namespace IonKiwi.Json {
 	public static partial class JsonParser {
@@ -18,27 +20,61 @@ namespace IonKiwi.Json {
 
 		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType) {
 
-			JsonParserRootState state = new JsonParserRootState();
+			JsonInternalParser parser = new JsonInternalParser(JsonReflection.GetTypeInfo(objectType));
+
+			int startDepth = reader.Depth;
 
 			while (await reader.Read().NoSync() != JsonToken.None) {
-				HandleToken(reader.Token);
+				parser.HandleToken(reader.Token);
 			}
 
-			return (T)state.Value;
+			int endDepth = reader.Depth;
+			if (endDepth != startDepth) {
+				throw new Exception("Parser left the reader at an invalid position");
+			}
+
+			EnsureValidPosition(reader, startDepth);
+
+			return parser.GetValue<T>();
 		}
 
 		public static T ParseSync<T>(JsonReader reader, Type objectType) {
-			JsonParserRootState state = new JsonParserRootState();
+
+			JsonInternalParser parser = new JsonInternalParser(JsonReflection.GetTypeInfo(objectType));
+
+			int startDepth = reader.Depth;
 
 			while (reader.ReadSync() != JsonToken.None) {
-				HandleToken(reader.Token);
+				parser.HandleToken(reader.Token);
 			}
 
-			return (T)state.Value;
+			EnsureValidPosition(reader, startDepth);
+
+			return parser.GetValue<T>();
 		}
 
-		private static void HandleToken(JsonToken token) {
+		private static void EnsureValidPosition(JsonReader reader, int startDepth) {
+			int endDepth = reader.Depth;
+			if (endDepth != startDepth) {
+				throw new Exception("Parser left the reader at an invalid position");
+			}
+		}
 
+		private sealed class JsonInternalParser {
+
+			private readonly JsonTypeInfo _rootType;
+
+			public JsonInternalParser(JsonTypeInfo typeInfo) {
+				_rootType = typeInfo;
+			}
+
+			public void HandleToken(JsonToken token) {
+
+			}
+
+			public T GetValue<T>() {
+				throw new NotImplementedException();
+			}
 		}
 	}
 }
