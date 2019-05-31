@@ -21,17 +21,81 @@ namespace IonKiwi.Json.MetaData {
 
 		internal Dictionary<string, PropertyInfo> Properties { get; } = new Dictionary<string, PropertyInfo>(StringComparer.Ordinal);
 
+		internal List<Action<object>> OnDeserializing { get; } = new List<Action<object>>();
+
+		internal List<Action<object>> OnDeserialized { get; } = new List<Action<object>>();
+
 		public void IsCollection(JsonCollectionAttribute collectionAttribute) { CollectionAttribute = collectionAttribute; }
 
 		public void IsDictionary(JsonDictionaryAttribute dictionaryAttribute) { DictionaryAttribute = dictionaryAttribute; }
 
 		public void IsObject(JsonObjectAttribute objectAttribute) { ObjectAttribute = objectAttribute; }
 
-		public void AddProperty<TValue, TProperty>(string name, Func<TValue, TProperty, TValue> setter, bool required = false) {
+		public void AddOnDeserializing<TValue>(Action<TValue> callback) where TValue : class {
+			var valueType = typeof(TValue);
+			var validValueType = valueType == RootType;
+			if (!validValueType) {
+				if (valueType.IsInterface) {
+					validValueType = ReflectionUtility.HasInterface(RootType, valueType);
+				}
+				else if (RootType.IsSubclassOf(valueType)) {
+					validValueType = true;
+				}
+			}
+
+			if (!validValueType) {
+				throw new InvalidOperationException("Invalid value type '" + ReflectionUtility.GetTypeName(valueType) + "' for root type '" + ReflectionUtility.GetTypeName(RootType) + "'.");
+			}
+
+			if (valueType == typeof(object)) {
+				OnDeserializing.Add((Action<object>)callback);
+			}
+			else {
+				Action<object> callbackWrapper = (obj) => callback((TValue)obj);
+				OnDeserializing.Add(callbackWrapper);
+			}
+		}
+
+		public void AddOnDeserialized<TValue>(Action<TValue> callback) where TValue : class {
+			var valueType = typeof(TValue);
+			var validValueType = valueType == RootType;
+			if (!validValueType) {
+				if (valueType.IsInterface) {
+					validValueType = ReflectionUtility.HasInterface(RootType, valueType);
+				}
+				else if (RootType.IsSubclassOf(valueType)) {
+					validValueType = true;
+				}
+			}
+
+			if (!validValueType) {
+				throw new InvalidOperationException("Invalid value type '" + ReflectionUtility.GetTypeName(valueType) + "' for root type '" + ReflectionUtility.GetTypeName(RootType) + "'.");
+			}
+
+			if (valueType == typeof(object)) {
+				OnDeserialized.Add((Action<object>)callback);
+			}
+			else {
+				Action<object> callbackWrapper = (obj) => callback((TValue)obj);
+				OnDeserialized.Add(callbackWrapper);
+			}
+		}
+
+		public void AddProperty<TValue, TProperty>(string name, Func<TValue, TProperty, TValue> setter, bool required = false) where TValue : class {
 
 			var valueType = typeof(TValue);
-			if (valueType != RootType) {
-				throw new InvalidOperationException("TValue != RooType");
+			var validValueType = valueType == RootType;
+			if (!validValueType) {
+				if (valueType.IsInterface) {
+					validValueType = ReflectionUtility.HasInterface(RootType, valueType);
+				}
+				else if (RootType.IsSubclassOf(valueType)) {
+					validValueType = true;
+				}
+			}
+
+			if (!validValueType) {
+				throw new InvalidOperationException("Invalid value type '" + ReflectionUtility.GetTypeName(valueType) + "' for root type '" + ReflectionUtility.GetTypeName(RootType) + "'.");
 			}
 
 			var propertyType = typeof(TProperty);
@@ -58,7 +122,7 @@ namespace IonKiwi.Json.MetaData {
 			var validProperty = pi.DeclaringType == RootType;
 			if (!validProperty) {
 				if (pi.DeclaringType.IsInterface) {
-					validProperty = RootType.GetInterfaces().Contains(pi.DeclaringType);
+					validProperty = ReflectionUtility.HasInterface(RootType, pi.DeclaringType);
 				}
 				else if (RootType.IsSubclassOf(pi.DeclaringType)) {
 					validProperty = true;
@@ -66,7 +130,7 @@ namespace IonKiwi.Json.MetaData {
 			}
 
 			if (!validProperty) {
-				throw new InvalidOperationException("Invalid property");
+				throw new InvalidOperationException("Invalid property '" + pi.Name + "'. declaring type: " + ReflectionUtility.GetTypeName(pi.DeclaringType) + ", root type: " + ReflectionUtility.GetTypeName(RootType));
 			}
 
 			if (Properties.ContainsKey(name)) {
@@ -90,7 +154,7 @@ namespace IonKiwi.Json.MetaData {
 			var validProperty = fi.DeclaringType == RootType;
 			if (!validProperty) {
 				if (fi.DeclaringType.IsInterface) {
-					validProperty = RootType.GetInterfaces().Contains(fi.DeclaringType);
+					validProperty = ReflectionUtility.HasInterface(RootType, fi.DeclaringType);
 				}
 				else if (RootType.IsSubclassOf(fi.DeclaringType)) {
 					validProperty = true;
@@ -98,7 +162,7 @@ namespace IonKiwi.Json.MetaData {
 			}
 
 			if (!validProperty) {
-				throw new InvalidOperationException("Invalid property");
+				throw new InvalidOperationException("Invalid property '" + fi.Name + "'. declaring type: " + ReflectionUtility.GetTypeName(fi.DeclaringType) + ", root type: " + ReflectionUtility.GetTypeName(RootType));
 			}
 
 			if (Properties.ContainsKey(name)) {

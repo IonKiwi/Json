@@ -70,9 +70,15 @@ namespace IonKiwi.Json {
 							dictionaryState.IsFirst = false;
 							if (string.Equals("$type", propertyName, StringComparison.Ordinal)) {
 								// type handling
+								foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
+									a(dictionaryState.Value);
+								}
 								return HandleStateResult.None;
 							}
 							dictionaryState.Value = TypeInstantiator.Instantiate(dictionaryState.TypeInfo.RootType);
+							foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
+								a(dictionaryState.Value);
+							}
 						}
 
 						JsonParserDictionaryValueState propertyState = new JsonParserDictionaryValueState();
@@ -94,7 +100,14 @@ namespace IonKiwi.Json {
 							string v = reader.GetValue();
 							if (v != null && v.StartsWith("$type:", StringComparison.Ordinal)) {
 								// type handling
+								foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
+									a(dictionaryState.Value);
+								}
 								return HandleStateResult.None;
+							}
+							dictionaryState.Value = TypeInstantiator.Instantiate(dictionaryState.TypeInfo.RootType);
+							foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
+								a(dictionaryState.Value);
 							}
 						}
 					}
@@ -122,7 +135,14 @@ namespace IonKiwi.Json {
 					string v = reader.GetValue();
 					if (v != null && v.StartsWith("$type:", StringComparison.Ordinal)) {
 						// type handling
+						foreach (var a in arrayState.TypeInfo.OnDeserializing) {
+							a(arrayState.Value);
+						}
 						return HandleStateResult.None;
+					}
+					arrayState.Value = TypeInstantiator.Instantiate(arrayState.TypeInfo.RootType);
+					foreach (var a in arrayState.TypeInfo.OnDeserializing) {
+						a(arrayState.Value);
 					}
 				}
 
@@ -146,11 +166,22 @@ namespace IonKiwi.Json {
 				var token = reader.Token;
 				if (token == JsonToken.ObjectProperty) {
 					string propertyName = reader.GetValue();
-					if (string.Equals("$type", propertyName, StringComparison.Ordinal) && !objectState.IsComplete) {
-						// type handling
-						return HandleStateResult.None;
+					if (objectState.IsFirst) {
+						objectState.IsFirst = false;
+						if (string.Equals("$type", propertyName, StringComparison.Ordinal) && !objectState.IsComplete) {
+							// type handling
+							foreach (var a in objectState.TypeInfo.OnDeserializing) {
+								a(objectState.Value);
+							}
+							return HandleStateResult.None;
+						}
+						objectState.Value = TypeInstantiator.Instantiate(objectState.TypeInfo.RootType);
+						foreach (var a in objectState.TypeInfo.OnDeserializing) {
+							a(objectState.Value);
+						}
 					}
-					else if (!objectState.TypeInfo.Properties.TryGetValue(propertyName, out var propertyInfo)) {
+
+					if (!objectState.TypeInfo.Properties.TryGetValue(propertyName, out var propertyInfo)) {
 						return HandleStateResult.Skip;
 					}
 					else {
@@ -178,7 +209,7 @@ namespace IonKiwi.Json {
 					objectState.Value = objectState.TypeInfo.FinalizeAction(objectState.Value);
 				}
 				foreach (var a in objectState.TypeInfo.OnDeserialized) {
-					a(objectState.Value, new System.Runtime.Serialization.StreamingContext());
+					a(objectState.Value);
 				}
 
 				objectState.IsComplete = true;
@@ -193,7 +224,7 @@ namespace IonKiwi.Json {
 					arrayState.Value = arrayState.TypeInfo.FinalizeAction(arrayState.Value);
 				}
 				foreach (var a in arrayState.TypeInfo.OnDeserialized) {
-					a(arrayState.Value, new System.Runtime.Serialization.StreamingContext());
+					a(arrayState.Value);
 				}
 
 				arrayState.IsComplete = true;
@@ -208,7 +239,7 @@ namespace IonKiwi.Json {
 					dictionaryState.Value = dictionaryState.TypeInfo.FinalizeAction(dictionaryState.Value);
 				}
 				foreach (var a in dictionaryState.TypeInfo.OnDeserialized) {
-					a(dictionaryState.Value, new System.Runtime.Serialization.StreamingContext());
+					a(dictionaryState.Value);
 				}
 
 				dictionaryState.IsComplete = true;

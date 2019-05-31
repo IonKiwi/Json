@@ -25,6 +25,7 @@ namespace IonKiwi.Json {
 		private sealed class JsonParserObjectState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
 			//public int StartDepth;
+			public bool IsFirst = true;
 		}
 
 		private sealed class JsonParserArrayState : JsonParserInternalState {

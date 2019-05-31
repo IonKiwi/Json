@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 
@@ -33,8 +32,8 @@ namespace IonKiwi.Json {
 			public Action<object, object, object> DictionaryAddMethod;
 			public Func<object, object> FinalizeAction;
 
-			public readonly List<Action<object, StreamingContext>> OnDeserialized = new List<Action<object, StreamingContext>>();
-			public readonly List<Action<object, StreamingContext>> OnDeserializing = new List<Action<object, StreamingContext>>();
+			public readonly List<Action<object>> OnDeserialized = new List<Action<object>>();
+			public readonly List<Action<object>> OnDeserializing = new List<Action<object>>();
 		}
 
 		internal class JsonPropertyInfo {
@@ -254,12 +253,12 @@ namespace IonKiwi.Json {
 				var currentType = typeHierarchy[i];
 				var m = currentType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
 				foreach (MethodInfo mi in m) {
-					var l2 = mi.GetCustomAttributes(typeof(OnDeserializingAttribute), false);
+					var l2 = mi.GetCustomAttributes(typeof(JsonOnDeserializingAttribute), false);
 					if (l2 != null && l2.Length > 0) {
 						ti.OnDeserializing.Add(CreateCallbackAction(mi));
 					}
 
-					var l1 = mi.GetCustomAttributes(typeof(OnDeserializedAttribute), false);
+					var l1 = mi.GetCustomAttributes(typeof(JsonOnDeserializedAttribute), false);
 					if (l1 != null && l1.Length > 0) {
 						ti.OnDeserialized.Add(CreateCallbackAction(mi));
 					}
@@ -269,14 +268,12 @@ namespace IonKiwi.Json {
 			return ti;
 		}
 
-		private static Action<object, StreamingContext> CreateCallbackAction(MethodInfo mi) {
-			ParameterExpression p1 = Expression.Parameter(typeof(object), "p1");
-			var p2 = Expression.Convert(p1, mi.DeclaringType);
-			ParameterExpression p3 = Expression.Parameter(typeof(StreamingContext), "p2");
-
-			MethodCallExpression methodCall = Expression.Call(p2, mi, p3);
-			Expression methodExpression = Expression.Lambda(methodCall, p1, p3);
-			Expression<Action<object, StreamingContext>> methodLambda = (Expression<Action<object, StreamingContext>>)methodExpression;
+		private static Action<object> CreateCallbackAction(MethodInfo mi) {
+			var p1 = Expression.Parameter(typeof(object), "p1");
+			var e1 = Expression.Convert(p1, mi.DeclaringType);
+			var methodCall = Expression.Call(e1, mi);
+			var methodExpression = Expression.Lambda(methodCall, p1);
+			var methodLambda = (Expression<Action<object>>)methodExpression;
 			return methodLambda.Compile();
 		}
 	}

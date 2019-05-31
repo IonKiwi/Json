@@ -5,13 +5,12 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.Serialization;
 
-namespace IonKiwi.Json.Newtonsoft {
-	public static class NewtonsoftSupport {
+namespace IonKiwi.Json.Utilities {
+	public static class DataContractSupport {
 		public static void Register() {
 			JsonMetaData.MetaData += (sender, e) => {
-				var objectAttr = e.RootType.GetCustomAttribute<global::Newtonsoft.Json.JsonObjectAttribute>();
-				var arrayAttr = e.RootType.GetCustomAttribute<global::Newtonsoft.Json.JsonArrayAttribute>();
-				var dictAttr = e.RootType.GetCustomAttribute<global::Newtonsoft.Json.JsonDictionaryAttribute>();
+				var objectAttr = e.RootType.GetCustomAttribute<DataContractAttribute>();
+				var arrayAttr = e.RootType.GetCustomAttribute<CollectionDataContractAttribute>();
 
 				var typeHierarchy = new List<Type>() { e.RootType };
 				var parentType = e.RootType.BaseType;
@@ -39,7 +38,7 @@ namespace IonKiwi.Json.Newtonsoft {
 					}
 				}
 
-				if (dictAttr != null) {
+				if (ReflectionUtility.HasInterface(e.RootType, typeof(IDictionary<,>))) {
 					e.IsDictionary(new JsonDictionaryAttribute() {
 
 					});
@@ -55,27 +54,23 @@ namespace IonKiwi.Json.Newtonsoft {
 					});
 
 					foreach (var p in e.RootType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-						var ignoreAttr = p.GetCustomAttribute<global::Newtonsoft.Json.JsonIgnoreAttribute>();
-						var propAttr = p.GetCustomAttribute<global::Newtonsoft.Json.JsonPropertyAttribute>();
-						var reqAttr = p.GetCustomAttribute<global::Newtonsoft.Json.JsonRequiredAttribute>();
+						var ignoreAttr = p.GetCustomAttribute<IgnoreDataMemberAttribute>();
+						var propAttr = p.GetCustomAttribute<DataMemberAttribute>();
 						if (ignoreAttr != null) {
 							continue;
 						}
-						else if (propAttr != null || reqAttr != null) {
-							e.AddProperty(string.IsNullOrEmpty(propAttr?.PropertyName) ? p.Name : propAttr.PropertyName, p,
-								required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always);
+						else if (propAttr != null) {
+							e.AddProperty(string.IsNullOrEmpty(propAttr.Name) ? p.Name : propAttr.Name, p, required: propAttr.IsRequired);
 						}
 					}
 					foreach (var f in e.RootType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-						var ignoreAttr = f.GetCustomAttribute<global::Newtonsoft.Json.JsonIgnoreAttribute>();
-						var propAttr = f.GetCustomAttribute<global::Newtonsoft.Json.JsonPropertyAttribute>();
-						var reqAttr = f.GetCustomAttribute<global::Newtonsoft.Json.JsonRequiredAttribute>();
+						var ignoreAttr = f.GetCustomAttribute<IgnoreDataMemberAttribute>();
+						var propAttr = f.GetCustomAttribute<DataMemberAttribute>();
 						if (ignoreAttr != null) {
 							continue;
 						}
-						else if (propAttr != null || reqAttr != null) {
-							e.AddField(string.IsNullOrEmpty(propAttr?.PropertyName) ? f.Name : propAttr.PropertyName, f,
-								required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always);
+						else if (propAttr != null) {
+							e.AddField(string.IsNullOrEmpty(propAttr.Name) ? f.Name : propAttr.Name, f, required: propAttr.IsRequired);
 						}
 					}
 				}

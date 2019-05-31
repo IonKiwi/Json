@@ -4,6 +4,14 @@ using System.Text;
 
 namespace IonKiwi.Json.MetaData {
 
+	[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+	public sealed class JsonOnDeserializingAttribute : Attribute {
+	}
+
+	[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+	public sealed class JsonOnDeserializedAttribute : Attribute {
+	}
+
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 	public class JsonObjectAttribute : Attribute {
 		public bool IsSingleOrArrayValue { get; set; }
