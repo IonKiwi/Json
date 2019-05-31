@@ -345,10 +345,12 @@ namespace IonKiwi.Json {
 					else if (propertyInfo.Setter2 != null) {
 						propertyInfo.Setter2(parentState.Value, propertyState.Value);
 					}
+					_currentState.Pop();
 				}
 				else if (parentState is JsonParserArrayState arrayState) {
 					var itemState = (JsonParserArrayItemState)completedState;
 					arrayState.TypeInfo.CollectionAddMethod(arrayState.Value, itemState.Value);
+					_currentState.Pop();
 				}
 				else if (parentState is JsonParserDictionaryState dictionaryState) {
 					if (dictionaryState.IsStringDictionary) {
@@ -359,6 +361,7 @@ namespace IonKiwi.Json {
 						IIntermediateDictionaryItem item = (IIntermediateDictionaryItem)completedState.Value;
 						dictionaryState.TypeInfo.DictionaryAddMethod(dictionaryState.Value, item.Key, item.Value);
 					}
+					_currentState.Pop();
 				}
 				else if (parentState is JsonParserRootState) {
 					parentState.Value = completedState.Value;

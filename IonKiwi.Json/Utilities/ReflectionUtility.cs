@@ -261,12 +261,12 @@ namespace IonKiwi.Json.Utilities {
 
 			var p1 = Expression.Parameter(t, "p1");
 			var p2 = Expression.Parameter(v, "p2");
-			var var = Expression.Variable(t, "v");
+			var var = Expression.Variable(d, "v");
 
 			Expression instace;
 			if (d != t) {
-				//instace = d.IsValueType ? Expression.Unbox(p1, t) : Expression.Convert(p1, t);
-				instace = Expression.Convert(p1, t);
+				//instace = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
+				instace = Expression.Convert(p1, d);
 			}
 			else {
 				instace = p1;
@@ -281,7 +281,7 @@ namespace IonKiwi.Json.Utilities {
 
 			var varValue = Expression.Assign(var, instace);
 			var callExpr = Expression.Call(var, property.GetSetMethod(true), value);
-			var resultExpr = d != t ? (Expression)Expression.Convert(var, typeof(object)) : var;
+			var resultExpr = d != t ? (Expression)Expression.Convert(var, t) : var;
 			var blockExpr = Expression.Block(new List<ParameterExpression>() { var }, varValue, callExpr, resultExpr);
 			var callLambda = Expression.Lambda<Func<TType, TValue, TType>>(blockExpr, p1, p2).Compile();
 			return callLambda;
@@ -323,12 +323,12 @@ namespace IonKiwi.Json.Utilities {
 
 			var p1 = Expression.Parameter(t, "p1");
 			var p2 = Expression.Parameter(v, "p2");
-			var var = Expression.Variable(t, "v");
+			var var = Expression.Variable(d, "v");
 
 			Expression instace;
 			if (d != t) {
-				//instace = d.IsValueType ? Expression.Unbox(p1, t) : Expression.Convert(p1, t);
-				instace = Expression.Convert(p1, t);
+				//instace = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
+				instace = Expression.Convert(p1, d);
 			}
 			else {
 				instace = p1;
@@ -344,7 +344,7 @@ namespace IonKiwi.Json.Utilities {
 			var varValue = Expression.Assign(var, instace);
 			var fieldExpr = Expression.Field(var, field);
 			var callExpr = Expression.Assign(fieldExpr, value);
-			var resultExpr = d != t ? (Expression)Expression.Convert(var, typeof(object)) : var;
+			var resultExpr = d != t ? (Expression)Expression.Convert(var, t) : var;
 			var blockExpr = Expression.Block(new List<ParameterExpression>() { var }, varValue, callExpr, resultExpr);
 			var callLambda = Expression.Lambda<Func<TType, TValue, TType>>(blockExpr, p1, p2).Compile();
 			return callLambda;
