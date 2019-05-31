@@ -23,5 +23,59 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal("value1", v.Property1);
 			return;
 		}
+
+		[Fact]
+		public void TestArray1() {
+			string json = "[1,2,3]";
+			var v = JsonParser.ParseSync<List<int>>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.Equal(3, v.Count);
+			Assert.Equal(1, v[0]);
+			Assert.Equal(2, v[1]);
+			Assert.Equal(3, v[2]);
+			return;
+		}
+
+		[Fact]
+		public void TestDictionary1() {
+			string json = "{Key1:\"value1\",Key2:\"value2\"}";
+			var v = JsonParser.ParseSync<Dictionary<string, string>>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.Equal(2, v.Count);
+			Assert.True(v.ContainsKey("Key1"));
+			Assert.Equal("value1", v["Key1"]);
+			Assert.True(v.ContainsKey("Key2"));
+			Assert.Equal("value2", v["Key2"]);
+			return;
+		}
+
+		[Fact]
+		public void TestDictionary2() {
+			string json = "[{Key:\"Key1\",Value:\"value1\"},{Key:\"Key2\",Value:\"value2\"}]";
+			var v = JsonParser.ParseSync<Dictionary<string, string>>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.Equal(2, v.Count);
+			Assert.True(v.ContainsKey("Key1"));
+			Assert.Equal("value1", v["Key1"]);
+			Assert.True(v.ContainsKey("Key2"));
+			Assert.Equal("value2", v["Key2"]);
+			return;
+		}
+
+		[Fact]
+		public void TestValue1() {
+			string json = "42";
+			var v = JsonParser.ParseSync<int>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.Equal(42, v);
+			return;
+		}
+
+		[Fact]
+		public void TestValue2() {
+			string json = "\"42\"";
+			var v = JsonParser.ParseSync<string>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.Equal("42", v);
+			return;
+		}
 	}
 }

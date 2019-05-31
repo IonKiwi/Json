@@ -237,7 +237,7 @@ namespace IonKiwi.Json.Utilities {
 
 			Expression instace;
 			if (d != t) {
-				instace = d.IsValueType ? Expression.Unbox(p1, t) : Expression.Convert(p1, t);
+				instace = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
 			}
 			else {
 				instace = p1;
@@ -297,7 +297,7 @@ namespace IonKiwi.Json.Utilities {
 
 			Expression instace;
 			if (d != t) {
-				instace = d.IsValueType ? Expression.Unbox(p1, t) : Expression.Convert(p1, t);
+				instace = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
 			}
 			else {
 				instace = p1;

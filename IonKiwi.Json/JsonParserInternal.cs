@@ -44,6 +44,9 @@ namespace IonKiwi.Json {
 				else if (state is JsonParserObjectPropertyState propertyState) {
 					return HandlePropertyState(propertyState, reader);
 				}
+				else if (state is JsonParserDictionaryValueState valueState) {
+					return HandleDictionaryValueState(valueState, reader);
+				}
 				else if (state is JsonParserArrayState arrayState) {
 					return HandleArrayState(arrayState, reader);
 				}
@@ -105,10 +108,10 @@ namespace IonKiwi.Json {
 								}
 								return HandleStateResult.None;
 							}
-							dictionaryState.Value = TypeInstantiator.Instantiate(dictionaryState.TypeInfo.RootType);
-							foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
-								a(dictionaryState.Value);
-							}
+						}
+						dictionaryState.Value = TypeInstantiator.Instantiate(dictionaryState.TypeInfo.RootType);
+						foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
+							a(dictionaryState.Value);
 						}
 					}
 
@@ -130,15 +133,17 @@ namespace IonKiwi.Json {
 					return HandleStateResult.None;
 				}
 
-				if (arrayState.IsFirst && reader.Token == JsonToken.String) {
+				if (arrayState.IsFirst) {
 					arrayState.IsFirst = false;
-					string v = reader.GetValue();
-					if (v != null && v.StartsWith("$type:", StringComparison.Ordinal)) {
-						// type handling
-						foreach (var a in arrayState.TypeInfo.OnDeserializing) {
-							a(arrayState.Value);
+					if (reader.Token == JsonToken.String) {
+						string v = reader.GetValue();
+						if (v != null && v.StartsWith("$type:", StringComparison.Ordinal)) {
+							// type handling
+							foreach (var a in arrayState.TypeInfo.OnDeserializing) {
+								a(arrayState.Value);
+							}
+							return HandleStateResult.None;
 						}
-						return HandleStateResult.None;
 					}
 					arrayState.Value = TypeInstantiator.Instantiate(arrayState.TypeInfo.RootType);
 					foreach (var a in arrayState.TypeInfo.OnDeserializing) {
@@ -159,6 +164,12 @@ namespace IonKiwi.Json {
 			private HandleStateResult HandlePropertyState(JsonParserObjectPropertyState propertyState, JsonReader reader) {
 				EnsureNotComplete(propertyState);
 				HandleValueState(propertyState, reader, propertyState.TypeInfo);
+				return HandleStateResult.None;
+			}
+
+			private HandleStateResult HandleDictionaryValueState(JsonParserDictionaryValueState valueState, JsonReader reader) {
+				EnsureNotComplete(valueState);
+				HandleValueState(valueState, reader, valueState.TypeInfo);
 				return HandleStateResult.None;
 			}
 
