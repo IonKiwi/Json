@@ -290,6 +290,7 @@ namespace IonKiwi.Json {
 					state.Parent = parentState;
 					state.Value = v;
 					state.IsComplete = true;
+					_currentState.Push(state);
 					HandleStateCompletion(parentState, state);
 				}
 				else {
@@ -301,6 +302,7 @@ namespace IonKiwi.Json {
 				if (parentState is JsonParserObjectPropertyState || parentState is JsonParserArrayItemState || parentState is JsonParserDictionaryValueState || parentState is JsonParserSimpleValueState) {
 					parentState.Value = completedState.Value;
 					parentState.IsComplete = true;
+					_currentState.Pop();
 					HandleStateCompletion(parentState.Parent, parentState);
 				}
 				else if (parentState is JsonParserObjectState) {
@@ -326,6 +328,11 @@ namespace IonKiwi.Json {
 						IIntermediateDictionaryItem item = (IIntermediateDictionaryItem)completedState.Value;
 						dictionaryState.TypeInfo.DictionaryAddMethod(dictionaryState.Value, item.Key, item.Value);
 					}
+				}
+				else if (parentState is JsonParserRootState) {
+					parentState.Value = completedState.Value;
+					parentState.IsComplete = true;
+					_currentState.Pop();
 				}
 				else {
 					ThrowUnhandledType(parentState.GetType());
