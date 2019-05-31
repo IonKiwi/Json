@@ -374,48 +374,48 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private T GetValueAsEnum<T>(JsonReader reader, JsonToken token) where T : struct {
-				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(T))}' was requested.");
-				}
+			//private T GetValueAsEnum<T>(JsonReader reader, JsonToken token) where T : struct {
+			//	if (token == JsonToken.Null) {
+			//		throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(T))}' was requested.");
+			//	}
 
-				if (token == JsonToken.String) {
-					string v = reader.GetValue();
-					if (string.IsNullOrEmpty(v)) {
-						throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(T))}' was requested.");
-					}
+			//	if (token == JsonToken.String) {
+			//		string v = reader.GetValue();
+			//		if (string.IsNullOrEmpty(v)) {
+			//			throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(T))}' was requested.");
+			//		}
 
-					if (ReflectionUtility.TryParseEnum<T>(v, true, out var result)) {
-						return result;
-					}
+			//		if (ReflectionUtility.TryParseEnum<T>(v, true, out var result)) {
+			//			return result;
+			//		}
 
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
-				}
-				else if (token == JsonToken.Number) {
-					var enumType = typeof(T);
-					var realTypex = Enum.GetUnderlyingType(enumType);
-					var enumValue = GetSimpleValue(reader, token, realTypex);
-					bool isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
+			//		throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//	}
+			//	else if (token == JsonToken.Number) {
+			//		var enumType = typeof(T);
+			//		var realTypex = Enum.GetUnderlyingType(enumType);
+			//		var enumValue = GetSimpleValue(reader, token, realTypex);
+			//		bool isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
 
-					if (!isFlags) {
-						if (Enum.IsDefined(enumType, enumValue)) {
-							return (T)Enum.ToObject(enumType, enumValue);
-						}
-					}
-					else {
-						var rev = Enum.ToObject(enumType, enumValue);
-						var hasFlag = ReflectionUtility.HasEnumFlag(enumType, rev);
-						if (hasFlag) {
-							return (T)rev;
-						}
-					}
+			//		if (!isFlags) {
+			//			if (Enum.IsDefined(enumType, enumValue)) {
+			//				return (T)Enum.ToObject(enumType, enumValue);
+			//			}
+			//		}
+			//		else {
+			//			var rev = Enum.ToObject(enumType, enumValue);
+			//			var hasFlag = ReflectionUtility.HasEnumFlag(enumType, rev);
+			//			if (hasFlag) {
+			//				return (T)rev;
+			//			}
+			//		}
 
-					throw new InvalidOperationException($"Json data '{reader.GetValue()}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
-				}
-				else {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
-				}
-			}
+			//		throw new InvalidOperationException($"Json data '{reader.GetValue()}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//	}
+			//	else {
+			//		throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//	}
+			//}
 
 			private object GetValueAsEnumUntyped(JsonReader reader, JsonToken token, Type enumType) {
 				if (token == JsonToken.Null) {
@@ -459,48 +459,48 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private T? GetValueAsNullableEnum<T>(JsonReader reader, JsonToken token) where T : struct {
-				if (token == JsonToken.Null) {
-					return null;
-				}
+			//private T? GetValueAsNullableEnum<T>(JsonReader reader, JsonToken token) where T : struct {
+			//	if (token == JsonToken.Null) {
+			//		return null;
+			//	}
 
-				if (token == JsonToken.String) {
-					string v = reader.GetValue();
-					if (string.IsNullOrEmpty(v)) {
-						return null;
-					}
+			//	if (token == JsonToken.String) {
+			//		string v = reader.GetValue();
+			//		if (string.IsNullOrEmpty(v)) {
+			//			return null;
+			//		}
 
-					if (ReflectionUtility.TryParseEnum<T>(v, true, out var result)) {
-						return result;
-					}
+			//		if (ReflectionUtility.TryParseEnum<T>(v, true, out var result)) {
+			//			return result;
+			//		}
 
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
-				}
-				else if (token == JsonToken.Number) {
-					var enumType = typeof(T);
-					var realTypex = Enum.GetUnderlyingType(enumType);
-					var enumValue = GetSimpleValue(reader, token, realTypex);
-					bool isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
+			//		throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//	}
+			//	else if (token == JsonToken.Number) {
+			//		var enumType = typeof(T);
+			//		var realTypex = Enum.GetUnderlyingType(enumType);
+			//		var enumValue = GetSimpleValue(reader, token, realTypex);
+			//		bool isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
 
-					if (!isFlags) {
-						if (Enum.IsDefined(enumType, enumValue)) {
-							return (T)Enum.ToObject(enumType, enumValue);
-						}
-					}
-					else {
-						var rev = Enum.ToObject(enumType, enumValue);
-						var hasFlag = ReflectionUtility.HasEnumFlag(enumType, rev);
-						if (hasFlag) {
-							return (T)rev;
-						}
-					}
+			//		if (!isFlags) {
+			//			if (Enum.IsDefined(enumType, enumValue)) {
+			//				return (T)Enum.ToObject(enumType, enumValue);
+			//			}
+			//		}
+			//		else {
+			//			var rev = Enum.ToObject(enumType, enumValue);
+			//			var hasFlag = ReflectionUtility.HasEnumFlag(enumType, rev);
+			//			if (hasFlag) {
+			//				return (T)rev;
+			//			}
+			//		}
 
-					throw new InvalidOperationException($"Json data '{reader.GetValue()}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
-				}
-				else {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
-				}
-			}
+			//		throw new InvalidOperationException($"Json data '{reader.GetValue()}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//	}
+			//	else {
+			//		throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//	}
+			//}
 
 			private object GetValueAsNullableEnumUntyped(JsonReader reader, JsonToken token, Type enumType) {
 				if (token == JsonToken.Null) {

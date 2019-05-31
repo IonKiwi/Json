@@ -14,16 +14,27 @@ namespace IonKiwi.Json {
 		private class JsonParserInternalState {
 			public JsonParserInternalState Parent;
 			public bool IsComplete;
+			public object Value;
 		}
 
 		private sealed class JsonParserRootState : JsonParserInternalState {
-			public object Value;
 			public JsonTypeInfo TypeInfo;
 		}
 
 		private sealed class JsonParserObjectState : JsonParserInternalState {
 			public JsonTypeInfo TypeInfo;
-			public object Value;
+			//public int StartDepth;
+		}
+
+		private sealed class JsonParserArrayState : JsonParserInternalState {
+			public JsonTypeInfo TypeInfo;
+			//public int StartDepth;
+		}
+
+		private sealed class JsonParserDictionaryState : JsonParserInternalState {
+			public JsonTypeInfo TypeInfo;
+			//public int StartDepth;
+			public bool IsStringDictionary;
 		}
 
 		private sealed class JsonParserObjectPropertyState : JsonParserInternalState {

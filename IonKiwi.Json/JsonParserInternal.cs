@@ -44,14 +44,29 @@ namespace IonKiwi.Json {
 				else if (state is JsonParserObjectPropertyState propertyState) {
 					return HandlePropertyState(propertyState, reader);
 				}
+				else if (state is JsonParserArrayState arrayState) {
+					return HandleArrayState(arrayState, reader);
+				}
 				else {
 					ThrowUnhandledType(state.GetType());
 					return HandleStateResult.None;
 				}
 			}
 
+			private HandleStateResult HandleArrayState(JsonParserArrayState arrayState, JsonReader reader) {
+				EnsureNotComplete(arrayState);
+				if (reader.Token == JsonToken.ArrayEnd) {
+					CompleteArray(arrayState);
+					return HandleStateResult.None;
+				}
+				HandleValueState(arrayState, reader, arrayState.TypeInfo);
+				return HandleStateResult.None;
+			}
+
 			private HandleStateResult HandlePropertyState(JsonParserObjectPropertyState propertyState, JsonReader reader) {
-				throw new NotImplementedException();
+				EnsureNotComplete(propertyState);
+				HandleValueState(propertyState, reader, propertyState.TypeInfo);
+				return HandleStateResult.None;
 			}
 
 			private HandleStateResult HandleObjectState(JsonParserObjectState objectState, JsonReader reader) {
@@ -90,29 +105,118 @@ namespace IonKiwi.Json {
 				objectState.IsComplete = true;
 			}
 
+			private void CompleteArray(JsonParserArrayState arrayState) {
+				if (object.ReferenceEquals(null, arrayState.Value)) {
+					arrayState.Value = TypeInstantiator.Instantiate(arrayState.TypeInfo.RootType);
+				}
+				// TODO: call finalizers
+
+				arrayState.IsComplete = true;
+			}
+
 			private HandleStateResult HandleRootState(JsonParserRootState rootState, JsonReader reader) {
 				EnsureNotComplete(rootState);
+				HandleValueState(rootState, reader, rootState.TypeInfo);
+				return HandleStateResult.None;
+			}
 
+			private void HandleValueState(JsonParserInternalState parentState, JsonReader reader, JsonTypeInfo typeInfo) {
 				var token = reader.Token;
-				var typeInfo = rootState.TypeInfo;
 				if (typeInfo.ObjectType == JsonObjectType.Object) {
 					if (token == JsonToken.Null) {
-						rootState.IsComplete = true;
+						parentState.IsComplete = true;
 					}
 					else if (token == JsonToken.ObjectStart) {
-						JsonParserObjectState objectState = new JsonParserObjectState();
-						objectState.Parent = rootState;
+						var objectState = new JsonParserObjectState();
+						objectState.Parent = parentState;
 						objectState.TypeInfo = typeInfo;
+						//objectState.StartDepth = reader.Depth;
 						_currentState.Push(objectState);
 					}
 					else {
 						UnexpectedToken(token);
 					}
-					return HandleStateResult.None;
+				}
+				else if (typeInfo.ObjectType == JsonObjectType.Array) {
+					if (token == JsonToken.Null) {
+						parentState.IsComplete = true;
+					}
+					else if (token == JsonToken.ArrayStart) {
+						var objectState = new JsonParserArrayState();
+						objectState.Parent = parentState;
+						objectState.TypeInfo = typeInfo;
+						//objectState.StartDepth = reader.Depth;
+						_currentState.Push(objectState);
+					}
+					else {
+						UnexpectedToken(token);
+					}
+				}
+				else if (typeInfo.ObjectType == JsonObjectType.Dictionary) {
+					if (token == JsonToken.Null) {
+						parentState.IsComplete = true;
+					}
+					else if (token == JsonToken.ObjectStart) {
+						var objectState = new JsonParserDictionaryState();
+						objectState.Parent = parentState;
+						objectState.TypeInfo = typeInfo;
+						//objectState.StartDepth = reader.Depth;
+						objectState.IsStringDictionary = true;
+						_currentState.Push(objectState);
+					}
+					else if (token == JsonToken.ArrayStart) {
+						var objectState = new JsonParserDictionaryState();
+						objectState.Parent = parentState;
+						objectState.TypeInfo = typeInfo;
+						//objectState.StartDepth = reader.Depth;
+						objectState.IsStringDictionary = false;
+						_currentState.Push(objectState);
+					}
+					else {
+						UnexpectedToken(token);
+					}
+				}
+				else if (typeInfo.ObjectType == JsonObjectType.SimpleValue) {
+					parentState.Value = GetSimpleValue(reader, reader.Token, typeInfo.RootType);
+					parentState.IsComplete = true;
 				}
 				else {
 					throw new NotImplementedException();
 				}
+			}
+
+			private void HandleStateCompletion(JsonParserInternalState state) {
+				if (state is JsonParserObjectPropertyState propertyState) {
+					SetPropertyValue(propertyState);
+				}
+				else if (state is JsonParserArrayState arrayState) {
+					AddArrayItem(arrayState);
+				}
+				else if (state is JsonParserDictionaryState dictionaryState) {
+					AddDictionaryKeyValue(dictionaryState);
+				}
+				else {
+					ThrowUnhandledType(state.GetType());
+				}
+			}
+
+			private void SetPropertyValue(JsonParserObjectPropertyState propertyState) {
+				var parent = (JsonParserObjectState)propertyState.Parent;
+				var propertyInfo = propertyState.PropertyInfo;
+				if (propertyInfo.Setter1 != null) {
+					parent.Value = propertyInfo.Setter1(parent.Value, propertyState.Value);
+				}
+				else if (propertyInfo.Setter2 != null) {
+					propertyInfo.Setter2(parent.Value, propertyState.Value);
+				}
+			}
+
+			private void AddArrayItem(JsonParserArrayState arrayState) {
+
+			}
+
+			private void AddDictionaryKeyValue(JsonParserDictionaryState dictionaryState) {
+
 			}
 
 			private void EnsureNotComplete(JsonParserInternalState state) {
