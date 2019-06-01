@@ -142,6 +142,10 @@ namespace IonKiwi.Json {
 			}
 			else if (token == JsonToken.ObjectProperty) {
 				await Read().NoSync();
+				token = _token;
+				if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
+					await Skip().NoSync();
+				}
 			}
 			else {
 				throw new InvalidOperationException("Reader is not at a skippable position. token: " + _token);
@@ -179,6 +183,10 @@ namespace IonKiwi.Json {
 			}
 			else if (token == JsonToken.ObjectProperty) {
 				ReadSync();
+				token = _token;
+				if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
+					SkipSync();
+				}
 			}
 			else {
 				throw new InvalidOperationException("Reader is not at a skippable position. token: " + _token);
@@ -1765,7 +1773,7 @@ namespace IonKiwi.Json {
 				else if (c == 'e' && state.Data.Length == 3) {
 					state.Data.Append(c);
 					state.IsComplete = true;
-					token = JsonToken.Null;
+					token = JsonToken.Boolean;
 					_offset += i + 1;
 					return true;
 				}
@@ -1835,7 +1843,7 @@ namespace IonKiwi.Json {
 				else if (c == 's' && state.Data.Length == 4) {
 					state.Data.Append(c);
 					state.IsComplete = true;
-					token = JsonToken.Null;
+					token = JsonToken.Boolean;
 					_offset += i + 1;
 					return true;
 				}

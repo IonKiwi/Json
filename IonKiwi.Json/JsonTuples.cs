@@ -15,59 +15,96 @@ namespace IonKiwi.Json {
 	partial class JsonReflection {
 
 		internal sealed class TupleContextInfo {
-			public Type RooType;
 			public Dictionary<string, int> PropertyMapping1 = new Dictionary<string, int>(StringComparer.Ordinal);
 			public Dictionary<string, string> PropertyMapping2 = new Dictionary<string, string>(StringComparer.Ordinal);
 			public Dictionary<string, TupleContextInfo> PropertyInfo = new Dictionary<string, TupleContextInfo>(StringComparer.Ordinal);
+
+			public TupleContextInfo Clone() {
+				var clone = new TupleContextInfo();
+				foreach (var kv in this.PropertyMapping1) {
+					clone.PropertyMapping1.Add(kv.Key, kv.Value);
+				}
+				foreach (var kv in this.PropertyMapping2) {
+					clone.PropertyMapping2.Add(kv.Key, kv.Value);
+				}
+				foreach (var kv in this.PropertyInfo) {
+					clone.PropertyInfo.Add(kv.Key, kv.Value.Clone());
+				}
+				return clone;
+			}
 		}
 
 		internal sealed class TupleContextInfoWrapper {
 
 			private readonly string[] _tupleNames;
-			private List<TupleContextInfo> _contexts = new List<TupleContextInfo>();
+			private TupleContextInfo _context;
 
-			public TupleContextInfoWrapper(string[] tupleNames) {
+			public TupleContextInfoWrapper(TupleContextInfo tupleContext, string[] tupleNames) {
+				_context = tupleContext?.Clone() ?? new TupleContextInfo();
 				_tupleNames = tupleNames;
 			}
 
 			public void Add(TupleContextInfo context) {
-				_contexts.Add(context);
+				if (context == null) {
+					return;
+				}
+
+				Add(this._context, context);
 			}
 
-			public TupleContextInfoWrapper Clone() {
-				TupleContextInfoWrapper wrapper = new TupleContextInfoWrapper(this._tupleNames);
-				wrapper._contexts.AddRange(this._contexts);
+			private static void Add(TupleContextInfo context1, TupleContextInfo context2) {
+				// only add string based tuple names
+				// index based tuple names are only for top level types / contexts
+
+				foreach (var kv in context2.PropertyMapping2) {
+					if (!context1.PropertyMapping2.TryGetValue(kv.Key, out var vv)) {
+						context1.PropertyMapping2.Add(kv.Key, kv.Value);
+					}
+					else if (!string.Equals(vv, kv.Value, StringComparison.Ordinal)) {
+						throw new InvalidOperationException("TupleContext does not match current context");
+					}
+				}
+
+				foreach (var kv in context2.PropertyInfo) {
+					if (!context1.PropertyInfo.TryGetValue(kv.Key, out var propertyInfo)) {
+						context1.PropertyInfo.Add(kv.Key, kv.Value);
+					}
+					else {
+						Add(propertyInfo, kv.Value);
+					}
+				}
+			}
+
+			public TupleContextInfoWrapper GetPropertyContext(string propertyName) {
+
+				if (!_context.PropertyInfo.TryGetValue(propertyName, out var context)) {
+					return null;
+				}
+
+				TupleContextInfoWrapper wrapper = new TupleContextInfoWrapper(context, this._tupleNames);
 				return wrapper;
 			}
 
 			public bool TryGetPropertyMapping(string property, out string tupleName) {
-				foreach (var ctx in _contexts) {
-					if (ctx.PropertyMapping1.TryGetValue(property, out var index)) {
-						if (_tupleNames == null) {
-							continue;
-						}
-						else if (index >= _tupleNames.Length) {
-							throw new Exception("Tuple index does not match given tuple names");
-						}
-						tupleName = _tupleNames[index];
-						return true;
+				if (_tupleNames != null && _context.PropertyMapping1.TryGetValue(property, out var index)) {
+					if (index >= _tupleNames.Length) {
+						throw new Exception("Tuple index does not match given tuple names");
 					}
-					else if (ctx.PropertyMapping2.TryGetValue(property, out var name)) {
-						tupleName = name;
-						return true;
-					}
+					tupleName = _tupleNames[index];
+					return true;
+				}
+				else if (_context.PropertyMapping2.TryGetValue(property, out var name)) {
+					tupleName = name;
+					return true;
 				}
 				tupleName = null;
 				return false;
 			}
 
 			public bool TryGetReversePropertyMapping(string tupleName, out string property) {
-				foreach (var ctx in _contexts) {
-					foreach (var kv in ctx.PropertyMapping1) {
-						if (_tupleNames == null) {
-							continue;
-						}
-						else if (kv.Value >= _tupleNames.Length) {
+				if (_tupleNames != null) {
+					foreach (var kv in _context.PropertyMapping1) {
+						if (kv.Value >= _tupleNames.Length) {
 							throw new Exception("Tuple index does not match given tuple names");
 						}
 						string tempName = _tupleNames[kv.Value];
@@ -76,11 +113,11 @@ namespace IonKiwi.Json {
 							return true;
 						}
 					}
-					foreach (var kv in ctx.PropertyMapping2) {
-						if (string.Equals(kv.Value, tupleName, StringComparison.Ordinal)) {
-							property = kv.Key;
-							return true;
-						}
+				}
+				foreach (var kv in _context.PropertyMapping2) {
+					if (string.Equals(kv.Value, tupleName, StringComparison.Ordinal)) {
+						property = kv.Key;
+						return true;
 					}
 				}
 				property = null;
@@ -565,7 +602,6 @@ namespace IonKiwi.Json {
 		// internal for unit tests
 		internal static TupleContextInfo CreateTupleContextInfo(Type rootType) {
 			TupleContextInfo context = new TupleContextInfo();
-			context.RooType = rootType;
 
 			var typeHierarchy = new List<Type>() { rootType };
 			var parentType = rootType.BaseType;
