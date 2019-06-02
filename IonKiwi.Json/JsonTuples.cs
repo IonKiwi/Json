@@ -177,188 +177,97 @@ namespace IonKiwi.Json {
 				}
 
 				if (keyInfo != null) {
-					if (!context.PropertyInfo.TryGetValue("Key", out var propertyInfo)) {
-						propertyInfo = new TupleContextInfo();
-						context.PropertyInfo.Add("Key", propertyInfo);
-					}
-
-					var tupleTypeInfo = typeInfo.First().Value;
-					if (tupleTypeInfo.TupleNames.Count > 0) {
-						if (propertyInfo.PropertyMapping2.Count == 0) {
-							for (int i = 0; i < tupleTypeInfo.TupleNames.Count; i++) {
-								propertyInfo.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleNames[i]);
-							}
-						}
-						else if (propertyInfo.PropertyMapping2.Count != tupleTypeInfo.TupleNames.Count) {
-							throw new Exception("Duplicatie property 'Key'. type: " + ReflectionUtility.GetTypeName(currentType));
-						}
-					}
-					else if (tupleTypeInfo.TupleIndexes.Count > 0) {
-						if (propertyInfo.PropertyMapping1.Count == 0) {
-							for (int i = 0; i < tupleTypeInfo.TupleIndexes.Count; i++) {
-								propertyInfo.PropertyMapping1.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleIndexes[i]);
-							}
-						}
-						else if (propertyInfo.PropertyMapping1.Count != tupleTypeInfo.TupleIndexes.Count) {
-							throw new Exception("Duplicatie property 'Key'. type: " + ReflectionUtility.GetTypeName(currentType));
-						}
-					}
-
-					if (tupleTypeInfo.SubTypes.Count > 0) {
-						var subTypeDefinition = tupleTypeInfo.RealType.GetGenericTypeDefinition();
-						FindGenericTypeParameters(subTypeDefinition, tupleTypeInfo.SubTypes, propertyInfo);
-					}
+					HandlePropertyParameter(currentType, context, "Key", keyInfo);
 				}
 				if (valueInfo != null) {
-					if (!context.PropertyInfo.TryGetValue("Value", out var propertyInfo)) {
-						propertyInfo = new TupleContextInfo();
-						context.PropertyInfo.Add("Value", propertyInfo);
-					}
-
-					var tupleTypeInfo = typeInfo.First().Value;
-					if (tupleTypeInfo.TupleNames.Count > 0) {
-						if (propertyInfo.PropertyMapping2.Count == 0) {
-							for (int i = 0; i < tupleTypeInfo.TupleNames.Count; i++) {
-								propertyInfo.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleNames[i]);
-							}
-						}
-						else if (propertyInfo.PropertyMapping2.Count != tupleTypeInfo.TupleNames.Count) {
-							throw new Exception("Duplicatie property 'Value'. type: " + ReflectionUtility.GetTypeName(currentType));
-						}
-					}
-					else if (tupleTypeInfo.TupleIndexes.Count > 0) {
-						if (propertyInfo.PropertyMapping1.Count == 0) {
-							for (int i = 0; i < tupleTypeInfo.TupleIndexes.Count; i++) {
-								propertyInfo.PropertyMapping1.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleIndexes[i]);
-							}
-						}
-						else if (propertyInfo.PropertyMapping1.Count != tupleTypeInfo.TupleIndexes.Count) {
-							throw new Exception("Duplicatie property 'Value'. type: " + ReflectionUtility.GetTypeName(currentType));
-						}
-					}
-
-					if (tupleTypeInfo.SubTypes.Count > 0) {
-						var subTypeDefinition = tupleTypeInfo.RealType.GetGenericTypeDefinition();
-						FindGenericTypeParameters(subTypeDefinition, tupleTypeInfo.SubTypes, propertyInfo);
-					}
+					HandlePropertyParameter(currentType, context, "Value", valueInfo);
 				}
 				return;
 			}
-			else if (ReflectionUtility.HasInterface(currentType, typeof(IEnumerable<>))) {
+			else if (ReflectionUtility.HasInterface(currentType, typeof(IEnumerable<>), out actualInterface)) {
 				if (typeInfo.Count != 1) {
 					throw new InvalidOperationException("Expected one type argument for collection. type: " + ReflectionUtility.GetTypeName(currentType));
 				}
-
-				if (!context.PropertyInfo.TryGetValue("Item", out var propertyInfo)) {
-					propertyInfo = new TupleContextInfo();
-					context.PropertyInfo.Add("Item", propertyInfo);
-				}
-
 				var tupleTypeInfo = typeInfo.First().Value;
-				if (tupleTypeInfo.TupleNames.Count > 0) {
-					if (propertyInfo.PropertyMapping2.Count == 0) {
-						for (int i = 0; i < tupleTypeInfo.TupleNames.Count; i++) {
-							propertyInfo.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleNames[i]);
-						}
-					}
-					else if (propertyInfo.PropertyMapping2.Count != tupleTypeInfo.TupleNames.Count) {
-						throw new Exception("Duplicatie property 'Item'. type: " + ReflectionUtility.GetTypeName(currentType));
-					}
-				}
-				else if (tupleTypeInfo.TupleIndexes.Count > 0) {
-					if (propertyInfo.PropertyMapping1.Count == 0) {
-						for (int i = 0; i < tupleTypeInfo.TupleIndexes.Count; i++) {
-							propertyInfo.PropertyMapping1.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleIndexes[i]);
-						}
-					}
-					else if (propertyInfo.PropertyMapping1.Count != tupleTypeInfo.TupleIndexes.Count) {
-						throw new Exception("Duplicatie property 'Item'. type: " + ReflectionUtility.GetTypeName(currentType));
-					}
+				if (actualInterface.GenericTypeArguments[0] != tupleTypeInfo.Parameter) {
+					throw new Exception("Expected collection type argument. actual: " + ReflectionUtility.GetTypeName(tupleTypeInfo.Parameter) + ", type: " + ReflectionUtility.GetTypeName(tupleTypeInfo.RealType));
 				}
 
-				if (tupleTypeInfo.SubTypes.Count > 0) {
-					var subTypeDefinition = tupleTypeInfo.RealType.GetGenericTypeDefinition();
-					FindGenericTypeParameters(subTypeDefinition, tupleTypeInfo.SubTypes, propertyInfo);
-				}
-
+				HandlePropertyParameter(currentType, context, "Item", tupleTypeInfo);
 				return;
 			}
 
 			do {
 				foreach (var f in currentType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
 					if (typeInfo.TryGetValue(f.FieldType, out var tupleTypeInfo)) {
-
-						if (!context.PropertyInfo.TryGetValue(f.Name, out var propertyInfo)) {
-							propertyInfo = new TupleContextInfo();
-							context.PropertyInfo.Add(f.Name, propertyInfo);
-						}
-
-						if (tupleTypeInfo.TupleNames.Count > 0) {
-							if (propertyInfo.PropertyMapping2.Count == 0) {
-								for (int i = 0; i < tupleTypeInfo.TupleNames.Count; i++) {
-									propertyInfo.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleNames[i]);
-								}
-							}
-							else if (propertyInfo.PropertyMapping2.Count != tupleTypeInfo.TupleNames.Count) {
-								throw new Exception("Duplicatie property '" + f.Name + "'. type: " + ReflectionUtility.GetTypeName(currentType));
-							}
-						}
-						else if (tupleTypeInfo.TupleIndexes.Count > 0) {
-							if (propertyInfo.PropertyMapping1.Count == 0) {
-								for (int i = 0; i < tupleTypeInfo.TupleIndexes.Count; i++) {
-									propertyInfo.PropertyMapping1.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleIndexes[i]);
-								}
-							}
-							else if (propertyInfo.PropertyMapping1.Count != tupleTypeInfo.TupleIndexes.Count) {
-								throw new Exception("Duplicatie property '" + f.Name + "'. type: " + ReflectionUtility.GetTypeName(currentType));
-							}
-						}
-
-						if (tupleTypeInfo.SubTypes.Count > 0) {
-							var subTypeDefinition = tupleTypeInfo.RealType.GetGenericTypeDefinition();
-							FindGenericTypeParameters(subTypeDefinition, tupleTypeInfo.SubTypes, propertyInfo);
-						}
+						HandlePropertyParameter(currentType, context, f.Name, tupleTypeInfo);
+					}
+					else if (f.FieldType.IsGenericType) {
+						FindGenericPropertyTypeParameters(context, f.FieldType, typeInfo, f.Name);
 					}
 				}
 				foreach (var f in currentType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
 					if (typeInfo.TryGetValue(f.PropertyType, out var tupleTypeInfo)) {
-
-						if (!context.PropertyInfo.TryGetValue(f.Name, out var propertyInfo)) {
-							propertyInfo = new TupleContextInfo();
-							context.PropertyInfo.Add(f.Name, propertyInfo);
-						}
-
-						if (tupleTypeInfo.TupleNames.Count > 0) {
-							if (propertyInfo.PropertyMapping2.Count == 0) {
-								for (int i = 0; i < tupleTypeInfo.TupleNames.Count; i++) {
-									propertyInfo.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleNames[i]);
-								}
-							}
-							else if (propertyInfo.PropertyMapping2.Count != tupleTypeInfo.TupleNames.Count) {
-								throw new Exception("Duplicatie property '" + f.Name + "'. type: " + ReflectionUtility.GetTypeName(currentType));
-							}
-						}
-						else if (tupleTypeInfo.TupleIndexes.Count > 0) {
-							if (propertyInfo.PropertyMapping1.Count == 0) {
-								for (int i = 0; i < tupleTypeInfo.TupleIndexes.Count; i++) {
-									propertyInfo.PropertyMapping1.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleIndexes[i]);
-								}
-							}
-							else if (propertyInfo.PropertyMapping1.Count != tupleTypeInfo.TupleIndexes.Count) {
-								throw new Exception("Duplicatie property '" + f.Name + "'. type: " + ReflectionUtility.GetTypeName(currentType));
-							}
-						}
-
-						if (tupleTypeInfo.SubTypes.Count > 0) {
-							var subTypeDefinition = tupleTypeInfo.RealType.GetGenericTypeDefinition();
-							FindGenericTypeParameters(subTypeDefinition, tupleTypeInfo.SubTypes, propertyInfo);
-						}
+						HandlePropertyParameter(currentType, context, f.Name, tupleTypeInfo);
+					}
+					else if (f.PropertyType.IsGenericType) {
+						FindGenericPropertyTypeParameters(context, f.PropertyType, typeInfo, f.Name);
 					}
 				}
 
 				currentType = currentType.BaseType;
 			}
 			while (currentType != null);
+		}
+
+		private static void HandlePropertyParameter(Type currentType, TupleContextInfo context, string propertyName, TypeLevelTupleInfo tupleTypeInfo) {
+			if (!context.PropertyInfo.TryGetValue(propertyName, out var propertyInfo)) {
+				propertyInfo = new TupleContextInfo();
+				context.PropertyInfo.Add(propertyName, propertyInfo);
+			}
+
+			if (tupleTypeInfo.TupleNames.Count > 0) {
+				if (propertyInfo.PropertyMapping2.Count == 0) {
+					for (int i = 0; i < tupleTypeInfo.TupleNames.Count; i++) {
+						propertyInfo.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleNames[i]);
+					}
+				}
+				else if (propertyInfo.PropertyMapping2.Count != tupleTypeInfo.TupleNames.Count) {
+					throw new Exception("Duplicatie property '" + propertyName + "'. type: " + ReflectionUtility.GetTypeName(currentType));
+				}
+			}
+			else if (tupleTypeInfo.TupleIndexes.Count > 0) {
+				if (propertyInfo.PropertyMapping1.Count == 0) {
+					for (int i = 0; i < tupleTypeInfo.TupleIndexes.Count; i++) {
+						propertyInfo.PropertyMapping1.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleIndexes[i]);
+					}
+				}
+				else if (propertyInfo.PropertyMapping1.Count != tupleTypeInfo.TupleIndexes.Count) {
+					throw new Exception("Duplicatie property '" + propertyName + "'. type: " + ReflectionUtility.GetTypeName(currentType));
+				}
+			}
+
+			if (tupleTypeInfo.SubTypes.Count > 0) {
+				var subTypeDefinition = tupleTypeInfo.RealType.GetGenericTypeDefinition();
+				FindGenericTypeParameters(subTypeDefinition, tupleTypeInfo.SubTypes, propertyInfo);
+			}
+		}
+
+		private static void FindGenericPropertyTypeParameters(TupleContextInfo context, Type fieldType, Dictionary<Type, TypeLevelTupleInfo> typeInfo, string propertyName) {
+
+			var propertyArguments = fieldType.GetGenericArguments();
+			for (int i = 0; i < propertyArguments.Length; i++) {
+				var propertyArgument = propertyArguments[i];
+				if (typeInfo.TryGetValue(propertyArgument, out var tupleTypeInfo)) {
+
+					if (!context.PropertyInfo.TryGetValue(propertyName, out var propertyInfo)) {
+						propertyInfo = new TupleContextInfo();
+						context.PropertyInfo.Add(propertyName, propertyInfo);
+					}
+
+					FindGenericTypeParameters(fieldType, typeInfo, propertyInfo);
+				}
+			}
 		}
 
 		private static void HandleTypeLevelTupleNames(TupleElementNamesAttribute typeTupleNames, Type currentType, TupleContextInfo context) {
