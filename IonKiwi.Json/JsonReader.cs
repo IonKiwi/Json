@@ -1,4 +1,5 @@
 ﻿using IonKiwi.Extenions;
+using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -19,6 +20,7 @@ namespace IonKiwi.Json {
 		private long _lineIndex = 0;
 		private long _lineOffset = 0;
 		private bool _isAbsoluteStart = true;
+		private Stack<(JsonToken token, Action action)> _rewindState = null;
 
 		public JsonReader(IInputReader dataReader) {
 			_dataReader = dataReader;
@@ -104,11 +106,33 @@ namespace IonKiwi.Json {
 		}
 
 		public async ValueTask<JsonToken> Read() {
+			if (_rewindState != null) { return ReplayState(); }
 			return _token = await ReadInternal().NoSync();
 		}
 
 		public JsonToken ReadSync() {
+			if (_rewindState != null) { return ReplayState(); }
 			return _token = ReadInternalSync();
+		}
+
+		private JsonToken ReplayState() {
+			var item = _rewindState.Pop();
+			if (_rewindState.Count == 0) {
+				_rewindState = null;
+			}
+			item.action();
+			_token = item.token;
+			return item.token;
+		}
+
+		internal void Unwind() {
+			do {
+				var item = _rewindState.Pop();
+				item.action();
+				_token = item.token;
+			}
+			while (_rewindState.Count > 0);
+			_rewindState = null;
 		}
 
 		public async ValueTask Skip() {
@@ -193,6 +217,309 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		internal void RewindReaderPositionForVisitor(JsonToken tokenType) {
+			if (!(tokenType == JsonToken.ObjectStart || tokenType == JsonToken.ArrayStart)) {
+				throw new InvalidOperationException($"'{nameof(tokenType)}' should be {JsonToken.ObjectStart} or {JsonToken.ArrayStart}, actual: {tokenType}");
+			}
+
+			var resetState = new Stack<(JsonToken token, Action action)>();
+
+			// account for empty array/object
+			if (_token == JsonToken.ObjectEnd) {
+				if (tokenType != JsonToken.ObjectStart) {
+					throw new InvalidOperationException($"'{nameof(tokenType)}' should be {JsonToken.ObjectStart}, actual: {tokenType}");
+				}
+
+				var objectState = (JsonInternalObjectState)_currentState.Peek();
+				if (objectState.PropertyCount != 0) {
+					throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
+				}
+				objectState.IsComplete = false;
+
+				resetState.Push((JsonToken.ObjectEnd, () => { objectState.IsComplete = true; }));
+
+				if (objectState.CommentsBeforeFirstProperty != null) {
+					for (int i = objectState.CommentsBeforeFirstProperty.Count - 1; i >= 0; i--) {
+						var currentComment = objectState.CommentsBeforeFirstProperty[i];
+						resetState.Push((JsonToken.Comment, () => { _currentState.Push(currentComment); }));
+					}
+				}
+
+				_token = JsonToken.ObjectStart;
+				_rewindState = resetState;
+			}
+			else if (_token == JsonToken.ArrayEnd) {
+				if (tokenType != JsonToken.ArrayStart) {
+					throw new InvalidOperationException($"'{nameof(tokenType)}' should be {JsonToken.ArrayStart}, actual: {tokenType}");
+				}
+
+				var arrayState = (JsonInternalArrayState)_currentState.Peek();
+				if (arrayState.ItemCount != 0) {
+					throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
+				}
+
+				arrayState.IsComplete = false;
+
+				var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
+				_currentState.Push(newState2);
+
+				resetState.Push((JsonToken.ArrayEnd, () => { _currentState.Pop(); arrayState.IsComplete = true; }));
+
+				if (arrayState.CommentsBeforeFirstValue != null) {
+					for (int i = arrayState.CommentsBeforeFirstValue.Count - 1; i >= 0; i--) {
+						var currentComment = arrayState.CommentsBeforeFirstValue[i];
+						resetState.Push((JsonToken.Comment, () => { _currentState.Push(currentComment); }));
+					}
+				}
+
+				_token = JsonToken.ArrayStart;
+				_rewindState = resetState;
+			}
+			// account for sub object
+			else if (_token == JsonToken.ObjectStart) {
+				var state = _currentState.Peek();
+				var parentState = state.Parent;
+				if (parentState is JsonInternalArrayItemState arrayItemState) {
+					var arrayState = (JsonInternalArrayState)arrayItemState.Parent;
+					if (arrayState.ItemCount != 1) {
+						throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
+					}
+
+					// remove object
+					_currentState.Pop();
+					// remove item
+					_currentState.Pop();
+
+					var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
+					_currentState.Push(newState2);
+
+					resetState.Push((JsonToken.ObjectStart, () => {
+						_currentState.Pop();
+						_currentState.Push(parentState);
+						_currentState.Push(state);
+					}
+					));
+
+					if (arrayState.CommentsBeforeFirstValue != null) {
+						for (int i = arrayState.CommentsBeforeFirstValue.Count - 1; i >= 0; i--) {
+							var currentComment = arrayState.CommentsBeforeFirstValue[i];
+							resetState.Push((JsonToken.Comment, () => { _currentState.Push(currentComment); }));
+						}
+					}
+
+					_token = tokenType;
+					_rewindState = resetState;
+				}
+				else {
+					throw new NotImplementedException(ReflectionUtility.GetTypeName(parentState.GetType()));
+				}
+			}
+			// account for sub array
+			else if (_token == JsonToken.ArrayStart) {
+				if (tokenType == JsonToken.ObjectStart) {
+					// '{[' is not valid json
+					throw new InvalidOperationException($"'{nameof(tokenType)}' should be {JsonToken.ArrayStart}, actual: {tokenType}");
+				}
+
+				var state = _currentState.Peek();
+				var parentState = state.Parent;
+				if (parentState is JsonInternalArrayItemState arrayItemState) {
+					var arrayState = (JsonInternalArrayState)arrayItemState.Parent;
+					if (arrayState.ItemCount != 1) {
+						throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
+					}
+
+					// remove object
+					_currentState.Pop();
+					// remove item
+					_currentState.Pop();
+
+					var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
+					_currentState.Push(newState2);
+
+					resetState.Push((JsonToken.ObjectStart, () => {
+						_currentState.Pop();
+						_currentState.Push(parentState);
+						_currentState.Push(state);
+					}
+					));
+
+					if (arrayState.CommentsBeforeFirstValue != null) {
+						for (int i = arrayState.CommentsBeforeFirstValue.Count - 1; i >= 0; i--) {
+							var currentComment = arrayState.CommentsBeforeFirstValue[i];
+							resetState.Push((JsonToken.Comment, () => { _currentState.Push(currentComment); }));
+						}
+					}
+
+					_token = JsonToken.ObjectStart;
+					_rewindState = resetState;
+				}
+				else if (parentState is JsonInternalArrayState arrayState) {
+					var parent = arrayState.Parent;
+					if (parent is JsonInternalArrayItemState itemState) {
+						if (tokenType != JsonToken.ArrayStart) {
+							throw new InvalidOperationException($"'{nameof(tokenType)}' should be {JsonToken.ArrayStart}, actual: {tokenType}");
+						}
+
+						var topArrayState = (JsonInternalArrayState)itemState.Parent;
+						if (topArrayState.ItemCount != 1) {
+							throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
+						}
+
+						// remove item
+						_currentState.Pop();
+						// remove array
+						_currentState.Pop();
+						// remove item
+						_currentState.Pop();
+
+						var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
+						_currentState.Push(newState2);
+
+						resetState.Push((JsonToken.ArrayStart, () => {
+							_currentState.Pop();
+							_currentState.Push(parent);
+							_currentState.Push(parentState);
+							_currentState.Push(state);
+						}
+						));
+
+						if (topArrayState.CommentsBeforeFirstValue != null) {
+							for (int i = topArrayState.CommentsBeforeFirstValue.Count - 1; i >= 0; i--) {
+								var currentComment = topArrayState.CommentsBeforeFirstValue[i];
+								resetState.Push((JsonToken.Comment, () => { _currentState.Push(currentComment); }));
+							}
+						}
+
+						_token = JsonToken.ArrayStart;
+						_rewindState = resetState;
+					}
+					else {
+						throw new NotImplementedException(ReflectionUtility.GetTypeName(parentState.GetType()));
+					}
+				}
+				else {
+					throw new NotImplementedException(ReflectionUtility.GetTypeName(parentState.GetType()));
+				}
+			}
+			else if (_token == JsonToken.ObjectProperty) {
+				if (tokenType != JsonToken.ObjectStart) {
+					throw new InvalidOperationException($"'{nameof(tokenType)}' should be {JsonToken.ObjectStart}, actual: {tokenType}");
+				}
+
+				var propertyState = (JsonInternalObjectPropertyState)_currentState.Peek();
+				var objectState = (JsonInternalObjectState)propertyState.Parent;
+
+				if (objectState.PropertyCount != 1) {
+					throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
+				}
+
+				// remove property
+				_currentState.Pop();
+				objectState.PropertyCount--;
+				objectState.CurrentProperty.Clear();
+
+				resetState.Push((JsonToken.ObjectProperty, () => {
+					objectState.PropertyCount++;
+					objectState.CurrentProperty.Append(propertyState.PropertyName);
+					_currentState.Push(propertyState);
+				}
+				));
+
+				if (objectState.CommentsBeforeFirstProperty != null) {
+					for (int i = objectState.CommentsBeforeFirstProperty.Count - 1; i >= 0; i--) {
+						var currentComment = objectState.CommentsBeforeFirstProperty[i];
+						resetState.Push((JsonToken.Comment, () => { _currentState.Push(currentComment); }));
+					}
+				}
+
+				_token = JsonToken.ObjectStart;
+				_rewindState = resetState;
+			}
+			else {
+				var state = _currentState.Peek();
+				var parentState = state.Parent;
+				if (parentState is JsonInternalObjectPropertyState propertyState) {
+					if (tokenType != JsonToken.ObjectStart) {
+						throw new InvalidOperationException($"'{nameof(tokenType)}' should be {JsonToken.ObjectStart}, actual: {tokenType}");
+					}
+
+					var objectState = (JsonInternalObjectState)parentState.Parent;
+					if (objectState.PropertyCount != 1) {
+						throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
+					}
+
+					// remove property value
+					_currentState.Pop();
+					// remove property
+					_currentState.Pop();
+					objectState.PropertyCount--;
+					objectState.CurrentProperty.Clear();
+
+					var storedToken = _token;
+					resetState.Push((storedToken, () => {
+						_currentState.Push(state);
+					}
+					));
+
+					resetState.Push((JsonToken.ObjectProperty, () => {
+						objectState.PropertyCount++;
+						objectState.CurrentProperty.Append(propertyState.PropertyName);
+						_currentState.Push(propertyState);
+					}
+					));
+
+					if (objectState.CommentsBeforeFirstProperty != null) {
+						for (int i = objectState.CommentsBeforeFirstProperty.Count - 1; i >= 0; i--) {
+							var currentComment = objectState.CommentsBeforeFirstProperty[i];
+							resetState.Push((JsonToken.Comment, () => { _currentState.Push(currentComment); }));
+						}
+					}
+
+					_token = JsonToken.ObjectStart;
+					_rewindState = resetState;
+				}
+				else {
+					if (tokenType != JsonToken.ArrayStart) {
+						throw new InvalidOperationException($"'{nameof(tokenType)}' should be {JsonToken.ArrayStart}, actual: {tokenType}");
+					}
+
+					// array value
+					var itemState = (JsonInternalArrayItemState)parentState;
+					var arrayState = (JsonInternalArrayState)itemState.Parent;
+					if (arrayState.ItemCount != 1) {
+						throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
+					}
+
+					// remove value
+					_currentState.Pop();
+					// remove item
+					_currentState.Pop();
+
+					var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
+					_currentState.Push(newState2);
+
+					var restoreToken = _token;
+					resetState.Push((restoreToken, () => {
+						_currentState.Pop();
+						_currentState.Push(itemState);
+						_currentState.Push(state);
+					}
+					));
+
+					if (arrayState.CommentsBeforeFirstValue != null) {
+						for (int i = arrayState.CommentsBeforeFirstValue.Count - 1; i >= 0; i--) {
+							var currentComment = arrayState.CommentsBeforeFirstValue[i];
+							resetState.Push((JsonToken.Comment, () => { _currentState.Push(currentComment); }));
+						}
+					}
+
+					_token = JsonToken.ArrayStart;
+					_rewindState = resetState;
+				}
+			}
+		}
+
 		private async ValueTask<JsonToken> ReadInternal() {
 			JsonToken token = JsonToken.None;
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
@@ -264,7 +591,27 @@ namespace IonKiwi.Json {
 			var state = _currentState.Peek();
 			if (state.IsComplete) {
 				_currentState.Pop();
-				state = _currentState.Peek();
+				if (state is JsonInternalCommentState commentState) {
+					state = _currentState.Peek();
+					if (state is JsonInternalObjectState objectState) {
+						if (objectState.CommentsBeforeFirstProperty == null) {
+							objectState.CommentsBeforeFirstProperty = new List<JsonInternalCommentState>();
+						}
+						objectState.CommentsBeforeFirstProperty.Add(commentState);
+					}
+					else if (state is JsonInternalArrayItemState arrayItemState) {
+						var arrayState = (JsonInternalArrayState)arrayItemState.Parent;
+						if (arrayState.ItemCount == 1 && arrayItemState.Token == JsonInternalArrayItemToken.BeforeValue) {
+							if (arrayState.CommentsBeforeFirstValue == null) {
+								arrayState.CommentsBeforeFirstValue = new List<JsonInternalCommentState>();
+							}
+							arrayState.CommentsBeforeFirstValue.Add(commentState);
+						}
+					}
+				}
+				else {
+					state = _currentState.Peek();
+				}
 				if (state.IsComplete) {
 					throw new Exception("Internal state corruption");
 				}
@@ -810,6 +1157,10 @@ namespace IonKiwi.Json {
 				else if (currentToken == JsonInternalObjectToken.AfterIdentifier) {
 					if (c == ':') {
 						state.Token = currentToken = JsonInternalObjectToken.AfterColon;
+						state.PropertyCount++;
+						if (state.PropertyCount == 2) {
+							state.CommentsBeforeFirstProperty = null;
+						}
 						var newState = new JsonInternalObjectPropertyState() { Parent = state, PropertyName = state.CurrentProperty.ToString() };
 						//state.Properties.Add(newState);
 						_currentState.Push(newState);
@@ -870,6 +1221,10 @@ namespace IonKiwi.Json {
 						// does not necessarily have AfterIdentifier state
 
 						state.Token = currentToken = JsonInternalObjectToken.AfterColon;
+						state.PropertyCount++;
+						if (state.PropertyCount == 2) {
+							state.CommentsBeforeFirstProperty = null;
+						}
 						var newState = new JsonInternalObjectPropertyState() { Parent = state, PropertyName = state.CurrentProperty.ToString() };
 						//state.Properties.Add(newState);
 						_currentState.Push(newState);
@@ -1118,6 +1473,7 @@ namespace IonKiwi.Json {
 						throw new InvalidOperationException("Internal state corruption");
 					}
 
+					arrayState.CommentsBeforeFirstValue = null;
 					var newState = new JsonInternalArrayItemState() { Parent = arrayState, Index = arrayState.ItemCount++ };
 					//arrayState.Items.Add(newState);
 					state.IsComplete = true;

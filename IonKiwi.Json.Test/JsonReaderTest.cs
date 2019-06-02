@@ -413,7 +413,7 @@ namespace IonKiwi.Json.Test {
 
 		[Fact]
 		public void CreateTest() {
-			byte[] json = Helper.GetStringData("Object2.js");
+			byte[] json = Helper.GetStringData("Array1.js");
 
 			var reader = new JsonReader(new Utf8ByteArrayInputReader(json));
 
@@ -434,7 +434,7 @@ namespace IonKiwi.Json.Test {
 				sb.AppendLine("Assert.Equal(\"" + reader.GetPath().Replace("\"", "\\\"") + "\", reader.GetPath());");
 				sb.AppendLine("Assert.Equal(" + reader.CharacterPosition.ToString(CultureInfo.InvariantCulture) + ", reader.CharacterPosition);");
 				sb.AppendLine("Assert.Equal(" + reader.LineNumber.ToString(CultureInfo.InvariantCulture) + ", reader.LineNumber);");
-				if (JsonReader.IsValueToken(token) || token == JsonToken.ObjectProperty) {
+				if (JsonReader.IsValueToken(token) || token == JsonToken.ObjectProperty || token == JsonToken.Comment) {
 					sb.AppendLine("Assert.Equal(\"" + reader.GetValue().Replace("\"", "\\\"") + "\", reader.GetValue());");
 				}
 

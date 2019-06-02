@@ -21,26 +21,54 @@ namespace IonKiwi.Json {
 			}
 
 			public async ValueTask HandleToken(JsonReader reader) {
-				var state = HandleTokenInternal(reader);
-				if (state == HandleStateResult.Skip) {
+				var result = HandleTokenInternal(reader);
+				if (result == HandleStateResult.Skip) {
 					await reader.Skip().NoSync();
 				}
-				else if (state == HandleStateResult.ReadTypeToken) {
+				else if (result == HandleStateResult.ReadTypeToken) {
 					await reader.Read().NoSync();
 					ValidateTypeTokenIsString(reader);
-					HandleTypeToken(reader, reader.GetValue());
+					var state = _currentState.Peek();
+					var t = HandleTypeToken(reader, state, reader.GetValue());
+					await HandleNewTypeAndVisitor(reader, state, t, JsonToken.ObjectStart).NoSync();
+				}
+				else if (result == HandleStateResult.ProcessTypeToken) {
+					var state = _currentState.Peek();
+					var t = HandleTypeToken(reader, state, reader.GetValue().Substring("$type".Length));
+					await HandleNewTypeAndVisitor(reader, state, t, JsonToken.ArrayStart).NoSync();
+				}
+				else if (result == HandleStateResult.CreateInstance) {
+					var state = _currentState.Peek();
+					await HandleTypeAndVisitor(reader, state).NoSync();
+				}
+				else if (result == HandleStateResult.HandleToken) {
+					await HandleToken(reader).NoSync();
 				}
 			}
 
 			public void HandleTokenSync(JsonReader reader) {
-				var state = HandleTokenInternal(reader);
-				if (state == HandleStateResult.Skip) {
+				var result = HandleTokenInternal(reader);
+				if (result == HandleStateResult.Skip) {
 					reader.SkipSync();
 				}
-				else if (state == HandleStateResult.ReadTypeToken) {
+				else if (result == HandleStateResult.ReadTypeToken) {
 					reader.ReadSync();
 					ValidateTypeTokenIsString(reader);
-					HandleTypeToken(reader, reader.GetValue());
+					var state = _currentState.Peek();
+					var t = HandleTypeToken(reader, state, reader.GetValue());
+					HandleNewTypeAndVisitorSync(reader, state, t, JsonToken.ObjectStart);
+				}
+				else if (result == HandleStateResult.ProcessTypeToken) {
+					var state = _currentState.Peek();
+					var t = HandleTypeToken(reader, state, reader.GetValue().Substring("$type:".Length));
+					HandleNewTypeAndVisitorSync(reader, state, t, JsonToken.ArrayStart);
+				}
+				else if (result == HandleStateResult.CreateInstance) {
+					var state = _currentState.Peek();
+					HandleTypeAndVisitorSync(reader, state);
+				}
+				else if (result == HandleStateResult.HandleToken) {
+					HandleTokenSync(reader);
 				}
 			}
 
@@ -50,7 +78,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private void HandleTypeToken(JsonReader reader, string typeName) {
+			private Type HandleTypeToken(JsonReader reader, JsonParserInternalState state, string typeName) {
 				if (string.IsNullOrEmpty(typeName)) {
 					throw new Exception("$type is empty and not a valid type.");
 				}
@@ -59,72 +87,230 @@ namespace IonKiwi.Json {
 					throw new Exception("$type '" + typeName + "' is not a valid type.");
 				}
 
-				var state = _currentState.Peek();
+				JsonTypeInfo typeInfo = null;
 				if (state is JsonParserDictionaryState dictionaryState) {
-					if (!(dictionaryState.TypeInfo.RootType == t || dictionaryState.TypeInfo.KnownTypes.Contains(t))) {
-						if (state.Parent is JsonParserObjectPropertyState propertyState) {
-							if (!propertyState.PropertyInfo.KnownTypes.Contains(t)) {
-								bool isAllowed = false;
-								if (_settings.TypeAllowedCallback != null) {
-									isAllowed = _settings.TypeAllowedCallback(t);
-								}
-								if (!isAllowed) {
-									throw new InvalidOperationException("Type '" + ReflectionUtility.GetTypeName(t) + "' is not allowed.");
-								}
+					typeInfo = dictionaryState.TypeInfo;
+				}
+				else if (state is JsonParserArrayState arrayState) {
+					typeInfo = arrayState.TypeInfo;
+				}
+				else if (state is JsonParserObjectState objectState) {
+					typeInfo = objectState.TypeInfo;
+				}
+				else {
+					ThrowUnhandledType(state.GetType());
+				}
+
+				if (!(typeInfo.OriginalType == t || typeInfo.KnownTypes.Contains(t))) {
+					if (state.Parent is JsonParserObjectPropertyState propertyState) {
+						if (!propertyState.PropertyInfo.KnownTypes.Contains(t)) {
+							bool isAllowed = false;
+							if (_settings.TypeAllowedCallback != null) {
+								isAllowed = _settings.TypeAllowedCallback(t);
+							}
+							if (!isAllowed) {
+								throw new InvalidOperationException("Type '" + ReflectionUtility.GetTypeName(t) + "' is not allowed.");
 							}
 						}
 					}
-					dictionaryState.TypeInfo = JsonReflection.GetTypeInfo(t);
-					dictionaryState.Value = TypeInstantiator.Instantiate(t);
+				}
+				return t;
+			}
+
+			private async ValueTask HandleTypeAndVisitor(JsonReader reader, JsonParserInternalState state) {
+				JsonTypeInfo typeInfo = null;
+				JsonToken token = JsonToken.None;
+				if (state is JsonParserDictionaryState dictionaryState) {
+					typeInfo = dictionaryState.TypeInfo;
+					token = dictionaryState.IsStringDictionary ? JsonToken.ObjectStart : JsonToken.ArrayStart;
+				}
+				else if (state is JsonParserArrayState arrayState) {
+					typeInfo = arrayState.TypeInfo;
+					token = JsonToken.ArrayStart;
+				}
+				else if (state is JsonParserObjectState objectState) {
+					typeInfo = objectState.TypeInfo;
+					token = JsonToken.ObjectStart;
+				}
+				else {
+					ThrowUnhandledType(state.GetType());
+				}
+
+				Type targetType = typeInfo.OriginalType;
+				if (_settings.Visitor != null) {
+					IJsonParserVisitor visitor = _settings.Visitor;
+
+					var visitorContext = new JsonParserContext();
+					IJsonParserContext visitorContextInternal = visitorContext;
+					visitorContextInternal.CurrentType = targetType;
+
+					reader.RewindReaderPositionForVisitor(token);
+
+					int currentDepth = reader.Depth;
+					var result = await visitor.ParseObject(reader, visitorContext).NoSync();
+					if (HandleVisitorResult(reader, visitorContext, result, state, token, targetType, currentDepth)) {
+						return;
+					}
+				}
+
+				state.Value = TypeInstantiator.Instantiate(typeInfo.RootType);
+				foreach (var a in typeInfo.OnDeserializing) {
+					a(state.Value);
+				}
+				await HandleToken(reader).NoSync();
+			}
+
+			private void HandleTypeAndVisitorSync(JsonReader reader, JsonParserInternalState state) {
+				JsonTypeInfo typeInfo = null;
+				JsonToken token = JsonToken.None;
+				if (state is JsonParserDictionaryState dictionaryState) {
+					typeInfo = dictionaryState.TypeInfo;
+					token = dictionaryState.IsStringDictionary ? JsonToken.ObjectStart : JsonToken.ArrayStart;
+				}
+				else if (state is JsonParserArrayState arrayState) {
+					typeInfo = arrayState.TypeInfo;
+					token = JsonToken.ArrayStart;
+				}
+				else if (state is JsonParserObjectState objectState) {
+					typeInfo = objectState.TypeInfo;
+					token = JsonToken.ObjectStart;
+				}
+				else {
+					ThrowUnhandledType(state.GetType());
+				}
+
+				Type targetType = typeInfo.OriginalType;
+				if (_settings.Visitor != null) {
+					IJsonParserVisitor visitor = _settings.Visitor;
+
+					var visitorContext = new JsonParserContext();
+					IJsonParserContext visitorContextInternal = visitorContext;
+					visitorContextInternal.CurrentType = targetType;
+
+					reader.RewindReaderPositionForVisitor(token);
+
+					int currentDepth = reader.Depth;
+					var result = visitor.ParseObjectSync(reader, visitorContext);
+					if (HandleVisitorResult(reader, visitorContext, result, state, token, targetType, currentDepth)) {
+						return;
+					}
+				}
+
+				state.Value = TypeInstantiator.Instantiate(typeInfo.RootType);
+				foreach (var a in typeInfo.OnDeserializing) {
+					a(state.Value);
+				}
+				HandleTokenSync(reader);
+			}
+
+			private async ValueTask HandleNewTypeAndVisitor(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
+				if (_settings.Visitor != null) {
+					IJsonParserVisitor visitor = _settings.Visitor;
+
+					var visitorContext = new JsonParserContext();
+					IJsonParserContext visitorContextInternal = visitorContext;
+					visitorContextInternal.CurrentType = newType;
+
+					reader.RewindReaderPositionForVisitor(token);
+
+					int currentDepth = reader.Depth;
+					var result = await visitor.ParseObject(reader, visitorContext).NoSync();
+					if (HandleVisitorResult(reader, visitorContext, result, state, token, newType, currentDepth)) {
+						return;
+					}
+				}
+
+				HandleTypeOnly(reader, state, newType);
+			}
+
+			private void HandleNewTypeAndVisitorSync(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
+				if (_settings.Visitor != null) {
+					IJsonParserVisitor visitor = _settings.Visitor;
+
+					var visitorContext = new JsonParserContext();
+					IJsonParserContext visitorContextInternal = visitorContext;
+					visitorContextInternal.CurrentType = newType;
+
+					reader.RewindReaderPositionForVisitor(token);
+
+					int currentDepth = reader.Depth;
+					var result = visitor.ParseObjectSync(reader, visitorContext);
+					if (HandleVisitorResult(reader, visitorContext, result, state, token, newType, currentDepth)) {
+						return;
+					}
+				}
+
+				HandleTypeOnly(reader, state, newType);
+			}
+
+			private bool HandleVisitorResult(JsonReader reader, JsonParserContext visitorContext, bool result, JsonParserInternalState state, JsonToken token, Type expectedType, int startDepth) {
+				if (result) {
+					var newValue = visitorContext.CurrentObject;
+					var newValueType = newValue?.GetType();
+
+					JsonTypeInfo typeInfo = null;
+					if (state is JsonParserDictionaryState dictionaryState) {
+						typeInfo = dictionaryState.TypeInfo;
+					}
+					else if (state is JsonParserArrayState arrayState) {
+						typeInfo = arrayState.TypeInfo;
+					}
+					else if (state is JsonParserObjectState objectState) {
+						typeInfo = objectState.TypeInfo;
+					}
+					else {
+						ThrowUnhandledType(state.GetType());
+					}
+
+					if ((newValueType != null && !(newValueType == typeInfo.OriginalType || newValueType.IsSubclassOf(typeInfo.OriginalType))) || (newValue == null && !typeInfo.IsNullable)) {
+						throw new InvalidOperationException("Visitor provided an invalid value. Expected value to be of type '" + ReflectionUtility.GetTypeName(expectedType) + "'.");
+					}
+					if ((token == JsonToken.ObjectStart && reader.Token != JsonToken.ObjectEnd) || (token == JsonToken.ArrayStart && reader.Token != JsonToken.ArrayEnd) || reader.Depth != startDepth) {
+						throw new InvalidOperationException("Visitor left the reader at an invalid position");
+					}
+
+					state.Value = newValue;
+					state.IsComplete = true;
+					HandleStateCompletion(state.Parent, state);
+					return true;
+				}
+				else {
+					if ((token == JsonToken.ObjectStart && reader.Token != JsonToken.ObjectStart) || (token == JsonToken.ArrayStart && reader.Token != JsonToken.ArrayStart) || reader.Depth != startDepth) {
+						throw new InvalidOperationException("Visitor left the reader at an invalid position");
+					}
+					// restore original position
+					reader.Unwind();
+					return false;
+				}
+			}
+
+			private void HandleTypeOnly(JsonReader reader, JsonParserInternalState state, Type newType) {
+				if (state is JsonParserDictionaryState dictionaryState) {
+					dictionaryState.TypeInfo = JsonReflection.GetTypeInfo(newType);
+					dictionaryState.Value = TypeInstantiator.Instantiate(newType);
 					dictionaryState.TupleContext = GetContextForNewType(dictionaryState.TupleContext, dictionaryState.TypeInfo);
 					foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
 						a(dictionaryState.Value);
 					}
 				}
 				else if (state is JsonParserArrayState arrayState) {
-					if (!(arrayState.TypeInfo.RootType == t || arrayState.TypeInfo.KnownTypes.Contains(t))) {
-						if (state.Parent is JsonParserObjectPropertyState propertyState) {
-							if (!propertyState.PropertyInfo.KnownTypes.Contains(t)) {
-								bool isAllowed = false;
-								if (_settings.TypeAllowedCallback != null) {
-									isAllowed = _settings.TypeAllowedCallback(t);
-								}
-								if (!isAllowed) {
-									throw new InvalidOperationException("Type '" + ReflectionUtility.GetTypeName(t) + "' is not allowed.");
-								}
-							}
-						}
-					}
-					arrayState.TypeInfo = JsonReflection.GetTypeInfo(t);
-					arrayState.Value = TypeInstantiator.Instantiate(t);
+					arrayState.TypeInfo = JsonReflection.GetTypeInfo(newType);
+					arrayState.Value = TypeInstantiator.Instantiate(newType);
 					arrayState.TupleContext = GetContextForNewType(arrayState.TupleContext, arrayState.TypeInfo);
 					foreach (var a in arrayState.TypeInfo.OnDeserializing) {
 						a(arrayState.Value);
 					}
 				}
 				else if (state is JsonParserObjectState objectState) {
-					if (!(objectState.TypeInfo.RootType == t || objectState.TypeInfo.KnownTypes.Contains(t))) {
-						if (state.Parent is JsonParserObjectPropertyState propertyState) {
-							if (!propertyState.PropertyInfo.KnownTypes.Contains(t)) {
-								bool isAllowed = false;
-								if (_settings.TypeAllowedCallback != null) {
-									isAllowed = _settings.TypeAllowedCallback(t);
-								}
-								if (!isAllowed) {
-									throw new InvalidOperationException("Type '" + ReflectionUtility.GetTypeName(t) + "' is not allowed.");
-								}
-							}
-						}
-					}
-					objectState.TypeInfo = JsonReflection.GetTypeInfo(t);
-					objectState.Value = TypeInstantiator.Instantiate(t);
+					objectState.TypeInfo = JsonReflection.GetTypeInfo(newType);
+					objectState.Value = TypeInstantiator.Instantiate(newType);
 					objectState.TupleContext = GetContextForNewType(objectState.TupleContext, objectState.TypeInfo);
 					foreach (var a in objectState.TypeInfo.OnDeserializing) {
 						a(objectState.Value);
 					}
 				}
 				else {
-					throw new NotImplementedException(ReflectionUtility.GetTypeName(state.GetType()));
+					ThrowUnhandledType(state.GetType());
 				}
 			}
 
@@ -159,8 +345,7 @@ namespace IonKiwi.Json {
 				if (dictionaryState.IsStringDictionary) {
 					var token = reader.Token;
 					if (token == JsonToken.ObjectEnd) {
-						CompleteDictionary(dictionaryState);
-						return HandleStateResult.None;
+						return CompleteDictionary(dictionaryState);
 					}
 					else if (token == JsonToken.ObjectProperty) {
 						string propertyName = reader.GetValue();
@@ -169,10 +354,7 @@ namespace IonKiwi.Json {
 							if (string.Equals("$type", propertyName, StringComparison.Ordinal)) {
 								return HandleStateResult.ReadTypeToken;
 							}
-							dictionaryState.Value = TypeInstantiator.Instantiate(dictionaryState.TypeInfo.RootType);
-							foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
-								a(dictionaryState.Value);
-							}
+							return HandleStateResult.CreateInstance;
 						}
 
 						JsonParserDictionaryValueState propertyState = new JsonParserDictionaryValueState();
@@ -181,12 +363,16 @@ namespace IonKiwi.Json {
 						propertyState.TypeInfo = JsonReflection.GetTypeInfo(dictionaryState.TypeInfo.ItemType);
 						propertyState.TupleContext = GetNewContext(dictionaryState.TupleContext, "Value", propertyState.TypeInfo);
 						_currentState.Push(propertyState);
+						return HandleStateResult.None;
+					}
+					else {
+						UnexpectedToken(token);
+						return HandleStateResult.None;
 					}
 				}
 				else {
 					if (reader.Token == JsonToken.ArrayEnd) {
-						CompleteDictionary(dictionaryState);
-						return HandleStateResult.None;
+						return CompleteDictionary(dictionaryState);
 					}
 
 					if (dictionaryState.IsFirst) {
@@ -194,34 +380,27 @@ namespace IonKiwi.Json {
 						if (reader.Token == JsonToken.String) {
 							string v = reader.GetValue();
 							if (v != null && v.StartsWith("$type:", StringComparison.Ordinal)) {
-								string typeName = v.Substring("$type".Length);
-								HandleTypeToken(reader, typeName);
-								return HandleStateResult.None;
+								return HandleStateResult.ProcessTypeToken;
 							}
 						}
-						dictionaryState.Value = TypeInstantiator.Instantiate(dictionaryState.TypeInfo.RootType);
-						foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
-							a(dictionaryState.Value);
-						}
+						return HandleStateResult.CreateInstance;
 					}
 
 					var itemState = new JsonParserArrayItemState();
 					itemState.Parent = dictionaryState;
-					itemState.TypeInfo = JsonReflection.GetTypeInfo(typeof(IntermediateDictionaryItem<,>).MakeGenericType(dictionaryState.TypeInfo.KeyType, dictionaryState.TypeInfo.ItemType));
+					itemState.TypeInfo = JsonReflection.GetTypeInfo(typeof(KeyValuePair<,>).MakeGenericType(dictionaryState.TypeInfo.KeyType, dictionaryState.TypeInfo.ItemType));
 					itemState.TupleContext = dictionaryState.TupleContext;
 					//objectState.StartDepth = reader.Depth;
 					_currentState.Push(itemState);
 
-					HandleValueState(itemState, reader, itemState.TypeInfo, itemState.TupleContext, false);
+					return HandleValueState(itemState, reader, itemState.TypeInfo, itemState.TupleContext, false);
 				}
-				return HandleStateResult.None;
 			}
 
 			private HandleStateResult HandleArrayState(JsonParserArrayState arrayState, JsonReader reader) {
 				EnsureNotComplete(arrayState);
 				if (reader.Token == JsonToken.ArrayEnd) {
-					CompleteArray(arrayState);
-					return HandleStateResult.None;
+					return CompleteArray(arrayState);
 				}
 
 				if (arrayState.IsFirst) {
@@ -230,14 +409,11 @@ namespace IonKiwi.Json {
 						if (reader.Token == JsonToken.String) {
 							string v = reader.GetValue();
 							if (v != null && v.StartsWith("$type:", StringComparison.Ordinal)) {
-								return HandleStateResult.ReadTypeToken;
+								return HandleStateResult.ProcessTypeToken;
 							}
 						}
 					}
-					arrayState.Value = TypeInstantiator.Instantiate(arrayState.TypeInfo.RootType);
-					foreach (var a in arrayState.TypeInfo.OnDeserializing) {
-						a(arrayState.Value);
-					}
+					return HandleStateResult.CreateInstance;
 				}
 
 				var itemState = new JsonParserArrayItemState();
@@ -247,20 +423,17 @@ namespace IonKiwi.Json {
 				//objectState.StartDepth = reader.Depth;
 				_currentState.Push(itemState);
 
-				HandleValueState(itemState, reader, itemState.TypeInfo, itemState.TupleContext, arrayState.IsSingleOrArrayValue);
-				return HandleStateResult.None;
+				return HandleValueState(itemState, reader, itemState.TypeInfo, itemState.TupleContext, arrayState.IsSingleOrArrayValue);
 			}
 
 			private HandleStateResult HandlePropertyState(JsonParserObjectPropertyState propertyState, JsonReader reader) {
 				EnsureNotComplete(propertyState);
-				HandleValueState(propertyState, reader, propertyState.TypeInfo, propertyState.TupleContext, propertyState.TypeInfo.IsSingleOrArrayValue || propertyState.PropertyInfo.IsSingleOrArrayValue);
-				return HandleStateResult.None;
+				return HandleValueState(propertyState, reader, propertyState.TypeInfo, propertyState.TupleContext, propertyState.TypeInfo.IsSingleOrArrayValue || propertyState.PropertyInfo.IsSingleOrArrayValue);
 			}
 
 			private HandleStateResult HandleDictionaryValueState(JsonParserDictionaryValueState valueState, JsonReader reader) {
 				EnsureNotComplete(valueState);
-				HandleValueState(valueState, reader, valueState.TypeInfo, valueState.TupleContext, valueState.TypeInfo.IsSingleOrArrayValue);
-				return HandleStateResult.None;
+				return HandleValueState(valueState, reader, valueState.TypeInfo, valueState.TupleContext, valueState.TypeInfo.IsSingleOrArrayValue);
 			}
 
 			private HandleStateResult HandleObjectState(JsonParserObjectState objectState, JsonReader reader) {
@@ -272,10 +445,7 @@ namespace IonKiwi.Json {
 						if (string.Equals("$type", propertyName, StringComparison.Ordinal) && !objectState.IsComplete) {
 							return HandleStateResult.ReadTypeToken;
 						}
-						objectState.Value = TypeInstantiator.Instantiate(objectState.TypeInfo.RootType);
-						foreach (var a in objectState.TypeInfo.OnDeserializing) {
-							a(objectState.Value);
-						}
+						return HandleStateResult.CreateInstance;
 					}
 
 					if (objectState.TypeInfo.IsTuple) {
@@ -297,7 +467,7 @@ namespace IonKiwi.Json {
 					}
 				}
 				else if (token == JsonToken.ObjectEnd) {
-					CompleteObject(objectState);
+					return CompleteObject(objectState);
 				}
 				else {
 					UnexpectedToken(token);
@@ -325,9 +495,9 @@ namespace IonKiwi.Json {
 				return context;
 			}
 
-			private void CompleteObject(JsonParserObjectState objectState) {
+			private HandleStateResult CompleteObject(JsonParserObjectState objectState) {
 				if (object.ReferenceEquals(null, objectState.Value)) {
-					objectState.Value = TypeInstantiator.Instantiate(objectState.TypeInfo.RootType);
+					return HandleStateResult.CreateInstance;
 				}
 				if (objectState.TypeInfo.FinalizeAction != null) {
 					objectState.Value = objectState.TypeInfo.FinalizeAction(objectState.Value);
@@ -338,11 +508,12 @@ namespace IonKiwi.Json {
 
 				objectState.IsComplete = true;
 				HandleStateCompletion(objectState.Parent, objectState);
+				return HandleStateResult.None;
 			}
 
-			private void CompleteArray(JsonParserArrayState arrayState) {
+			private HandleStateResult CompleteArray(JsonParserArrayState arrayState) {
 				if (object.ReferenceEquals(null, arrayState.Value)) {
-					arrayState.Value = TypeInstantiator.Instantiate(arrayState.TypeInfo.RootType);
+					return HandleStateResult.CreateInstance;
 				}
 				if (arrayState.TypeInfo.FinalizeAction != null) {
 					arrayState.Value = arrayState.TypeInfo.FinalizeAction(arrayState.Value);
@@ -353,11 +524,12 @@ namespace IonKiwi.Json {
 
 				arrayState.IsComplete = true;
 				HandleStateCompletion(arrayState.Parent, arrayState);
+				return HandleStateResult.None;
 			}
 
-			private void CompleteDictionary(JsonParserDictionaryState dictionaryState) {
+			private HandleStateResult CompleteDictionary(JsonParserDictionaryState dictionaryState) {
 				if (object.ReferenceEquals(null, dictionaryState.Value)) {
-					dictionaryState.Value = TypeInstantiator.Instantiate(dictionaryState.TypeInfo.RootType);
+					return HandleStateResult.CreateInstance;
 				}
 				if (dictionaryState.TypeInfo.FinalizeAction != null) {
 					dictionaryState.Value = dictionaryState.TypeInfo.FinalizeAction(dictionaryState.Value);
@@ -368,15 +540,15 @@ namespace IonKiwi.Json {
 
 				dictionaryState.IsComplete = true;
 				HandleStateCompletion(dictionaryState.Parent, dictionaryState);
+				return HandleStateResult.None;
 			}
 
 			private HandleStateResult HandleRootState(JsonParserRootState rootState, JsonReader reader) {
 				EnsureNotComplete(rootState);
-				HandleValueState(rootState, reader, rootState.TypeInfo, rootState.TupleContext, rootState.TypeInfo.IsSingleOrArrayValue);
-				return HandleStateResult.None;
+				return HandleValueState(rootState, reader, rootState.TypeInfo, rootState.TupleContext, rootState.TypeInfo.IsSingleOrArrayValue);
 			}
 
-			private void HandleValueState(JsonParserInternalState parentState, JsonReader reader, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext, bool isSingleOrArrayValue) {
+			private HandleStateResult HandleValueState(JsonParserInternalState parentState, JsonReader reader, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext, bool isSingleOrArrayValue) {
 				var token = reader.Token;
 				if (typeInfo.ObjectType == JsonObjectType.Object) {
 					if (token == JsonToken.Null) {
@@ -416,7 +588,7 @@ namespace IonKiwi.Json {
 						objectState.IsSingleOrArrayValue = true;
 						//objectState.StartDepth = reader.Depth;
 						_currentState.Push(objectState);
-						HandleTokenInternal(reader);
+						return HandleStateResult.HandleToken;
 					}
 					else {
 						UnexpectedToken(token);
@@ -465,6 +637,7 @@ namespace IonKiwi.Json {
 				else {
 					throw new NotImplementedException();
 				}
+				return HandleStateResult.None;
 			}
 
 			private void HandleStateCompletion(JsonParserInternalState parentState, JsonParserInternalState completedState) {
@@ -502,8 +675,7 @@ namespace IonKiwi.Json {
 						dictionaryState.TypeInfo.DictionaryAddMethod(dictionaryState.Value, propertyState.PropertyName, propertyState.Value);
 					}
 					else {
-						IIntermediateDictionaryItem item = (IIntermediateDictionaryItem)completedState.Value;
-						dictionaryState.TypeInfo.DictionaryAddMethod(dictionaryState.Value, item.Key, item.Value);
+						dictionaryState.TypeInfo.DictionaryAddKeyValueMethod(dictionaryState.Value, completedState.Value);
 					}
 					_currentState.Pop();
 				}

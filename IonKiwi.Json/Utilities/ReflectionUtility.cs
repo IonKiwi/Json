@@ -544,6 +544,46 @@ namespace IonKiwi.Json.Utilities {
 			return methodLambda.Compile();
 		}
 
+		public static Action<TIn, TValue1> CreateDictionaryAddKeyValue<TIn, TValue1>(Type dictionaryType, Type keyType, Type valueType) {
+			if (!HasInterface(dictionaryType, typeof(IDictionary<,>), out var iDictionaryType)) {
+				throw new InvalidOperationException($"Type '{ReflectionUtility.GetTypeName(dictionaryType)}' is not an IDictionary<,>.");
+			}
+			var itemType = typeof(ICollection<>).MakeGenericType(typeof(KeyValuePair<,>).MakeGenericType(iDictionaryType.GetGenericArguments()[0], iDictionaryType.GetGenericArguments()[1]));
+			if (!HasInterface(iDictionaryType, itemType, out var itemInterface)) {
+				throw new InvalidOperationException($"Type '{ReflectionUtility.GetTypeName(dictionaryType)}' is not an ICollection<KeyValuePair<,>>.");
+			}
+			var mi = itemInterface.GetMethod("Add", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType) }, null);
+			var p = mi.GetParameters();
+			if (p.Length != 1) {
+				throw new Exception("Expected 1 parameter for Dictionary Add method");
+			}
+
+			Type inType = typeof(TIn);
+			Type valueType1 = typeof(TValue1);
+
+			ParameterExpression p1 = Expression.Parameter(inType, "p1");
+			Expression p2;
+			if (inType != mi.DeclaringType) {
+				p2 = Expression.Convert(p1, mi.DeclaringType);
+			}
+			else {
+				p2 = p1;
+			}
+
+			ParameterExpression p3 = Expression.Parameter(valueType1, "p2");
+			Expression p4;
+			if (valueType1 != p[0].ParameterType) {
+				p4 = Expression.Convert(p3, p[0].ParameterType);
+			}
+			else {
+				p4 = p3;
+			}
+
+			MethodCallExpression methodCall = Expression.Call(p2, mi, p4);
+			var methodLambda = Expression.Lambda<Action<TIn, TValue1>>(methodCall, p1, p3);
+			return methodLambda.Compile();
+		}
+
 		public static bool IsTupleType(Type valueType, out int tupleRank, out bool isNullable) {
 			tupleRank = 0;
 			isNullable = false;

@@ -26,16 +26,19 @@ namespace IonKiwi.Json {
 		}
 
 		internal sealed class JsonTypeInfo {
+			public Type OriginalType;
 			public Type RootType;
 			public Type KeyType;
 			public Type ItemType;
 			public bool IsSimpleValue;
 			public bool IsTuple;
 			public bool IsSingleOrArrayValue;
+			public bool IsNullable = true;
 			public JsonObjectType ObjectType;
 			public readonly Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
 			public Action<object, object> CollectionAddMethod;
 			public Action<object, object, object> DictionaryAddMethod;
+			public Action<object, object> DictionaryAddKeyValueMethod;
 			public Func<object, object> FinalizeAction;
 			public TupleContextInfo TupleContext;
 			public readonly List<Action<object>> OnDeserialized = new List<Action<object>>();
@@ -79,16 +82,28 @@ namespace IonKiwi.Json {
 			return typeInfo;
 		}
 
+		private static bool IsSimpleValue(Type t, out bool isNullable) {
+
+			if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+				bool result = IsSimpleValue(t.GenericTypeArguments[0], out _);
+				isNullable = true;
+				return result;
+			}
+
+			bool isSimpleValue = (t.IsValueType && t.IsPrimitive) || t == typeof(string) || t == typeof(Uri) || t == typeof(DateTime) || t == typeof(Decimal) || t == typeof(BigInteger) || t == typeof(TimeSpan);
+			isNullable = t.IsValueType;
+			return isSimpleValue;
+		}
+
 		private static JsonTypeInfo CreateTypeInfo(Type t) {
 			var ti = new JsonTypeInfo();
 			ti.RootType = t;
-			ti.IsSimpleValue = (t.IsValueType && t.IsPrimitive) || t == typeof(string);
-			if (t.IsValueType && !t.IsPrimitive) {
-				ti.IsSimpleValue = t == typeof(Uri) || t == typeof(DateTime) || t == typeof(Decimal) || t == typeof(BigInteger) || t == typeof(TimeSpan);
-			}
+			ti.OriginalType = t;
+			ti.IsSimpleValue = IsSimpleValue(t, out var isNullable);
 
 			if (ti.IsSimpleValue) {
 				ti.ObjectType = JsonObjectType.SimpleValue;
+				ti.IsNullable = isNullable;
 				return ti;
 			}
 
@@ -103,11 +118,13 @@ namespace IonKiwi.Json {
 				ti.ObjectType = JsonObjectType.Array;
 				ti.ItemType = t.GetElementType();
 				ti.RootType = typeof(List<>).MakeGenericType(ti.ItemType);
+				ti.CollectionAddMethod = ReflectionUtility.CreateCollectionAdd<object, object>(ti.RootType, ti.ItemType);
 				ti.FinalizeAction = ReflectionUtility.CreateToArray<object, object>(ti.RootType);
 				return ti;
 			}
-			else if (IsTupleType(t, out var tupleRank, out var isNullable, out var placeHolderType, out var finalizeMethod)) {
+			else if (IsTupleType(t, out var tupleRank, out isNullable, out var placeHolderType, out var finalizeMethod)) {
 				ti.IsTuple = true;
+				ti.IsNullable = isNullable;
 				ti.RootType = placeHolderType;
 				ti.ObjectType = JsonObjectType.Object;
 
@@ -205,6 +222,7 @@ namespace IonKiwi.Json {
 				ti.ItemType = dictionaryInterface.GenericTypeArguments[1];
 				ti.ObjectType = JsonObjectType.Dictionary;
 				ti.DictionaryAddMethod = ReflectionUtility.CreateDictionaryAdd<object, object, object>(t, ti.KeyType, ti.ItemType);
+				ti.DictionaryAddKeyValueMethod = ReflectionUtility.CreateDictionaryAddKeyValue<object, object>(t, ti.KeyType, ti.ItemType);
 			}
 			else if (collectionInfo != null) {
 

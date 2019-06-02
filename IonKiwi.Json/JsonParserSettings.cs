@@ -45,6 +45,15 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		private JsonParserVisitor _visitor;
+		public JsonParserVisitor Visitor {
+			get { return _visitor; }
+			set {
+				EnsureUnlocked();
+				_visitor = value;
+			}
+		}
+
 		public JsonParserSettings AddDefaultAssemblyName(AssemblyName name) {
 			EnsureUnlocked();
 
@@ -121,6 +130,7 @@ namespace IonKiwi.Json {
 				clone._defaultAssemblyNames.Add(kv.Key, kv.Value);
 			}
 			clone.TypeAllowedCallback = this.TypeAllowedCallback;
+			clone.Visitor = this.Visitor;
 			return clone;
 		}
 	}

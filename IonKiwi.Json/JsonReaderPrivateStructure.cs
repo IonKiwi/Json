@@ -88,7 +88,9 @@ namespace IonKiwi.Json {
 			public bool IsCarriageReturn;
 			public bool IsForwardSlash;
 			public bool ExpectUnicodeEscapeSequence;
+			public int PropertyCount;
 			public StringBuilder CurrentProperty = new StringBuilder();
+			public List<JsonInternalCommentState> CommentsBeforeFirstProperty;
 			//public Dictionary<string, JsonInternalObjectPropertyState> Properties = new Dictionary<string, JsonInternalObjectPropertyState>(StringComparer.Ordinal);
 		}
 
@@ -100,6 +102,7 @@ namespace IonKiwi.Json {
 		}
 
 		private sealed class JsonInternalArrayState : JsonInternalState {
+			public List<JsonInternalCommentState> CommentsBeforeFirstValue;
 			//public List<JsonInternalArrayItemState> Items = new List<JsonInternalArrayItemState>();
 			public int ItemCount;
 		}
@@ -108,11 +111,15 @@ namespace IonKiwi.Json {
 			public StringBuilder Data = new StringBuilder();
 		}
 
-		private sealed class JsonInternalSingleLineCommentState : JsonInternalStringState {
+		private class JsonInternalCommentState : JsonInternalStringState {
 
 		}
 
-		private sealed class JsonInternalMultiLineCommentState : JsonInternalStringState {
+		private sealed class JsonInternalSingleLineCommentState : JsonInternalCommentState {
+
+		}
+
+		private sealed class JsonInternalMultiLineCommentState : JsonInternalCommentState {
 			public bool IsAsterisk;
 		}
 

@@ -11,6 +11,9 @@ namespace IonKiwi.Json {
 			None,
 			Skip,
 			ReadTypeToken,
+			ProcessTypeToken,
+			CreateInstance,
+			HandleToken,
 		}
 
 		private class JsonParserInternalState {
@@ -68,24 +71,6 @@ namespace IonKiwi.Json {
 			public JsonTypeInfo TypeInfo;
 			public TupleContextInfoWrapper TupleContext;
 			public JsonPropertyInfo PropertyInfo;
-		}
-
-		private interface IIntermediateDictionaryItem {
-			object Key { get; }
-			object Value { get; }
-		}
-
-		[JsonObject]
-		private sealed class IntermediateDictionaryItem<TKey, TValue> : IIntermediateDictionaryItem {
-			[JsonProperty]
-			public TKey Key { get; set; }
-
-			[JsonProperty]
-			public TValue Value { get; set; }
-
-			object IIntermediateDictionaryItem.Key => Key;
-
-			object IIntermediateDictionaryItem.Value => Value;
 		}
 	}
 }
