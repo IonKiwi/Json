@@ -241,7 +241,7 @@ namespace IonKiwi.Json.Test {
 		[DataContract]
 		private class TupleGenericTest3<T> {
 			[DataMember]
-			public TupleGenericTest2<(string q, string v), T> Value1 { get; set; } = new TupleGenericTest2<(string q, string v), T>();
+			public TupleGenericTest2<(string q, string v), T> Value1 { get; set; }
 		}
 
 		[DataContract]

@@ -542,9 +542,13 @@ namespace IonKiwi.Json {
 			}
 
 			// handle properties & fields
-			for (int i = 0; i < typeHierarchy.Count; i++) {
-				var currentType = typeHierarchy[i];
-				foreach (var f in currentType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
+			Type currentType2 = rootType;
+			if (currentType2.IsGenericType) {
+				currentType2 = currentType2.GetGenericTypeDefinition();
+			}
+
+			do {
+				foreach (var f in currentType2.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
 					var tupleNames = f.GetCustomAttribute<TupleElementNamesAttribute>();
 					if (tupleNames != null) {
 						if (!f.FieldType.IsGenericType) {
@@ -565,7 +569,7 @@ namespace IonKiwi.Json {
 						HandleTypeLevelTupleNames(typeLevelTupleNames, f.FieldType, propertyInfo);
 					}
 				}
-				foreach (var f in currentType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
+				foreach (var f in currentType2.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
 					var tupleNames = f.GetCustomAttribute<TupleElementNamesAttribute>();
 					if (tupleNames != null) {
 						if (!f.PropertyType.IsGenericType) {
@@ -586,7 +590,13 @@ namespace IonKiwi.Json {
 						HandleTypeLevelTupleNames(typeLevelTupleNames, f.PropertyType, propertyInfo);
 					}
 				}
+
+				currentType2 = currentType2.BaseType;
+				if (currentType2 != null && currentType2.IsGenericType) {
+					currentType2 = currentType2.GetGenericTypeDefinition();
+				}
 			}
+			while (currentType2 != null);
 
 			return context;
 		}
