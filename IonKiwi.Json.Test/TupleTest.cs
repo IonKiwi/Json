@@ -141,7 +141,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[DataContract]
-		public class TupleGenericTest<T> {
+		private class TupleGenericTest<T> {
 			[DataMember]
 			public Dictionary<string, T> Value1 = new Dictionary<string, T>();
 
@@ -150,7 +150,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[DataContract]
-		public sealed class TupleGenericTest : TupleGenericTest<(int x, (int z1, int z2) y)> {
+		private sealed class TupleGenericTest : TupleGenericTest<(int x, (int z1, int z2) y)> {
 		}
 
 		[Fact]
@@ -226,6 +226,40 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal(10, v.Value2[1].x);
 			Assert.Equal(11, v.Value2[1].y.z1);
 			Assert.Equal(12, v.Value2[1].y.z2);
+		}
+
+		[DataContract]
+		private class TupleGenericTest2<X, T> {
+
+			[DataMember]
+			public X Value1 { get; set; }
+
+			[DataMember]
+			public T Value2 { get; set; }
+		}
+
+		[DataContract]
+		private class TupleGenericTest3<T> {
+			[DataMember]
+			public TupleGenericTest2<(string q, string v), T> Value1 { get; set; } = new TupleGenericTest2<(string q, string v), T>();
+		}
+
+		[DataContract]
+		private sealed class TupleGenericTest3 : TupleGenericTest3<(int x, (int z1, int z2) y)> {
+
+		}
+
+		[Fact]
+		public void Test11() {
+			string json = "{Value1:{Value1:{q:\"test1\",v:\"test2\"},Value2:{x:1,y:{z1:2,z2:3}}}}";
+			var v = JsonParser.ParseSync<TupleGenericTest3>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Value1);
+			Assert.Equal("test1", v.Value1.Value1.q);
+			Assert.Equal("test2", v.Value1.Value1.v);
+			Assert.Equal(1, v.Value1.Value2.x);
+			Assert.Equal(2, v.Value1.Value2.y.z1);
+			Assert.Equal(3, v.Value1.Value2.y.z2);
 		}
 	}
 }
