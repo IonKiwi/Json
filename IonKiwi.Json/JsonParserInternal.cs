@@ -89,8 +89,7 @@ namespace IonKiwi.Json {
 						propertyState.Parent = dictionaryState;
 						propertyState.PropertyName = propertyName;
 						propertyState.TypeInfo = JsonReflection.GetTypeInfo(dictionaryState.TypeInfo.ItemType);
-						propertyState.TupleContext = dictionaryState.TupleContext?.GetPropertyContext("Value");
-						propertyState.TupleContext?.Add(propertyState.TypeInfo.TupleContext);
+						propertyState.TupleContext = GetNewContext(dictionaryState.TupleContext, "Value", propertyState.TypeInfo);
 						_currentState.Push(propertyState);
 					}
 				}
@@ -158,8 +157,7 @@ namespace IonKiwi.Json {
 				var itemState = new JsonParserArrayItemState();
 				itemState.Parent = arrayState;
 				itemState.TypeInfo = JsonReflection.GetTypeInfo(arrayState.TypeInfo.ItemType);
-				itemState.TupleContext = arrayState.TupleContext?.GetPropertyContext("Item");
-				itemState.TupleContext?.Add(itemState.TypeInfo.TupleContext);
+				itemState.TupleContext = GetNewContext(arrayState.TupleContext, "Item", itemState.TypeInfo);
 				//objectState.StartDepth = reader.Depth;
 				_currentState.Push(itemState);
 
@@ -211,8 +209,7 @@ namespace IonKiwi.Json {
 						JsonParserObjectPropertyState propertyState = new JsonParserObjectPropertyState();
 						propertyState.Parent = objectState;
 						propertyState.TypeInfo = JsonReflection.GetTypeInfo(propertyInfo.PropertyType);
-						propertyState.TupleContext = objectState.TupleContext?.GetPropertyContext(propertyName);
-						propertyState.TupleContext?.Add(propertyState.TypeInfo.TupleContext);
+						propertyState.TupleContext = GetNewContext(objectState.TupleContext, propertyName, propertyState.TypeInfo);
 						propertyState.PropertyInfo = propertyInfo;
 						_currentState.Push(propertyState);
 					}
@@ -224,6 +221,15 @@ namespace IonKiwi.Json {
 					UnexpectedToken(token);
 				}
 				return HandleStateResult.None;
+			}
+
+			private TupleContextInfoWrapper GetNewContext(TupleContextInfoWrapper context, string propertyName, JsonTypeInfo propertyTypeInfo) {
+				var newContext = context?.GetPropertyContext(propertyName);
+				if (newContext == null) {
+					return new TupleContextInfoWrapper(propertyTypeInfo.TupleContext, null);
+				}
+				newContext.Add(propertyTypeInfo.TupleContext);
+				return newContext;
 			}
 
 			private void CompleteObject(JsonParserObjectState objectState) {

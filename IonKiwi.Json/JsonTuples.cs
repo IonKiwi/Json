@@ -67,7 +67,7 @@ namespace IonKiwi.Json {
 
 				foreach (var kv in context2.PropertyInfo) {
 					if (!context1.PropertyInfo.TryGetValue(kv.Key, out var propertyInfo)) {
-						context1.PropertyInfo.Add(kv.Key, kv.Value);
+						context1.PropertyInfo.Add(kv.Key, kv.Value.Clone());
 					}
 					else {
 						Add(propertyInfo, kv.Value);
@@ -362,8 +362,7 @@ namespace IonKiwi.Json {
 		}
 
 		private static void HandleTypeLevelTupleNames(TupleElementNamesAttribute typeTupleNames, Type currentType, TupleContextInfo context) {
-			var typeDefinition = currentType.GetGenericTypeDefinition();
-			var baseType = typeDefinition.BaseType;
+			var baseType = currentType.BaseType;
 			var baseTypeDefinition = baseType.GetGenericTypeDefinition();
 			var typeArguments = baseType.GenericTypeArguments;
 			var baseTypeArguments = baseTypeDefinition.GetGenericArguments();
