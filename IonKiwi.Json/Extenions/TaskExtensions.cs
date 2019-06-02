@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace IonKiwi.Extenions {
-	public static class TaskExtensions {
+	internal static class TaskExtensions {
 		public static ConfiguredTaskAwaitable NoSync(this Task task) {
 			return task.ConfigureAwait(false);
 		}

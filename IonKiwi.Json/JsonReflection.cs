@@ -1,4 +1,5 @@
-﻿using IonKiwi.Json.MetaData;
+﻿using IonKiwi.Extenions;
+using IonKiwi.Json.MetaData;
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
@@ -39,6 +40,7 @@ namespace IonKiwi.Json {
 			public TupleContextInfo TupleContext;
 			public readonly List<Action<object>> OnDeserialized = new List<Action<object>>();
 			public readonly List<Action<object>> OnDeserializing = new List<Action<object>>();
+			public readonly HashSet<Type> KnownTypes = new HashSet<Type>();
 		}
 
 		internal sealed class JsonPropertyInfo {
@@ -49,6 +51,7 @@ namespace IonKiwi.Json {
 			public Action<object, object> Setter2;
 			public Func<object, object> Getter;
 			public bool IsSingleOrArrayValue;
+			public readonly HashSet<Type> KnownTypes = new HashSet<Type>();
 		}
 
 		public static JsonTypeInfo GetTypeInfo(Type t) {
@@ -94,6 +97,7 @@ namespace IonKiwi.Json {
 			var dictInfo = t.GetCustomAttribute<JsonDictionaryAttribute>(false);
 
 			Dictionary<string, JsonMetaDataEventArgs.PropertyInfo> customProperties = null;
+			List<Type> customKnownTypes = null;
 
 			if (t.IsArray) {
 				ti.ObjectType = JsonObjectType.Array;
@@ -141,12 +145,15 @@ namespace IonKiwi.Json {
 				if (md.ObjectAttribute != null) {
 					objectInfo = md.ObjectAttribute;
 					customProperties = md.Properties;
+					customKnownTypes = md.KnownTypes;
 				}
 				if (md.CollectionAttribute != null) {
 					collectionInfo = md.CollectionAttribute;
+					customKnownTypes = md.KnownTypes;
 				}
 				if (md.DictionaryAttribute != null) {
 					dictInfo = md.DictionaryAttribute;
+					customKnownTypes = md.KnownTypes;
 				}
 
 				// non explicit json type support
@@ -227,7 +234,16 @@ namespace IonKiwi.Json {
 
 				if (customProperties != null) {
 					foreach (var cp in customProperties) {
-						ti.Properties.Add(cp.Key, new JsonPropertyInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter, Getter = cp.Value.Getter, Required = cp.Value.Required, Name = cp.Key, IsSingleOrArrayValue = cp.Value.IsSingleOrArrayValue });
+						var pix = new JsonPropertyInfo() {
+							PropertyType = cp.Value.PropertyType,
+							Setter1 = cp.Value.Setter,
+							Getter = cp.Value.Getter,
+							Required = cp.Value.Required,
+							Name = cp.Key,
+							IsSingleOrArrayValue = cp.Value.IsSingleOrArrayValue,
+						};
+						pix.KnownTypes.AddRange(cp.Value.KnownTypes);
+						ti.Properties.Add(cp.Key, pix);
 					}
 				}
 				else {
@@ -261,6 +277,12 @@ namespace IonKiwi.Json {
 								if (ti.Properties.ContainsKey(name)) {
 									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
 								}
+
+								var propertyKnownTypes = p.GetCustomAttributes<JsonKnownTypeAttribute>();
+								foreach (var knownType in propertyKnownTypes) {
+									pi.KnownTypes.Add(knownType.KnownType);
+								}
+
 								ti.Properties.Add(name, pi);
 							}
 						}
@@ -287,6 +309,12 @@ namespace IonKiwi.Json {
 								if (ti.Properties.ContainsKey(name)) {
 									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
 								}
+
+								var propertyKnownTypes = f.GetCustomAttributes<JsonKnownTypeAttribute>();
+								foreach (var knownType in propertyKnownTypes) {
+									pi.KnownTypes.Add(knownType.KnownType);
+								}
+
 								ti.Properties.Add(name, pi);
 							}
 						}
@@ -318,6 +346,15 @@ namespace IonKiwi.Json {
 			ti.IsSingleOrArrayValue = collectionInfo?.IsSingleOrArrayValue == true;
 			if (ti.IsSingleOrArrayValue && ti.ObjectType != JsonObjectType.Array) {
 				throw new InvalidOperationException("IsSingleOrArrayValue is only valid for 'array' types.");
+			}
+
+			var knownTypes = t.GetCustomAttributes<JsonKnownTypeAttribute>();
+			foreach (var knownType in knownTypes) {
+				ti.KnownTypes.Add(knownType.KnownType);
+			}
+
+			if (customKnownTypes != null) {
+				ti.KnownTypes.AddRange(customKnownTypes);
 			}
 
 			ti.TupleContext = CreateTupleContextInfo(t);

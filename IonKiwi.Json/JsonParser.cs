@@ -13,7 +13,9 @@ namespace IonKiwi.Json {
 		private static readonly JsonParserSettings _defaultSettings = new JsonParserSettings() {
 			DateTimeHandling = DateTimeHandling.Utc,
 			UnspecifiedDateTimeHandling = UnspecifiedDateTimeHandling.AssumeLocal
-		}.Seal();
+		}
+		.AddDefaultAssemblyName(typeof(string).Assembly.GetName(false))
+		.Seal();
 
 		public static JsonParserSettings DefaultSettings {
 			get {

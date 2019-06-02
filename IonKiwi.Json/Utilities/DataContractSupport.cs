@@ -42,16 +42,19 @@ namespace IonKiwi.Json.Utilities {
 					e.IsDictionary(new JsonDictionaryAttribute() {
 
 					});
+					e.AddKnownTypes(ReflectionUtility.GetAllDataContractKnownTypeAttributes(e.RootType));
 				}
 				else if (arrayAttr != null) {
 					e.IsCollection(new JsonCollectionAttribute() {
 
 					});
+					e.AddKnownTypes(ReflectionUtility.GetAllDataContractKnownTypeAttributes(e.RootType));
 				}
 				else if (objectAttr != null) {
 					e.IsObject(new JsonObjectAttribute() {
 
 					});
+					e.AddKnownTypes(ReflectionUtility.GetAllDataContractKnownTypeAttributes(e.RootType));
 
 					foreach (var p in e.RootType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
 						var ignoreAttr = p.GetCustomAttribute<IgnoreDataMemberAttribute>();
@@ -60,7 +63,7 @@ namespace IonKiwi.Json.Utilities {
 							continue;
 						}
 						else if (propAttr != null) {
-							e.AddProperty(string.IsNullOrEmpty(propAttr.Name) ? p.Name : propAttr.Name, p, required: propAttr.IsRequired);
+							e.AddProperty(string.IsNullOrEmpty(propAttr.Name) ? p.Name : propAttr.Name, p, required: propAttr.IsRequired, knownTypes: ReflectionUtility.GetAllDataContractKnownTypeAttributes(p.PropertyType));
 						}
 					}
 					foreach (var f in e.RootType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
@@ -70,7 +73,7 @@ namespace IonKiwi.Json.Utilities {
 							continue;
 						}
 						else if (propAttr != null) {
-							e.AddField(string.IsNullOrEmpty(propAttr.Name) ? f.Name : propAttr.Name, f, required: propAttr.IsRequired);
+							e.AddField(string.IsNullOrEmpty(propAttr.Name) ? f.Name : propAttr.Name, f, required: propAttr.IsRequired, knownTypes: ReflectionUtility.GetAllDataContractKnownTypeAttributes(f.FieldType));
 						}
 					}
 				}

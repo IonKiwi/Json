@@ -25,12 +25,106 @@ namespace IonKiwi.Json {
 				if (state == HandleStateResult.Skip) {
 					await reader.Skip().NoSync();
 				}
+				else if (state == HandleStateResult.ReadTypeToken) {
+					await reader.Read().NoSync();
+					ValidateTypeTokenIsString(reader);
+					HandleTypeToken(reader, reader.GetValue());
+				}
 			}
 
 			public void HandleTokenSync(JsonReader reader) {
 				var state = HandleTokenInternal(reader);
 				if (state == HandleStateResult.Skip) {
 					reader.SkipSync();
+				}
+				else if (state == HandleStateResult.ReadTypeToken) {
+					reader.ReadSync();
+					ValidateTypeTokenIsString(reader);
+					HandleTypeToken(reader, reader.GetValue());
+				}
+			}
+
+			private void ValidateTypeTokenIsString(JsonReader reader) {
+				if (reader.Token != JsonToken.String) {
+					throw new Exception("Expected string data for property '$type'. actual: " + reader.Token);
+				}
+			}
+
+			private void HandleTypeToken(JsonReader reader, string typeName) {
+				if (string.IsNullOrEmpty(typeName)) {
+					throw new Exception("$type is empty and not a valid type.");
+				}
+				Type t = ReflectionUtility.LoadType(typeName, _settings);
+				if (t == null) {
+					throw new Exception("$type '" + typeName + "' is not a valid type.");
+				}
+
+				var state = _currentState.Peek();
+				if (state is JsonParserDictionaryState dictionaryState) {
+					if (!(dictionaryState.TypeInfo.RootType == t || dictionaryState.TypeInfo.KnownTypes.Contains(t))) {
+						if (state.Parent is JsonParserObjectPropertyState propertyState) {
+							if (!propertyState.PropertyInfo.KnownTypes.Contains(t)) {
+								bool isAllowed = false;
+								if (_settings.TypeAllowedCallback != null) {
+									isAllowed = _settings.TypeAllowedCallback(t);
+								}
+								if (!isAllowed) {
+									throw new InvalidOperationException("Type '" + ReflectionUtility.GetTypeName(t) + "' is not allowed.");
+								}
+							}
+						}
+					}
+					dictionaryState.TypeInfo = JsonReflection.GetTypeInfo(t);
+					dictionaryState.Value = TypeInstantiator.Instantiate(t);
+					dictionaryState.TupleContext = GetContextForNewType(dictionaryState.TupleContext, dictionaryState.TypeInfo);
+					foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
+						a(dictionaryState.Value);
+					}
+				}
+				else if (state is JsonParserArrayState arrayState) {
+					if (!(arrayState.TypeInfo.RootType == t || arrayState.TypeInfo.KnownTypes.Contains(t))) {
+						if (state.Parent is JsonParserObjectPropertyState propertyState) {
+							if (!propertyState.PropertyInfo.KnownTypes.Contains(t)) {
+								bool isAllowed = false;
+								if (_settings.TypeAllowedCallback != null) {
+									isAllowed = _settings.TypeAllowedCallback(t);
+								}
+								if (!isAllowed) {
+									throw new InvalidOperationException("Type '" + ReflectionUtility.GetTypeName(t) + "' is not allowed.");
+								}
+							}
+						}
+					}
+					arrayState.TypeInfo = JsonReflection.GetTypeInfo(t);
+					arrayState.Value = TypeInstantiator.Instantiate(t);
+					arrayState.TupleContext = GetContextForNewType(arrayState.TupleContext, arrayState.TypeInfo);
+					foreach (var a in arrayState.TypeInfo.OnDeserializing) {
+						a(arrayState.Value);
+					}
+				}
+				else if (state is JsonParserObjectState objectState) {
+					if (!(objectState.TypeInfo.RootType == t || objectState.TypeInfo.KnownTypes.Contains(t))) {
+						if (state.Parent is JsonParserObjectPropertyState propertyState) {
+							if (!propertyState.PropertyInfo.KnownTypes.Contains(t)) {
+								bool isAllowed = false;
+								if (_settings.TypeAllowedCallback != null) {
+									isAllowed = _settings.TypeAllowedCallback(t);
+								}
+								if (!isAllowed) {
+									throw new InvalidOperationException("Type '" + ReflectionUtility.GetTypeName(t) + "' is not allowed.");
+								}
+							}
+						}
+					}
+					objectState.TypeInfo = JsonReflection.GetTypeInfo(t);
+					objectState.Value = TypeInstantiator.Instantiate(t);
+					objectState.TupleContext = GetContextForNewType(objectState.TupleContext, objectState.TypeInfo);
+					foreach (var a in objectState.TypeInfo.OnDeserializing) {
+						a(objectState.Value);
+					}
+				}
+				else {
+					throw new NotImplementedException(ReflectionUtility.GetTypeName(state.GetType()));
 				}
 			}
 
@@ -73,11 +167,7 @@ namespace IonKiwi.Json {
 						if (dictionaryState.IsFirst) {
 							dictionaryState.IsFirst = false;
 							if (string.Equals("$type", propertyName, StringComparison.Ordinal)) {
-								// type handling
-								foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
-									a(dictionaryState.Value);
-								}
-								return HandleStateResult.None;
+								return HandleStateResult.ReadTypeToken;
 							}
 							dictionaryState.Value = TypeInstantiator.Instantiate(dictionaryState.TypeInfo.RootType);
 							foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
@@ -104,10 +194,8 @@ namespace IonKiwi.Json {
 						if (reader.Token == JsonToken.String) {
 							string v = reader.GetValue();
 							if (v != null && v.StartsWith("$type:", StringComparison.Ordinal)) {
-								// type handling
-								foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
-									a(dictionaryState.Value);
-								}
+								string typeName = v.Substring("$type".Length);
+								HandleTypeToken(reader, typeName);
 								return HandleStateResult.None;
 							}
 						}
@@ -142,11 +230,7 @@ namespace IonKiwi.Json {
 						if (reader.Token == JsonToken.String) {
 							string v = reader.GetValue();
 							if (v != null && v.StartsWith("$type:", StringComparison.Ordinal)) {
-								// type handling
-								foreach (var a in arrayState.TypeInfo.OnDeserializing) {
-									a(arrayState.Value);
-								}
-								return HandleStateResult.None;
+								return HandleStateResult.ReadTypeToken;
 							}
 						}
 					}
@@ -186,11 +270,7 @@ namespace IonKiwi.Json {
 					if (objectState.IsFirst) {
 						objectState.IsFirst = false;
 						if (string.Equals("$type", propertyName, StringComparison.Ordinal) && !objectState.IsComplete) {
-							// type handling
-							foreach (var a in objectState.TypeInfo.OnDeserializing) {
-								a(objectState.Value);
-							}
-							return HandleStateResult.None;
+							return HandleStateResult.ReadTypeToken;
 						}
 						objectState.Value = TypeInstantiator.Instantiate(objectState.TypeInfo.RootType);
 						foreach (var a in objectState.TypeInfo.OnDeserializing) {
@@ -232,6 +312,17 @@ namespace IonKiwi.Json {
 				}
 				newContext.Add(propertyTypeInfo.TupleContext);
 				return newContext;
+			}
+
+			private TupleContextInfoWrapper GetContextForNewType(TupleContextInfoWrapper context, JsonTypeInfo typeInfo) {
+				if (context == null) {
+					if (typeInfo.TupleContext == null) {
+						return null;
+					}
+					return new TupleContextInfoWrapper(typeInfo.TupleContext, null);
+				}
+				context.Add(typeInfo.TupleContext);
+				return context;
 			}
 
 			private void CompleteObject(JsonParserObjectState objectState) {

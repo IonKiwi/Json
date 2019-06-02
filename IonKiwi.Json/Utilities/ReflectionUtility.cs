@@ -1,5 +1,7 @@
-﻿using System;
+﻿using IonKiwi.Json.MetaData;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -569,6 +571,260 @@ namespace IonKiwi.Json.Utilities {
 				return true;
 			}
 			return false;
+		}
+
+		public static Type LoadType(string typeName, JsonParserSettings settings) {
+			if (string.IsNullOrEmpty(typeName)) {
+				throw new ArgumentNullException(nameof(typeName));
+			}
+
+			StringBuilder sb = new StringBuilder();
+			BuildTypeInternal(typeName, sb, typeName, settings);
+			string assemblyQualifiedName = sb.ToString();
+			Type t = Type.GetType(assemblyQualifiedName, true);
+			return t;
+		}
+
+		// internal for unit test
+		internal static void BuildTypeInternal(string inputTypeName, StringBuilder sb, string typeName, JsonParserSettings settings) {
+			int g1 = typeName.IndexOf('[');
+			if (g1 >= 0) {
+				int g2 = typeName.LastIndexOf(']');
+				if (g2 < 0) {
+					throw new Exception("Invalid type name: " + inputTypeName);
+				}
+
+				// generic type definition
+				string partialGenericTypeName1 = typeName.Substring(0, g1 + 1);
+				string partialGenericTypeName2 = typeName.Substring(g2);
+
+				int x1 = partialGenericTypeName2.IndexOf(',');
+				if (x1 < 0) { throw new Exception("Invalid type name: " + inputTypeName); }
+				int x2 = partialGenericTypeName2.IndexOf(',', x1 + 1);
+				if (x2 < 0) {
+					string assemblyName = partialGenericTypeName2.Substring(x1 + 1).Trim();
+					string partialName;
+					if (settings.DefaultAssemblyNames.TryGetValue(assemblyName, out partialName)) {
+						partialGenericTypeName2 += partialName;
+					}
+					else if (!settings.HasDefaultAssemblyName) {
+						throw new Exception("Invalid type name: " + inputTypeName);
+					}
+					else {
+						partialGenericTypeName2 += settings.DefaultAssemblyName;
+					}
+				}
+
+				sb.Append(partialGenericTypeName1);
+
+				// "[System.String, mscorlib], [System.String, mscorlib]"
+				var typeArguments = typeName.Substring(g1 + 1, g2 - g1 - 1);
+				int bracketLevel = 0;
+				int startIndex = 0;
+				int typeArgumentCount = 0;
+				for (int z = 0, zl = typeArguments.Length; z < zl; z++) {
+					char c = typeArguments[z];
+					if (c == '[') { bracketLevel++; }
+					else if (c == ']') { bracketLevel--; }
+					else if (bracketLevel == 0) {
+						if (c == ',') {
+							var typeArgumentsPart = typeArguments.Substring(startIndex, z - startIndex).Trim();
+							if (typeArgumentCount > 0) { sb.Append(','); }
+							typeArgumentCount++;
+							startIndex = z + 1;
+							if (typeArgumentsPart[0] == '[' && typeArgumentsPart[typeArgumentsPart.Length - 1] == ']') {
+								sb.Append('[');
+								BuildTypeInternal(inputTypeName, sb, typeArgumentsPart.Substring(1, typeArgumentsPart.Length - 2), settings);
+								sb.Append(']');
+							}
+							else {
+								BuildTypeInternal(inputTypeName, sb, typeArgumentsPart, settings);
+							}
+						}
+					}
+
+					if (z == zl - 1) {
+						if (bracketLevel != 0) { throw new Exception("Invalid type name: " + inputTypeName); }
+
+						var typeArgumentsPart = typeArguments.Substring(startIndex).Trim();
+						if (typeArgumentCount > 0) { sb.Append(','); }
+						typeArgumentCount++;
+						if (typeArgumentsPart[0] == '[' && typeArgumentsPart[typeArgumentsPart.Length - 1] == ']') {
+							sb.Append('[');
+							BuildTypeInternal(inputTypeName, sb, typeArgumentsPart.Substring(1, typeArgumentsPart.Length - 2), settings);
+							sb.Append(']');
+						}
+						else {
+							BuildTypeInternal(inputTypeName, sb, typeArgumentsPart, settings);
+						}
+					}
+				}
+
+				sb.Append(partialGenericTypeName2);
+				return;
+			}
+			else {
+				int i1 = typeName.IndexOf(',');
+				if (i1 < 0) { throw new Exception("Invalid type name: " + inputTypeName); }
+				int i2 = typeName.IndexOf(',', i1 + 1);
+				if (i2 < 0) {
+					string assemblyName = typeName.Substring(i1 + 1).Trim();
+					string partialName;
+					if (settings.DefaultAssemblyNames.TryGetValue(assemblyName, out partialName)) {
+						sb.Append(typeName);
+						sb.Append(partialName);
+						return;
+					}
+					else if (!settings.HasDefaultAssemblyName) {
+						throw new Exception("Invalid type name: " + inputTypeName);
+					}
+					else {
+						sb.Append(typeName);
+						sb.Append(settings.DefaultAssemblyName);
+						return;
+					}
+				}
+				else {
+					sb.Append(typeName);
+					return;
+				}
+			}
+		}
+
+		public static Type[] GetAllJsonKnownTypeAttributes(Type rootType) {
+			HashSet<Type> types = new HashSet<Type>();
+			HashSet<Type> allKnownTypes = new HashSet<Type>();
+			types.Add(rootType);
+			var knownTypes = rootType.GetCustomAttributes<JsonKnownTypeAttribute>();
+			foreach (var knownType in knownTypes) {
+				if (knownType.KnownType != null) {
+					allKnownTypes.Add(knownType.KnownType);
+				}
+			}
+			foreach (var knownType in knownTypes) {
+				if (knownType.KnownType != null) {
+					HandleSubJsonKnownTypeAttributes(types, knownType.KnownType, allKnownTypes);
+				}
+			}
+			return allKnownTypes.ToArray();
+		}
+
+		public static Type[] GetAllJsonKnownTypeAttributes(PropertyInfo property) {
+			HashSet<Type> types = new HashSet<Type>();
+			HashSet<Type> allKnownTypes = new HashSet<Type>();
+			var knownTypes = property.GetCustomAttributes<JsonKnownTypeAttribute>();
+			foreach (var knownType in knownTypes) {
+				if (knownType.KnownType != null) {
+					allKnownTypes.Add(knownType.KnownType);
+				}
+			}
+			foreach (var knownType in knownTypes) {
+				if (knownType.KnownType != null) {
+					HandleSubJsonKnownTypeAttributes(types, knownType.KnownType, allKnownTypes);
+				}
+			}
+			return allKnownTypes.ToArray();
+		}
+
+		public static Type[] GetAllJsonKnownTypeAttributes(FieldInfo property) {
+			HashSet<Type> types = new HashSet<Type>();
+			HashSet<Type> allKnownTypes = new HashSet<Type>();
+			var knownTypes = property.GetCustomAttributes<JsonKnownTypeAttribute>();
+			foreach (var knownType in knownTypes) {
+				if (knownType.KnownType != null) {
+					allKnownTypes.Add(knownType.KnownType);
+				}
+			}
+			foreach (var knownType in knownTypes) {
+				if (knownType.KnownType != null) {
+					HandleSubJsonKnownTypeAttributes(types, knownType.KnownType, allKnownTypes);
+				}
+			}
+			return allKnownTypes.ToArray();
+		}
+
+		private static void HandleSubJsonKnownTypeAttributes(HashSet<Type> types, Type currentType, HashSet<Type> allKnownTypes) {
+			if (types.Contains(currentType)) { return; }
+			types.Add(currentType);
+			var knownTypes = currentType.GetCustomAttributes<JsonKnownTypeAttribute>();
+			foreach (var knownType in knownTypes) {
+				if (knownType.KnownType != null) {
+					allKnownTypes.Add(knownType.KnownType);
+				}
+			}
+			foreach (var knownType in knownTypes) {
+				if (knownType.KnownType != null) {
+					HandleSubJsonKnownTypeAttributes(types, knownType.KnownType, allKnownTypes);
+				}
+			}
+		}
+
+		public static Type[] GetAllDataContractKnownTypeAttributes(Type rootType) {
+			HashSet<Type> types = new HashSet<Type>();
+			HashSet<Type> allKnownTypes = new HashSet<Type>();
+			types.Add(rootType);
+			var knownTypes = rootType.GetCustomAttributes<System.Runtime.Serialization.KnownTypeAttribute>();
+			foreach (var knownType in knownTypes) {
+				if (knownType.Type != null) {
+					allKnownTypes.Add(knownType.Type);
+				}
+			}
+			foreach (var knownType in knownTypes) {
+				if (knownType.Type != null) {
+					HandleSubDataContractKnownTypeAttributes(types, knownType.Type, allKnownTypes);
+				}
+			}
+			return allKnownTypes.ToArray();
+		}
+
+		public static Type[] GetAllDataContractKnownTypeAttributes(PropertyInfo property) {
+			HashSet<Type> types = new HashSet<Type>();
+			HashSet<Type> allKnownTypes = new HashSet<Type>();
+			var knownTypes = property.GetCustomAttributes<System.Runtime.Serialization.KnownTypeAttribute>();
+			foreach (var knownType in knownTypes) {
+				if (knownType.Type != null) {
+					allKnownTypes.Add(knownType.Type);
+				}
+			}
+			foreach (var knownType in knownTypes) {
+				if (knownType.Type != null) {
+					HandleSubDataContractKnownTypeAttributes(types, knownType.Type, allKnownTypes);
+				}
+			}
+			return allKnownTypes.ToArray();
+		}
+
+		public static Type[] GetAllDataContractKnownTypeAttributes(FieldInfo property) {
+			HashSet<Type> types = new HashSet<Type>();
+			HashSet<Type> allKnownTypes = new HashSet<Type>();
+			var knownTypes = property.GetCustomAttributes<System.Runtime.Serialization.KnownTypeAttribute>();
+			foreach (var knownType in knownTypes) {
+				if (knownType.Type != null) {
+					allKnownTypes.Add(knownType.Type);
+				}
+			}
+			foreach (var knownType in knownTypes) {
+				if (knownType.Type != null) {
+					HandleSubDataContractKnownTypeAttributes(types, knownType.Type, allKnownTypes);
+				}
+			}
+			return allKnownTypes.ToArray();
+		}
+
+		private static void HandleSubDataContractKnownTypeAttributes(HashSet<Type> types, Type currentType, HashSet<Type> allKnownTypes) {
+			if (types.Contains(currentType)) { return; }
+			types.Add(currentType);
+			var knownTypes = currentType.GetCustomAttributes<System.Runtime.Serialization.KnownTypeAttribute>();
+			foreach (var knownType in knownTypes) {
+				if (knownType.Type != null) {
+					allKnownTypes.Add(knownType.Type);
+				}
+			}
+			foreach (var knownType in knownTypes) {
+				if (knownType.Type != null) {
+					HandleSubDataContractKnownTypeAttributes(types, knownType.Type, allKnownTypes);
+				}
+			}
 		}
 	}
 }

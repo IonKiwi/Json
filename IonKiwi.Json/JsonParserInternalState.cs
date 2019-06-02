@@ -9,7 +9,8 @@ namespace IonKiwi.Json {
 
 		private enum HandleStateResult {
 			None,
-			Skip
+			Skip,
+			ReadTypeToken,
 		}
 
 		private class JsonParserInternalState {

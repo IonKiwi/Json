@@ -4,6 +4,18 @@ using System.Text;
 
 namespace IonKiwi.Json.MetaData {
 
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Field, Inherited = false)]
+	public sealed class JsonKnownTypeAttribute : Attribute {
+
+		public JsonKnownTypeAttribute() { }
+
+		public JsonKnownTypeAttribute(Type knownType) {
+			KnownType = knownType;
+		}
+
+		public Type KnownType { get; set; }
+	}
+
 	[AttributeUsage(AttributeTargets.Method, Inherited = false)]
 	public sealed class JsonOnDeserializingAttribute : Attribute {
 	}

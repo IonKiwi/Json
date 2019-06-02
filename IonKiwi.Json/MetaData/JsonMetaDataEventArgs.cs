@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace IonKiwi.Json.MetaData {
 	public class JsonMetaDataEventArgs : EventArgs {
@@ -19,6 +20,8 @@ namespace IonKiwi.Json.MetaData {
 
 		internal JsonObjectAttribute ObjectAttribute { get; set; }
 
+		internal List<Type> KnownTypes { get; } = new List<Type>();
+
 		internal Dictionary<string, PropertyInfo> Properties { get; } = new Dictionary<string, PropertyInfo>(StringComparer.Ordinal);
 
 		internal List<Action<object>> OnDeserializing { get; } = new List<Action<object>>();
@@ -30,6 +33,10 @@ namespace IonKiwi.Json.MetaData {
 		public void IsDictionary(JsonDictionaryAttribute dictionaryAttribute) { DictionaryAttribute = dictionaryAttribute; }
 
 		public void IsObject(JsonObjectAttribute objectAttribute) { ObjectAttribute = objectAttribute; }
+
+		public void AddKnownTypes(params Type[] knownTypes) {
+			KnownTypes.AddRange(knownTypes);
+		}
 
 		public void AddOnDeserializing<TValue>(Action<TValue> callback) where TValue : class {
 			var valueType = typeof(TValue);
@@ -81,7 +88,7 @@ namespace IonKiwi.Json.MetaData {
 			}
 		}
 
-		public void AddProperty<TValue, TProperty>(string name, Func<TValue, TProperty> getter, Func<TValue, TProperty, TValue> setter, bool required = false, bool isSingleOrArrayValue = false) {
+		public void AddProperty<TValue, TProperty>(string name, Func<TValue, TProperty> getter, Func<TValue, TProperty, TValue> setter, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null) {
 
 			var valueType = typeof(TValue);
 			var validValueType = valueType == RootType;
@@ -108,27 +115,27 @@ namespace IonKiwi.Json.MetaData {
 				getterWrapper = (obj) => getter((TValue)obj);
 			}
 
+			var pi = new PropertyInfo() {
+				PropertyType = propertyType,
+				Required = required,
+				Setter = setterWrapper,
+				Getter = getterWrapper,
+				IsSingleOrArrayValue = isSingleOrArrayValue,
+			};
+
+			if (knownTypes != null) {
+				pi.KnownTypes.AddRange(knownTypes);
+			}
+
 			if (Properties.ContainsKey(name)) {
-				Properties[name] = new PropertyInfo() {
-					PropertyType = propertyType,
-					Required = required,
-					Setter = setterWrapper,
-					Getter = getterWrapper,
-					IsSingleOrArrayValue = isSingleOrArrayValue,
-				};
+				Properties[name] = pi;
 			}
 			else {
-				Properties.Add(name, new PropertyInfo() {
-					PropertyType = propertyType,
-					Required = required,
-					Setter = setterWrapper,
-					Getter = getterWrapper,
-					IsSingleOrArrayValue = isSingleOrArrayValue,
-				});
+				Properties.Add(name, pi);
 			}
 		}
 
-		public void AddProperty(string name, System.Reflection.PropertyInfo pi, bool required = false, bool isSingleOrArrayValue = false) {
+		public void AddProperty(string name, System.Reflection.PropertyInfo pi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null) {
 
 			var validProperty = pi.DeclaringType == RootType;
 			if (!validProperty) {
@@ -144,27 +151,27 @@ namespace IonKiwi.Json.MetaData {
 				throw new InvalidOperationException("Invalid property '" + pi.Name + "'. declaring type: " + ReflectionUtility.GetTypeName(pi.DeclaringType) + ", root type: " + ReflectionUtility.GetTypeName(RootType));
 			}
 
+			var tpi = new PropertyInfo() {
+				PropertyType = pi.PropertyType,
+				Required = required,
+				Setter = pi.CanWrite ? ReflectionUtility.CreatePropertySetterFunc<object, object>(pi) : null,
+				Getter = pi.CanRead ? ReflectionUtility.CreatePropertyGetter<object, object>(pi) : null,
+				IsSingleOrArrayValue = isSingleOrArrayValue,
+			};
+
+			if (knownTypes != null) {
+				tpi.KnownTypes.AddRange(knownTypes);
+			}
+
 			if (Properties.ContainsKey(name)) {
-				Properties[name] = new PropertyInfo() {
-					PropertyType = pi.PropertyType,
-					Required = required,
-					Setter = pi.CanWrite ? ReflectionUtility.CreatePropertySetterFunc<object, object>(pi) : null,
-					Getter = pi.CanRead ? ReflectionUtility.CreatePropertyGetter<object, object>(pi) : null,
-					IsSingleOrArrayValue = isSingleOrArrayValue,
-				};
+				Properties[name] = tpi;
 			}
 			else {
-				Properties.Add(name, new PropertyInfo() {
-					PropertyType = pi.PropertyType,
-					Required = required,
-					Setter = pi.CanWrite ? ReflectionUtility.CreatePropertySetterFunc<object, object>(pi) : null,
-					Getter = pi.CanRead ? ReflectionUtility.CreatePropertyGetter<object, object>(pi) : null,
-					IsSingleOrArrayValue = isSingleOrArrayValue,
-				});
+				Properties.Add(name, tpi);
 			}
 		}
 
-		public void AddField(string name, System.Reflection.FieldInfo fi, bool required = false, bool isSingleOrArrayValue = false) {
+		public void AddField(string name, System.Reflection.FieldInfo fi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null) {
 
 			var validProperty = fi.DeclaringType == RootType;
 			if (!validProperty) {
@@ -180,23 +187,23 @@ namespace IonKiwi.Json.MetaData {
 				throw new InvalidOperationException("Invalid property '" + fi.Name + "'. declaring type: " + ReflectionUtility.GetTypeName(fi.DeclaringType) + ", root type: " + ReflectionUtility.GetTypeName(RootType));
 			}
 
+			var tpi = new PropertyInfo() {
+				PropertyType = fi.FieldType,
+				Required = required,
+				Setter = ReflectionUtility.CreateFieldSetterFunc<object, object>(fi),
+				Getter = ReflectionUtility.CreateFieldGetter<object, object>(fi),
+				IsSingleOrArrayValue = isSingleOrArrayValue,
+			};
+
+			if (knownTypes != null) {
+				tpi.KnownTypes.AddRange(knownTypes);
+			}
+
 			if (Properties.ContainsKey(name)) {
-				Properties[name] = new PropertyInfo() {
-					PropertyType = fi.FieldType,
-					Required = required,
-					Setter = ReflectionUtility.CreateFieldSetterFunc<object, object>(fi),
-					Getter = ReflectionUtility.CreateFieldGetter<object, object>(fi),
-					IsSingleOrArrayValue = isSingleOrArrayValue,
-				};
+				Properties[name] = tpi;
 			}
 			else {
-				Properties.Add(name, new PropertyInfo() {
-					PropertyType = fi.FieldType,
-					Required = required,
-					Setter = ReflectionUtility.CreateFieldSetterFunc<object, object>(fi),
-					Getter = ReflectionUtility.CreateFieldGetter<object, object>(fi),
-					IsSingleOrArrayValue = isSingleOrArrayValue,
-				});
+				Properties.Add(name, tpi);
 			}
 		}
 
@@ -206,6 +213,7 @@ namespace IonKiwi.Json.MetaData {
 			public Func<object, object, object> Setter;
 			public Func<object, object> Getter;
 			public bool IsSingleOrArrayValue;
+			public readonly List<Type> KnownTypes = new List<Type>();
 		}
 	}
 }

@@ -142,5 +142,38 @@ namespace IonKiwi.Json.Test {
 
 			return;
 		}
+
+		[JsonObject]
+		[JsonKnownType(typeof(TypeHandling2))]
+		private class TypeHandling1 {
+			[JsonProperty]
+			public int Value1 { get; set; }
+		}
+
+		[JsonObject]
+		private class TypeHandling2 : TypeHandling1 {
+			[JsonProperty]
+			public int Value2 { get; set; }
+		}
+
+		[Fact]
+		public void TestTypeHandling1() {
+			var hostAssembly = typeof(JsonParserTest).Assembly.GetName(false);
+			string json = "{$type:\"IonKiwi.Json.Test.JsonParserTest+TypeHandling2, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\",Value1:42,Value2:43}";
+			var v = JsonParser.ParseSync<TypeHandling2>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+
+			Assert.NotNull(v);
+			Assert.Equal(42, v.Value1);
+			Assert.Equal(43, v.Value2);
+
+			var settings = JsonParser.DefaultSettings.Clone();
+			settings.SetDefaultAssemblyName(typeof(JsonParserTest).Assembly.GetName(false));
+			json = "{$type:\"IonKiwi.Json.Test.JsonParserTest+TypeHandling2, IonKiwi.Json.Test\",Value1:42,Value2:43}";
+			v = JsonParser.ParseSync<TypeHandling2>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: settings);
+
+			Assert.NotNull(v);
+			Assert.Equal(42, v.Value1);
+			Assert.Equal(43, v.Value2);
+		}
 	}
 }
