@@ -14,12 +14,14 @@ namespace IonKiwi.Json.MetaData {
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 	public class JsonObjectAttribute : Attribute {
-		public bool IsSingleOrArrayValue { get; set; }
+
 	}
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 	public class JsonCollectionAttribute : Attribute {
 		public Type CollectionInterface { get; set; }
+
+		public bool IsSingleOrArrayValue { get; set; }
 	}
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]

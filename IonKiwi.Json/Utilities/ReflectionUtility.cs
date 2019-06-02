@@ -257,6 +257,64 @@ namespace IonKiwi.Json.Utilities {
 			return _hasEnumFlag(allEnumValues, enumValue);
 		}
 
+		public static Func<TIn, TOut> CreatePropertyGetter<TIn, TOut>(PropertyInfo pi) {
+			var m = pi.GetGetMethod(true);
+			if (m == null) {
+				throw new Exception("Json property without getter");
+			}
+
+			Type inType = typeof(TIn);
+			Type outType = typeof(TOut);
+
+			ParameterExpression p1 = Expression.Parameter(inType, "p1");
+			Expression p2;
+			if (inType != pi.DeclaringType) {
+				p2 = Expression.Convert(p1, pi.DeclaringType);
+			}
+			else {
+				p2 = p1;
+			}
+			var methodCall = Expression.Call(p2, m);
+
+			Expression targetExpression;
+			if (outType != pi.PropertyType) {
+				targetExpression = Expression.Convert(methodCall, outType);
+			}
+			else {
+				targetExpression = methodCall;
+			}
+
+			var methodLambda = Expression.Lambda<Func<TIn, TOut>>(targetExpression, p1);
+			return methodLambda.Compile();
+		}
+
+		public static Func<TIn, TOut> CreateFieldGetter<TIn, TOut>(FieldInfo fi) {
+			Type inType = typeof(TIn);
+			Type outType = typeof(TOut);
+
+			ParameterExpression p1 = Expression.Parameter(inType, "p1");
+			Expression p2;
+			if (inType != fi.DeclaringType) {
+				p2 = Expression.Convert(p1, fi.DeclaringType);
+
+			}
+			else {
+				p2 = p1;
+			}
+			var fieldExpression = Expression.Field(p2, fi);
+
+			Expression x;
+			if (outType != fi.FieldType) {
+				x = Expression.Convert(fieldExpression, outType);
+			}
+			else {
+				x = fieldExpression;
+			}
+
+			var lambdaExpression = Expression.Lambda<Func<TIn, TOut>>(x, p1);
+			return lambdaExpression.Compile();
+		}
+
 		public static Action<TType, TValue> CreatePropertySetterAction<TType, TValue>(PropertyInfo property) {
 			var t = typeof(TType);
 			var v = typeof(TValue);

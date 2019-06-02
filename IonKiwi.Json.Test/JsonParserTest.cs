@@ -1,4 +1,5 @@
-﻿using System;
+﻿using IonKiwi.Json.MetaData;
+using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text;
@@ -90,6 +91,55 @@ namespace IonKiwi.Json.Test {
 			string json = "\"42\"";
 			var v = JsonParser.ParseSync<string>(new JsonReader(Encoding.UTF8.GetBytes(json)));
 			Assert.Equal("42", v);
+			return;
+		}
+
+		[JsonObject]
+		private sealed class SingleOrArrayValue1 {
+			[JsonProperty(IsSingleOrArrayValue = true)]
+			public List<int> Value { get; set; }
+		}
+
+		[Fact]
+		public void TestSingleOrArrayValue1() {
+			string json = "{Value:42}";
+			var v = JsonParser.ParseSync<SingleOrArrayValue1>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Value);
+			Assert.Single(v.Value);
+			Assert.Equal(42, v.Value[0]);
+
+			json = "{Value:[42,43]}";
+			v = JsonParser.ParseSync<SingleOrArrayValue1>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Value);
+			Assert.Equal(2, v.Value.Count);
+			Assert.Equal(42, v.Value[0]);
+			Assert.Equal(43, v.Value[1]);
+
+			return;
+		}
+
+		[JsonCollection(IsSingleOrArrayValue = true)]
+		private sealed class SingleOrArrayValue2 : List<int> {
+
+		}
+
+		[Fact]
+		public void TestSingleOrArrayValue2() {
+			string json = "42";
+			var v = JsonParser.ParseSync<SingleOrArrayValue2>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.Single(v);
+			Assert.Equal(42, v[0]);
+
+			json = "[42,43]";
+			v = JsonParser.ParseSync<SingleOrArrayValue2>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.Equal(2, v.Count);
+			Assert.Equal(42, v[0]);
+			Assert.Equal(43, v[1]);
+
 			return;
 		}
 	}

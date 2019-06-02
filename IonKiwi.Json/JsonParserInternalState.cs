@@ -35,6 +35,7 @@ namespace IonKiwi.Json {
 			public TupleContextInfoWrapper TupleContext;
 			//public int StartDepth;
 			public bool IsFirst = true;
+			public bool IsSingleOrArrayValue = false;
 		}
 
 		private sealed class JsonParserArrayItemState : JsonParserInternalState {

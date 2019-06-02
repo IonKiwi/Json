@@ -30,6 +30,7 @@ namespace IonKiwi.Json {
 			public Type ItemType;
 			public bool IsSimpleValue;
 			public bool IsTuple;
+			public bool IsSingleOrArrayValue;
 			public JsonObjectType ObjectType;
 			public readonly Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
 			public Action<object, object> CollectionAddMethod;
@@ -46,6 +47,8 @@ namespace IonKiwi.Json {
 			public bool Required;
 			public Func<object, object, object> Setter1;
 			public Action<object, object> Setter2;
+			public Func<object, object> Getter;
+			public bool IsSingleOrArrayValue;
 		}
 
 		public static JsonTypeInfo GetTypeInfo(Type t) {
@@ -224,7 +227,7 @@ namespace IonKiwi.Json {
 
 				if (customProperties != null) {
 					foreach (var cp in customProperties) {
-						ti.Properties.Add(cp.Key, new JsonPropertyInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter, Required = cp.Value.Required, Name = cp.Key });
+						ti.Properties.Add(cp.Key, new JsonPropertyInfo() { PropertyType = cp.Value.PropertyType, Setter1 = cp.Value.Setter, Getter = cp.Value.Getter, Required = cp.Value.Required, Name = cp.Key, IsSingleOrArrayValue = cp.Value.IsSingleOrArrayValue });
 					}
 				}
 				else {
@@ -242,11 +245,18 @@ namespace IonKiwi.Json {
 								JsonPropertyInfo pi = new JsonPropertyInfo();
 								pi.Name = name;
 								pi.PropertyType = p.PropertyType;
-								if (t.IsValueType) {
-									pi.Setter1 = ReflectionUtility.CreatePropertySetterFunc<object, object>(p);
+								pi.Required = propInfo.Required;
+								pi.IsSingleOrArrayValue = propInfo.IsSingleOrArrayValue;
+								if (p.CanWrite) {
+									if (t.IsValueType) {
+										pi.Setter1 = ReflectionUtility.CreatePropertySetterFunc<object, object>(p);
+									}
+									else {
+										pi.Setter2 = ReflectionUtility.CreatePropertySetterAction<object, object>(p);
+									}
 								}
-								else {
-									pi.Setter2 = ReflectionUtility.CreatePropertySetterAction<object, object>(p);
+								if (p.CanRead) {
+									pi.Getter = ReflectionUtility.CreatePropertyGetter<object, object>(p);
 								}
 								if (ti.Properties.ContainsKey(name)) {
 									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
@@ -265,12 +275,15 @@ namespace IonKiwi.Json {
 								JsonPropertyInfo pi = new JsonPropertyInfo();
 								pi.Name = name;
 								pi.PropertyType = f.FieldType;
+								pi.Required = propInfo.Required;
+								pi.IsSingleOrArrayValue = propInfo.IsSingleOrArrayValue;
 								if (t.IsValueType) {
 									pi.Setter1 = ReflectionUtility.CreateFieldSetterFunc<object, object>(f);
 								}
 								else {
 									pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
 								}
+								pi.Getter = ReflectionUtility.CreateFieldGetter<object, object>(f);
 								if (ti.Properties.ContainsKey(name)) {
 									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
 								}
@@ -300,6 +313,11 @@ namespace IonKiwi.Json {
 						ti.OnDeserialized.Add(CreateCallbackAction(mi));
 					}
 				}
+			}
+
+			ti.IsSingleOrArrayValue = collectionInfo?.IsSingleOrArrayValue == true;
+			if (ti.IsSingleOrArrayValue && ti.ObjectType != JsonObjectType.Array) {
+				throw new InvalidOperationException("IsSingleOrArrayValue is only valid for 'array' types.");
 			}
 
 			ti.TupleContext = CreateTupleContextInfo(t);
