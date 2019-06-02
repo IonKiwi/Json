@@ -392,6 +392,9 @@ namespace IonKiwi.Json {
 					else if (propertyInfo.Setter2 != null) {
 						propertyInfo.Setter2(parentState.Value, propertyState.Value);
 					}
+					else {
+						// log
+					}
 					_currentState.Pop();
 				}
 				else if (parentState is JsonParserArrayState arrayState) {
