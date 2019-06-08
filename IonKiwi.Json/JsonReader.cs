@@ -323,38 +323,7 @@ namespace IonKiwi.Json {
 
 				var state = _currentState.Peek();
 				var parentState = state.Parent;
-				if (parentState is JsonInternalArrayItemState arrayItemState) {
-					var arrayState = (JsonInternalArrayState)arrayItemState.Parent;
-					if (arrayState.ItemCount != 1) {
-						throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
-					}
-
-					// remove object
-					_currentState.Pop();
-					// remove item
-					_currentState.Pop();
-
-					var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
-					_currentState.Push(newState2);
-
-					resetState.Push((JsonToken.ObjectStart, () => {
-						_currentState.Pop();
-						_currentState.Push(parentState);
-						_currentState.Push(state);
-					}
-					));
-
-					if (arrayState.CommentsBeforeFirstValue != null) {
-						for (int i = arrayState.CommentsBeforeFirstValue.Count - 1; i >= 0; i--) {
-							var currentComment = arrayState.CommentsBeforeFirstValue[i];
-							resetState.Push((JsonToken.Comment, () => { _currentState.Push(currentComment); }));
-						}
-					}
-
-					_token = JsonToken.ObjectStart;
-					_rewindState = resetState;
-				}
-				else if (parentState is JsonInternalArrayState arrayState) {
+				if (parentState is JsonInternalArrayState arrayState) {
 					var parent = arrayState.Parent;
 					if (parent is JsonInternalArrayItemState itemState) {
 						if (tokenType != JsonToken.ArrayStart) {
