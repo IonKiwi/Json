@@ -1,4 +1,5 @@
-﻿using IonKiwi.Json.MetaData;
+﻿using IonKiwi.Extenions;
+using IonKiwi.Json.MetaData;
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
@@ -13,21 +14,58 @@ namespace IonKiwi.Json {
 			private readonly JsonWriterSettings _settings;
 			private readonly Stack<JsonWriterInternalState> _currentState = new Stack<JsonWriterInternalState>();
 
-			public JsonWriterInternal(JsonWriterSettings settings, JsonTypeInfo typeInfo, string[] tupleNames) {
+			public JsonWriterInternal(JsonWriterSettings settings, object value, Type objectType, JsonTypeInfo typeInfo, string[] tupleNames) {
 				_settings = settings;
 				var wrapper = new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames);
-				_currentState.Push(new JsonWriterInternalState() { TypeInfo = typeInfo, TupleContext = wrapper });
+				_currentState.Push(new JsonWriterRootState() { TypeInfo = typeInfo, TupleContext = wrapper, Value = value, ValueType = objectType });
 			}
 
-			internal async ValueTask Serialize(IOutputWriter writer, object value, Type objectType) {
-
+			internal async ValueTask Serialize(IOutputWriter writer) {
+				do {
+					byte[] data = SerializeInternal(_currentState.Peek());
+					await writer.WriteBlock(data).NoSync();
+				}
+				while (_currentState.Count > 1);
 			}
 
-			internal void SerializeSync(IOutputWriter writer, object value, Type objectType) {
-
+			internal void SerializeSync(IOutputWriter writer) {
+				do {
+					byte[] data = SerializeInternal(_currentState.Peek());
+					writer.WriteBlockSync(data);
+				}
+				while (_currentState.Count > 1);
 			}
 
-			private byte[] HandleObject(JsonWriterInternalState state, object value, Type objectType) {
+			private byte[] SerializeInternal(JsonWriterInternalState state) {
+				if (state is JsonWriterRootState rootState) {
+					return HandleObject(rootState, rootState.Value, rootState.ValueType, rootState.TypeInfo, rootState.TupleContext);
+				}
+				else if (state is JsonWriterObjectState objectState) {
+					return HandleObject(objectState);
+				}
+				else {
+					ThrowUnhandledType(state.GetType());
+					return null;
+				}
+			}
+
+			private void ThrowUnhandledType(Type t) {
+				throw new NotImplementedException(ReflectionUtility.GetTypeName(t));
+			}
+
+			private byte[] HandleObject(JsonWriterObjectState objectState) {
+				var currentProperty = objectState.Properties.Current;
+								
+
+				if (!objectState.Properties.MoveNext()) {
+					objectState.Properties.Dispose();
+					return new byte[] { (byte)'}' };
+				}
+
+				throw new NotImplementedException();
+			}
+
+			private byte[] HandleObject(JsonWriterInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
 
 				if (!state.WriteValueCallbackCalled && _settings.WriteValueCallback != null) {
 					JsonWriterWriteValueCallbackArgs e = new JsonWriterWriteValueCallbackArgs();
@@ -43,8 +81,8 @@ namespace IonKiwi.Json {
 						var newTypeInfo = JsonReflection.GetTypeInfo(objectType);
 
 						value = e2.Value;
-						state.TypeInfo = newTypeInfo;
-						state.TupleContext = new TupleContextInfoWrapper(newTypeInfo.TupleContext, null);
+						typeInfo = newTypeInfo;
+						tupleContext = new TupleContextInfoWrapper(newTypeInfo.TupleContext, null);
 					}
 				}
 
@@ -52,25 +90,30 @@ namespace IonKiwi.Json {
 					return Encoding.UTF8.GetBytes("null");
 				}
 
-				if (state.TypeInfo.ObjectType == JsonObjectType.Raw) {
+				if (typeInfo.ObjectType == JsonObjectType.Raw) {
 					return Encoding.UTF8.GetBytes(((RawJson)value).Json);
 				}
-				else if (state.TypeInfo.ObjectType == JsonObjectType.Object) {
+				else if (typeInfo.ObjectType == JsonObjectType.Object) {
+
+					var objectState = new JsonWriterObjectState();
+					objectState.Parent = state;
+					objectState.Properties = typeInfo.Properties.GetEnumerator();
+					objectState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+					objectState.TypeInfo = typeInfo;
+					objectState.TupleContext = tupleContext;
+					_currentState.Push(objectState);
 
 					bool emitType = false;
-					if (state.TypeInfo.OriginalType != objectType) {
+					if (typeInfo.OriginalType != objectType) {
 						emitType = true;
-						if (state.TypeInfo.OriginalType.IsValueType && state.TypeInfo.IsNullable && state.TypeInfo.ItemType == objectType) {
+						if (typeInfo.OriginalType.IsValueType && typeInfo.IsNullable && typeInfo.ItemType == objectType) {
 							emitType = false;
 						}
 					}
 					if (emitType) {
-						return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(state.TypeInfo.OriginalType, _settings) + "\",");
+						return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\",");
 					}
 					return new byte[] { (byte)'{' };
-
-					//foreach (var p in state.TypeInfo.Properties) {
-					//}
 				}
 				//else if (state.TypeInfo.ObjectType == JsonObjectType.Array) {
 

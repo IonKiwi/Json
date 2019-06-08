@@ -111,7 +111,7 @@ namespace IonKiwi.Json {
 			public StringBuilder Data = new StringBuilder();
 		}
 
-		private class JsonInternalCommentState : JsonInternalStringState {
+		private abstract class JsonInternalCommentState : JsonInternalStringState {
 
 		}
 

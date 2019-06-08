@@ -27,16 +27,16 @@ namespace IonKiwi.Json {
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
-			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
-			await jsonWriter.Serialize(writer, value, objectType).NoSync();
+			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			await jsonWriter.Serialize(writer).NoSync();
 		}
 
 		public static void SerializeSync<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
-			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
-			jsonWriter.SerializeSync(writer, value, objectType);
+			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			jsonWriter.SerializeSync(writer);
 		}
 
 		public static string[] ReservedKeywords => new string[] {
@@ -49,6 +49,89 @@ namespace IonKiwi.Json {
 		};
 		private static readonly HashSet<string> ReservedKeywordsSet = new HashSet<string>(ReservedKeywords, StringComparer.Ordinal);
 
+		private static bool IsHexDigit(char c) {
+			return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+		}
+
+		private static bool IsUnicodeEscapeSequence(string input, int offset, out int length, out char[] chars) {
+			length = 0;
+			chars = null;
+			int v;
+
+			if (input[offset] != 'u') {
+				return false;
+			}
+			else if (offset + 1 >= input.Length) { return false; }
+			else if (input[offset + 1] == '{') {
+				int digitCount = 0;
+				for (int i = offset + 2; i < input.Length; i++) {
+					var c = input[i];
+					if (IsHexDigit(c)) {
+						digitCount++;
+					}
+					else if (c == '}') {
+						if (digitCount == 0) { return false; }
+						v = 0;
+						for (int ii = 0, ls = (digitCount - 1) * 4; ii < digitCount - 1; ii++, ls -= 4) {
+							v |= CommonUtility.GetByte(input[offset + 2 + ii], out _) << ls;
+						}
+						v |= CommonUtility.GetByte(input[offset + 2 + digitCount - 1], out _);
+						chars = Char.ConvertFromUtf32(v).ToCharArray();
+						length = i + 1 - offset;
+						return true;
+					}
+					else {
+						return false;
+					}
+				}
+				return false;
+			}
+			else if (offset + 4 >= input.Length) { return false; }
+			else if (!IsHexDigit(input[offset + 1])) { return false; }
+			else if (!IsHexDigit(input[offset + 2])) { return false; }
+			else if (!IsHexDigit(input[offset + 3])) { return false; }
+			else if (!IsHexDigit(input[offset + 4])) { return false; }
+
+
+			v = CommonUtility.GetByte(input[offset + 1], out _) << 12;
+			v |= CommonUtility.GetByte(input[offset + 2], out _) << 8;
+			v |= CommonUtility.GetByte(input[offset + 3], out _) << 4;
+			v |= CommonUtility.GetByte(input[offset + 4], out _);
+
+			if (v >= 0xD800 && v <= 0xDBFF) {
+
+				if (offset + 10 >= input.Length) { return false; }
+				if (input[offset + 5] != '\\' && input[offset + 6] != 'u') {
+					throw new Exception("Expected low surrogate for high surrogate");
+				}
+				else if (!IsHexDigit(input[offset + 7])) { return false; }
+				else if (!IsHexDigit(input[offset + 8])) { return false; }
+				else if (!IsHexDigit(input[offset + 9])) { return false; }
+				else if (!IsHexDigit(input[offset + 10])) { return false; }
+
+				int v2 = CommonUtility.GetByte(input[offset + 7], out _) << 12;
+				v2 |= CommonUtility.GetByte(input[offset + 8], out _) << 8;
+				v2 |= CommonUtility.GetByte(input[offset + 9], out _) << 4;
+				v2 |= CommonUtility.GetByte(input[offset + 10], out _);
+
+				if (!(v2 >= 0xDC00 && v2 <= 0xDFFF)) {
+					throw new NotSupportedException("Expected low surrogate pair");
+				}
+
+				int utf16v = (v - 0xD800) * 0x400 + v2 - 0xDC00 + 0x10000;
+				chars = Char.ConvertFromUtf32(utf16v).ToCharArray();
+				length = 11;
+				return true;
+			}
+			else if (v >= 0xDC00 && v <= 0xDFFF) {
+				throw new Exception("Low surrogate without high surrogate");
+			}
+
+			length = 5;
+			chars = Char.ConvertFromUtf32(v).ToCharArray();
+			return true;
+		}
+
 		public static bool ValidateIdentifier(string identifier) {
 
 			if (string.IsNullOrEmpty(identifier)) {
@@ -60,15 +143,13 @@ namespace IonKiwi.Json {
 			}
 
 			var start = identifier[0];
-			int i = 1;
+			int i = 1, escapeSequenceLength;
 			if (start == '\\') {
-				if (identifier.Length < 6) { return false; }
-				if (identifier[1] != 'u') { return false; }
-				if (Char.IsDigit(identifier[2])) { return false; }
-				if (Char.IsDigit(identifier[3])) { return false; }
-				if (Char.IsDigit(identifier[4])) { return false; }
-				if (Char.IsDigit(identifier[5])) { return false; }
-				i += 5;
+				if (!IsUnicodeEscapeSequence(identifier, 1, out escapeSequenceLength, out var chars)) { return false; }
+				i += escapeSequenceLength;
+				if (!UnicodeExtension.ID_Start(chars)) {
+					return false;
+				}
 			}
 			else {
 				bool validStart = false;
@@ -101,13 +182,11 @@ namespace IonKiwi.Json {
 				var valid = c == '$' || c == '_';
 				if (!valid) {
 					if (c == '\\') {
-						if (l <= i + 6) { return false; }
-						if (identifier[i + 1] != 'u') { return false; }
-						if (Char.IsDigit(identifier[i + 2])) { return false; }
-						if (Char.IsDigit(identifier[i + 3])) { return false; }
-						if (Char.IsDigit(identifier[i + 4])) { return false; }
-						if (Char.IsDigit(identifier[i + 5])) { return false; }
-						i += 5;
+						if (!IsUnicodeEscapeSequence(identifier, i + 1, out escapeSequenceLength, out var chars)) { return false; }
+						i += escapeSequenceLength;
+						if (!UnicodeExtension.ID_Continue(chars)) {
+							return false;
+						}
 					}
 					else if (Char.IsLowSurrogate(c)) {
 						if (l <= i + 1 || !Char.IsHighSurrogate(identifier[i + 1])) { return false; }

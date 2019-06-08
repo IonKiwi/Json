@@ -13,17 +13,24 @@ namespace IonKiwi.Json {
 	partial class JsonWriter {
 		partial class JsonWriterInternal {
 
-			private sealed class JsonWriterInternalState {
+			private abstract class JsonWriterInternalState {
 				public JsonWriterInternalState Parent;
-				public JsonTypeInfo TypeInfo;
-				public TupleContextInfoWrapper TupleContext;
 				public bool WriteValueCallbackCalled;
 			}
 
-			//private sealed class JsonParserRootState : JsonWriterInternalState {
-			//	public JsonTypeInfo TypeInfo;
-			//	public TupleContextInfoWrapper TupleContext;
-			//}
+			private sealed class JsonWriterRootState : JsonWriterInternalState {
+				public object Value;
+				public Type ValueType;
+				public JsonTypeInfo TypeInfo;				
+				public TupleContextInfoWrapper TupleContext;
+			}
+
+			private sealed class JsonWriterObjectState : JsonWriterInternalState {
+				public object Value;
+				public JsonTypeInfo TypeInfo;
+				public TupleContextInfoWrapper TupleContext;
+				public Dictionary<string, JsonPropertyInfo>.Enumerator Properties;
+			}
 		}
 	}
 }
