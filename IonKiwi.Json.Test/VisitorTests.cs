@@ -649,5 +649,147 @@ namespace IonKiwi.Json.Test {
 
 			return;
 		}
+
+		[CollectionDataContract]
+		[KnownType(typeof(VisitorCollection6))]
+		private class VisitorCollection5 : List<VisitorCollection1> {
+
+		}
+
+		[CollectionDataContract]
+		private sealed class VisitorCollection6 : VisitorCollection5 {
+
+		}
+
+		[Fact]
+		public void TesArrayWithArray() {
+			string json = "[[]]";
+
+			var visitor = new ArrayWithObjectVisitor();
+			visitor.Mode = 0;
+			visitor.Count = 0;
+			visitor.Types.Add(typeof(VisitorCollection5));
+			visitor.Types.Add(typeof(VisitorCollection1));
+
+			var jps = JsonParser.DefaultSettings.Clone();
+			jps.Visitor = visitor;
+			var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
+			Assert.Equal(2, visitor.Count);
+			Assert.NotNull(v);
+			Assert.Equal(typeof(VisitorCollection5), v.GetType());
+			Assert.Single(v);
+			Assert.NotNull(v[0]);
+			Assert.Equal(typeof(VisitorCollection1), v[0].GetType());
+
+			visitor.Mode = 1;
+			visitor.Count = 0;
+			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
+			Assert.Equal(1, visitor.Count);
+			Assert.NotNull(v);
+			Assert.Equal(typeof(VisitorCollection5), v.GetType());
+			Assert.Single(v);
+			Assert.NotNull(v[0]);
+			Assert.Equal(typeof(VisitorCollection1), v[0].GetType());
+
+			visitor.Mode = 2;
+			visitor.Count = 0;
+			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
+			Assert.Equal(2, visitor.Count);
+			Assert.NotNull(v);
+			Assert.Equal(typeof(VisitorCollection5), v.GetType());
+			Assert.Single(v);
+			Assert.NotNull(v[0]);
+			Assert.Equal(typeof(VisitorCollection1), v[0].GetType());
+
+			return;
+		}
+
+		[Fact]
+		public void TesArrayWithArrayWithType1() {
+			var hostAssembly = typeof(VisitorTests).Assembly.GetName(false);
+			string json = "[[\"$type:IonKiwi.Json.Test.VisitorTests+VisitorCollection2, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\"]]";
+
+			var visitor = new ArrayWithObjectVisitor();
+			visitor.Mode = 0;
+			visitor.Count = 0;
+			visitor.Types.Add(typeof(VisitorCollection5));
+			visitor.Types.Add(typeof(VisitorCollection2));
+
+			var jps = JsonParser.DefaultSettings.Clone();
+			jps.Visitor = visitor;
+			var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
+			Assert.Equal(2, visitor.Count);
+			Assert.NotNull(v);
+			Assert.Equal(typeof(VisitorCollection5), v.GetType());
+			Assert.Single(v);
+			Assert.NotNull(v[0]);
+			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+
+			visitor.Mode = 1;
+			visitor.Count = 0;
+			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
+			Assert.Equal(1, visitor.Count);
+			Assert.NotNull(v);
+			Assert.Equal(typeof(VisitorCollection5), v.GetType());
+			Assert.Single(v);
+			Assert.NotNull(v[0]);
+			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+
+			visitor.Mode = 2;
+			visitor.Count = 0;
+			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
+			Assert.Equal(2, visitor.Count);
+			Assert.NotNull(v);
+			Assert.Equal(typeof(VisitorCollection5), v.GetType());
+			Assert.Single(v);
+			Assert.NotNull(v[0]);
+			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+
+			return;
+		}
+
+		[Fact]
+		public void TesArrayWithArrayWithType2() {
+			var hostAssembly = typeof(VisitorTests).Assembly.GetName(false);
+			string json = "[\"$type:IonKiwi.Json.Test.VisitorTests+VisitorCollection6, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\",[\"$type:IonKiwi.Json.Test.VisitorTests+VisitorCollection2, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\"]]";
+
+			var visitor = new ArrayWithObjectVisitor();
+			visitor.Mode = 0;
+			visitor.Count = 0;
+			visitor.Types.Add(typeof(VisitorCollection6));
+			visitor.Types.Add(typeof(VisitorCollection2));
+
+			var jps = JsonParser.DefaultSettings.Clone();
+			jps.Visitor = visitor;
+			var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
+			Assert.Equal(2, visitor.Count);
+			Assert.NotNull(v);
+			Assert.Equal(typeof(VisitorCollection6), v.GetType());
+			Assert.Single(v);
+			Assert.NotNull(v[0]);
+			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+
+			visitor.Mode = 1;
+			visitor.Count = 0;
+			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
+			Assert.Equal(1, visitor.Count);
+			Assert.NotNull(v);
+			Assert.Equal(typeof(VisitorCollection6), v.GetType());
+			Assert.Single(v);
+			Assert.NotNull(v[0]);
+			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+
+			visitor.Mode = 2;
+			visitor.Count = 0;
+			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
+			Assert.Equal(2, visitor.Count);
+			Assert.NotNull(v);
+			Assert.Equal(typeof(VisitorCollection6), v.GetType());
+			Assert.Single(v);
+			Assert.NotNull(v[0]);
+			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+
+			return;
+		}
 	}
 }
