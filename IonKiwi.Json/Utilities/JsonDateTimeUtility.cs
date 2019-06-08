@@ -24,6 +24,7 @@
 #endregion
 
 using IonKiwi.Json;
+using IonKiwi.Json.MetaData;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -32,15 +33,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace IonKiwi.Json.Utilities {
-	public enum DateTimeHandling {
-		Utc,
-		Local,
-	}
-
-	public enum UnspecifiedDateTimeHandling {
-		AssumeLocal,
-		AssumeUtc
-	}
 
 	// partially copied from Newtonsoft.Json
 	internal static class JsonDateTimeUtility {

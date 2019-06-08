@@ -1,4 +1,5 @@
 ﻿using IonKiwi.Extenions;
+using IonKiwi.Json.MetaData;
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
@@ -22,14 +23,6 @@ namespace IonKiwi.Json {
 				return _defaultSettings;
 			}
 		}
-
-		//public static ValueTask<T> Parse<T>(JsonReader reader, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
-		//	return Parse<T>(reader, typeof(T), tupleNames, parserSettings);
-		//}
-
-		//public static T ParseSync<T>(JsonReader reader, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
-		//	return ParseSync<T>(reader, typeof(T), tupleNames, parserSettings);
-		//}
 
 		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 

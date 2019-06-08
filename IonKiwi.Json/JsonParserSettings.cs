@@ -1,4 +1,5 @@
-﻿using IonKiwi.Json.Utilities;
+﻿using IonKiwi.Json.MetaData;
+using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -126,7 +127,7 @@ namespace IonKiwi.Json {
 			clone.LogMissingNonRequiredProperties = this.LogMissingNonRequiredProperties;
 			clone.DefaultAssemblyName = this.DefaultAssemblyName;
 			clone.HasDefaultAssemblyName = this.HasDefaultAssemblyName;
-			foreach (KeyValuePair<string, string> kv in this._defaultAssemblyNames) {
+			foreach (var kv in this._defaultAssemblyNames) {
 				clone._defaultAssemblyNames.Add(kv.Key, kv.Value);
 			}
 			clone.TypeAllowedCallback = this.TypeAllowedCallback;

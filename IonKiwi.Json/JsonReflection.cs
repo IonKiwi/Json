@@ -23,6 +23,7 @@ namespace IonKiwi.Json {
 			Object,
 			Dictionary,
 			SimpleValue,
+			Raw,
 		}
 
 		internal sealed class JsonTypeInfo {
@@ -104,6 +105,9 @@ namespace IonKiwi.Json {
 			if (ti.IsSimpleValue) {
 				ti.ObjectType = JsonObjectType.SimpleValue;
 				ti.IsNullable = isNullable;
+				if (isNullable) {
+					ti.ItemType = t.GenericTypeArguments[0];
+				}
 				return ti;
 			}
 
@@ -122,9 +126,16 @@ namespace IonKiwi.Json {
 				ti.FinalizeAction = ReflectionUtility.CreateToArray<object, object>(ti.RootType);
 				return ti;
 			}
+			else if (t == typeof(RawJson)) {
+				ti.ObjectType = JsonObjectType.Raw;
+				return ti;
+			}
 			else if (IsTupleType(t, out var tupleRank, out isNullable, out var placeHolderType, out var finalizeMethod)) {
 				ti.IsTuple = true;
 				ti.IsNullable = isNullable;
+				if (isNullable) {
+					ti.ItemType = t.GenericTypeArguments[0];
+				}
 				ti.RootType = placeHolderType;
 				ti.ObjectType = JsonObjectType.Object;
 

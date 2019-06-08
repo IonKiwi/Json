@@ -5,6 +5,24 @@ using System.Text;
 
 namespace IonKiwi.Json.Utilities {
 	public static class CommonUtility {
+
+		public static bool AreByteArraysEqual(byte[] x, byte[] y) {
+			if (x == null && y == null) {
+				return true;
+			}
+			else if (x == null || y == null || x.Length != y.Length) {
+				return false;
+			}
+
+			for (int i = 0; i < x.Length; i++) {
+				if (x[i] != y[i]) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
 		public static string GetHexadecimalString(IEnumerable<byte> data, bool upperCase) {
 			string format = (upperCase ? "X2" : "x2");
 			return data.Aggregate(new StringBuilder(),

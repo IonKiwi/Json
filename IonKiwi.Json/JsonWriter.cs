@@ -1,10 +1,44 @@
-﻿using System;
+﻿using IonKiwi.Extenions;
+using IonKiwi.Json.MetaData;
+using IonKiwi.Json.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace IonKiwi.Json {
-	public class JsonWriter {
+	public static partial class JsonWriter {
+
+		private static readonly JsonWriterSettings _defaultSettings = new JsonWriterSettings() {
+			DateTimeHandling = DateTimeHandling.Utc,
+			UnspecifiedDateTimeHandling = UnspecifiedDateTimeHandling.AssumeLocal
+		}
+		.AddDefaultAssemblyName(typeof(string).Assembly.GetName(false))
+		.Seal();
+
+		public static JsonWriterSettings DefaultSettings {
+			get {
+				return _defaultSettings;
+			}
+		}
+
+		public static async ValueTask Serialize<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+			if (objectType == null) {
+				objectType = typeof(T);
+			}
+			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			await jsonWriter.Serialize(writer, value, objectType).NoSync();
+		}
+
+		public static void SerializeSync<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+			if (objectType == null) {
+				objectType = typeof(T);
+			}
+			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			jsonWriter.SerializeSync(writer, value, objectType);
+		}
+
 		public static string[] ReservedKeywords => new string[] {
 			"await", "break", "case", "catch", "class", "const", "continue", "debugger", "default", "delete", "do", "else", "export", "extends", "finally", "for", "function", "if", "import", "in", "instanceof", "new", "return", "super", "switch", "this", "throw", "try", "typeof", "var", "void", "while", "with", "yield",
 			"let", "static",

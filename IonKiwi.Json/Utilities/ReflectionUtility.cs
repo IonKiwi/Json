@@ -613,6 +613,78 @@ namespace IonKiwi.Json.Utilities {
 			return false;
 		}
 
+		public static string GetTypeName(Type t, JsonWriterSettings settings) {
+			StringBuilder sb = new StringBuilder();
+			GetTypeName(sb, t, settings);
+			return sb.ToString();
+		}
+
+		private static void GetTypeName(StringBuilder sb, Type t, JsonWriterSettings settings) {
+			bool isPartial = IsInDefaultAssemblyVersion(t, settings) || IsInDefaultAssemblyName(t, settings);
+
+			bool isGenericType = t.IsGenericType && !t.IsGenericTypeDefinition;
+			if (isGenericType) {
+				sb.Append(t.GetGenericTypeDefinition().FullName);
+			}
+			else if (isPartial) {
+				sb.Append(t.FullName);
+				sb.Append(", ");
+				sb.Append(t.Assembly.GetName(false).Name);
+			}
+			else {
+				sb.Append(t.AssemblyQualifiedName);
+			}
+
+			if (isGenericType) {
+				AddGenericParameters(sb, t, settings);
+				if (isPartial) {
+					sb.Append(", ");
+					sb.Append(t.Assembly.GetName(false).Name);
+				}
+				else {
+					sb.Append(", ");
+					sb.Append(t.Assembly.GetName(false).FullName);
+				}
+			}
+		}
+
+		private static void AddGenericParameters(StringBuilder sb, Type t, JsonWriterSettings settings) {
+			sb.Append('[');
+			Type[] arguments = t.GetGenericArguments();
+			for (int i = 0; i < arguments.Length; i++) {
+				Type gt = arguments[i];
+				if (i > 0) {
+					sb.Append(',');
+				}
+				if (gt.IsGenericParameter) {
+					sb.Append(gt.Name);
+				}
+				else {
+					sb.Append('[');
+					GetTypeName(sb, gt, settings);
+					sb.Append(']');
+				}
+			}
+			sb.Append(']');
+		}
+
+		private static bool IsInDefaultAssemblyVersion(Type t, JsonWriterSettings settings) {
+			if (settings.DefaultAssemblyName == null) {
+				return false;
+			}
+			var asmName = t.Assembly.GetName(false);
+			return (asmName.Version == settings.DefaultAssemblyName.Version && CommonUtility.AreByteArraysEqual(asmName.GetPublicKeyToken(), settings.DefaultAssemblyName.PublicKeyTokenBytes));
+		}
+
+		private static bool IsInDefaultAssemblyName(Type t, JsonWriterSettings settings) {
+			var asmName = t.Assembly.GetName(false);
+			AssemblyName partialName;
+			if (settings.DefaultAssemblyNames.TryGetValue(asmName.Name, out partialName)) {
+				return (asmName.Version == partialName.Version && CommonUtility.AreByteArraysEqual(asmName.GetPublicKeyToken(), partialName.GetPublicKeyToken()));
+			}
+			return false;
+		}
+
 		public static Type LoadType(string typeName, JsonParserSettings settings) {
 			if (string.IsNullOrEmpty(typeName)) {
 				throw new ArgumentNullException(nameof(typeName));
