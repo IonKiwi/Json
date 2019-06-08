@@ -43,6 +43,9 @@ namespace IonKiwi.Json {
 				else if (state is JsonWriterObjectState objectState) {
 					return HandleObject(objectState);
 				}
+				else if (state is JsonWriterObjectPropertyState propertyState) {
+					return HandleObject(propertyState, propertyState.Value, propertyState.TypeInfo.OriginalType, propertyState.TypeInfo, propertyState.TupleContext);
+				}
 				else {
 					ThrowUnhandledType(state.GetType());
 					return null;
@@ -53,16 +56,35 @@ namespace IonKiwi.Json {
 				throw new NotImplementedException(ReflectionUtility.GetTypeName(t));
 			}
 
-			private byte[] HandleObject(JsonWriterObjectState objectState) {
-				var currentProperty = objectState.Properties.Current;
-								
+			private byte[] HandleObject(JsonWriterObjectState state) {
+				var currentProperty = state.Properties.Current;
 
-				if (!objectState.Properties.MoveNext()) {
-					objectState.Properties.Dispose();
-					return new byte[] { (byte)'}' };
+				string prefix = state.IsFirst ? "," : string.Empty;
+				if (state.IsFirst) {
+					state.IsFirst = false;
 				}
 
-				throw new NotImplementedException();
+				string propertyName = currentProperty.Key;
+				if (state.TupleContext != null && state.TupleContext.TryGetPropertyMapping(currentProperty.Key, out var newName)) {
+					propertyName = newName;
+				}
+
+				var newState = new JsonWriterObjectPropertyState();
+				newState.Parent = state;
+				newState.Value = currentProperty.Value.Getter(state.Value);
+				newState.ValueType = currentProperty.Value.PropertyType;
+				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
+				newState.TypeInfo = JsonReflection.GetTypeInfo(currentProperty.Value.PropertyType);
+				newState.TupleContext = GetNewContext(state.TupleContext, currentProperty.Key, newState.TypeInfo);
+				if (newState.ValueType != realType) {
+					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
+					newState.TypeInfo = newTypeInfo;
+					newState.TupleContext = GetContextForNewType(newState.TupleContext, newTypeInfo);
+				}
+				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+				return Encoding.UTF8.GetBytes(prefix + CommonUtility.JavaScriptStringEncode(propertyName,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? CommonUtility.JavaScriptEncodeMode.Hex : CommonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? CommonUtility.JavaScriptQuoteMode.Always : CommonUtility.JavaScriptQuoteMode.WhenRequired));
 			}
 
 			private byte[] HandleObject(JsonWriterInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
@@ -132,6 +154,26 @@ namespace IonKiwi.Json {
 
 			private void ThrowNotImplementedException() {
 				throw new NotImplementedException();
+			}
+
+			private TupleContextInfoWrapper GetNewContext(TupleContextInfoWrapper context, string propertyName, JsonTypeInfo propertyTypeInfo) {
+				var newContext = context?.GetPropertyContext(propertyName);
+				if (newContext == null) {
+					return new TupleContextInfoWrapper(propertyTypeInfo.TupleContext, null);
+				}
+				newContext.Add(propertyTypeInfo.TupleContext);
+				return newContext;
+			}
+
+			private TupleContextInfoWrapper GetContextForNewType(TupleContextInfoWrapper context, JsonTypeInfo typeInfo) {
+				if (context == null) {
+					if (typeInfo.TupleContext == null) {
+						return null;
+					}
+					return new TupleContextInfoWrapper(typeInfo.TupleContext, null);
+				}
+				context.Add(typeInfo.TupleContext);
+				return context;
 			}
 		}
 	}

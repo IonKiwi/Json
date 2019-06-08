@@ -27,7 +27,8 @@ namespace IonKiwi.Json {
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
-			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			var realType = object.ReferenceEquals(null, value) ? objectType : value.GetType();
+			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(realType), tupleNames);
 			await jsonWriter.Serialize(writer).NoSync();
 		}
 
@@ -35,7 +36,8 @@ namespace IonKiwi.Json {
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
-			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			var realType = object.ReferenceEquals(null, value) ? objectType : value.GetType();
+			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(realType), tupleNames);
 			jsonWriter.SerializeSync(writer);
 		}
 

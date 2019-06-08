@@ -19,6 +19,11 @@ namespace IonKiwi.Json {
 		internal byte[] PublicKeyTokenBytes { get; }
 	}
 
+	public enum JsonWriteMode {
+		Json,
+		ECMAScript
+	}
+
 	public class JsonWriterSettings : ISealable {
 		private bool _locked;
 		private Dictionary<string, AssemblyName> _defaultAssemblyNames = new Dictionary<string, AssemblyName>(StringComparer.OrdinalIgnoreCase);
@@ -88,6 +93,15 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		private JsonWriteMode _writeMode;
+		public JsonWriteMode JsonWriteMode {
+			get { return _writeMode; }
+			set {
+				EnsureUnlocked();
+				_writeMode = value;
+			}
+		}
+
 		private void EnsureUnlocked() {
 			if (_locked) { throw new InvalidOperationException("Object is sealed"); }
 		}
@@ -107,6 +121,7 @@ namespace IonKiwi.Json {
 
 		public JsonWriterSettings Clone() {
 			var clone = new JsonWriterSettings();
+			clone.JsonWriteMode = this.JsonWriteMode;
 			clone.DateTimeHandling = this.DateTimeHandling;
 			clone.UnspecifiedDateTimeHandling = this.UnspecifiedDateTimeHandling;
 			clone.EnumValuesAsString = this.EnumValuesAsString;

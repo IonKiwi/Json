@@ -27,9 +27,17 @@ namespace IonKiwi.Json {
 
 			private sealed class JsonWriterObjectState : JsonWriterInternalState {
 				public object Value;
+				public bool IsFirst = true;
 				public JsonTypeInfo TypeInfo;
 				public TupleContextInfoWrapper TupleContext;
 				public Dictionary<string, JsonPropertyInfo>.Enumerator Properties;
+			}
+
+			private sealed class JsonWriterObjectPropertyState : JsonWriterInternalState {
+				public object Value;
+				public Type ValueType;
+				public JsonTypeInfo TypeInfo;
+				public TupleContextInfoWrapper TupleContext;
 			}
 		}
 	}
