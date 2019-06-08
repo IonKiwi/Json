@@ -14,7 +14,7 @@ namespace IonKiwi.Json.Test {
 		[Fact]
 		public void Test1() {
 			string json = "{a:1,b:2,c:3}";
-			var v = JsonParser.ParseSync<ValueTuple<int, int, int>>(new JsonReader(Encoding.UTF8.GetBytes(json)), new string[] { "a", "b", "c" });
+			var v = JsonParser.ParseSync<ValueTuple<int, int, int>>(new JsonReader(Encoding.UTF8.GetBytes(json)), tupleNames: new string[] { "a", "b", "c" });
 			Assert.Equal(1, v.Item1);
 			Assert.Equal(2, v.Item2);
 			Assert.Equal(3, v.Item3);
@@ -29,7 +29,7 @@ namespace IonKiwi.Json.Test {
 		public void Test2() {
 			string json = "{main:true,delay:42,subTuple:{subVal1:43,subVal2:44},superMode:true,zz:{subval3:2,z:{x:3,y:4}}}";
 			var tupleNames = typeof(TupleTest).GetMethod("GetValue1", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).ReturnParameter.GetCustomAttribute<TupleElementNamesAttribute>();
-			var v = JsonParser.ParseSync<(bool main, int delay, (int subVal1, int subVal2) subTuple, bool superMode, (int subval3, (int x, int y) z) zz)>(new JsonReader(Encoding.UTF8.GetBytes(json)), tupleNames.TransformNames.ToArray());
+			var v = JsonParser.ParseSync<(bool main, int delay, (int subVal1, int subVal2) subTuple, bool superMode, (int subval3, (int x, int y) z) zz)>(new JsonReader(Encoding.UTF8.GetBytes(json)), tupleNames: tupleNames.TransformNames.ToArray());
 			Assert.True(v.main);
 			Assert.Equal(42, v.delay);
 			Assert.Equal(43, v.subTuple.subVal1);
@@ -93,7 +93,7 @@ namespace IonKiwi.Json.Test {
 		[Fact]
 		public void Test5() {
 			string json = "{Value1:{main:true,delay:42,subTuple:{subVal1:43,subVal2:44},superMode:true,zz:{subval3:2,z:{x:3,y:4}}}}";
-			var v = JsonParser.ParseSync<TupleTestClass1<(bool main, int delay, (int subVal1, int subVal2) subTuple, bool superMode, (int subval3, (int x, int y) z) zz)>>(new JsonReader(Encoding.UTF8.GetBytes(json)), new string[] { "main", "delay", "subTuple", "superMode", "zz", "subVal1", "subVal2", "subval3", "z", "x", "y" });
+			var v = JsonParser.ParseSync<TupleTestClass1<(bool main, int delay, (int subVal1, int subVal2) subTuple, bool superMode, (int subval3, (int x, int y) z) zz)>>(new JsonReader(Encoding.UTF8.GetBytes(json)), tupleNames: new string[] { "main", "delay", "subTuple", "superMode", "zz", "subVal1", "subVal2", "subval3", "z", "x", "y" });
 			Assert.NotNull(v);
 			Assert.True(v.Value1.main);
 			Assert.Equal(42, v.Value1.delay);
@@ -108,7 +108,7 @@ namespace IonKiwi.Json.Test {
 		[Fact]
 		public void Test6() {
 			string json = "{Value1:{x:1,y:2},Value2:{x:3,y:4}}";
-			var v = JsonParser.ParseSync<Dictionary<string, (int x, int y)>>(new JsonReader(Encoding.UTF8.GetBytes(json)), new string[] { "x", "y" });
+			var v = JsonParser.ParseSync<Dictionary<string, (int x, int y)>>(new JsonReader(Encoding.UTF8.GetBytes(json)), tupleNames: new string[] { "x", "y" });
 			Assert.NotNull(v);
 			Assert.Equal(2, v.Count);
 			Assert.True(v.ContainsKey("Value1"));
@@ -122,7 +122,7 @@ namespace IonKiwi.Json.Test {
 		[Fact]
 		public void Test7() {
 			string json = "[{x:1,y:2},{x:3,y:4}]";
-			var v = JsonParser.ParseSync<List<(int x, int y)>>(new JsonReader(Encoding.UTF8.GetBytes(json)), new string[] { "x", "y" });
+			var v = JsonParser.ParseSync<List<(int x, int y)>>(new JsonReader(Encoding.UTF8.GetBytes(json)), tupleNames: new string[] { "x", "y" });
 			Assert.NotNull(v);
 			Assert.Equal(2, v.Count);
 			Assert.Equal(1, v[0].x);
@@ -181,7 +181,7 @@ namespace IonKiwi.Json.Test {
 		[Fact]
 		public void Test9() {
 			string json = "{Value1:{Value1:{x:1,y:{z1:2,z2:3}},Value2:{x:4,y:{z1:5,z2:6}}},Value2:[{x:7,y:{z1:8,z2:9}},{x:10,y:{z1:11,z2:12}}]}";
-			var v = JsonParser.ParseSync<TupleGenericTest<(int x, (int z1, int z2) y)>>(new JsonReader(Encoding.UTF8.GetBytes(json)), new string[] { "x", "y", "z1", "z2" });
+			var v = JsonParser.ParseSync<TupleGenericTest<(int x, (int z1, int z2) y)>>(new JsonReader(Encoding.UTF8.GetBytes(json)), tupleNames: new string[] { "x", "y", "z1", "z2" });
 			Assert.NotNull(v);
 			Assert.NotNull(v.Value1);
 			Assert.Equal(2, v.Value1.Count);

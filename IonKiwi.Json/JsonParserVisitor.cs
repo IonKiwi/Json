@@ -31,12 +31,16 @@ namespace IonKiwi.Json {
 
 		private JsonParserSettings _parserSettings;
 
-		protected T ParseSync<T>(JsonReader reader) {
-			return JsonParser.ParseSync<T>(reader, parserSettings: _parserSettings);
+		protected JsonParserSettings ParserSettings {
+			get { return _parserSettings; }
 		}
 
-		protected ValueTask<T> Parse<T>(JsonReader reader) {
-			return JsonParser.Parse<T>(reader, parserSettings: _parserSettings);
+		protected T ParseSync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
+			return JsonParser.ParseSync<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
+		}
+
+		protected ValueTask<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
+			return JsonParser.Parse<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
 		}
 
 		protected abstract ValueTask<bool> ParseObject(JsonReader reader, JsonParserContext context);
