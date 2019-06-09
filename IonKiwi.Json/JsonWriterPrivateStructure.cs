@@ -34,6 +34,7 @@ namespace IonKiwi.Json {
 			}
 
 			private sealed class JsonWriterObjectPropertyState : JsonWriterInternalState {
+				public bool Processed = false;
 				public object Value;
 				public Type ValueType;
 				public JsonTypeInfo TypeInfo;
@@ -49,6 +50,7 @@ namespace IonKiwi.Json {
 			}
 
 			private sealed class JsonWriterArrayItemState : JsonWriterInternalState {
+				public bool Processed = false;
 				public object Value;
 				public Type ValueType;
 				public JsonTypeInfo TypeInfo;

@@ -43,5 +43,14 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal("{\"Value1\":\"test1\",\"Value2\":\"test2\"}", json);
 			return;
 		}
+
+		[Fact]
+		public void TestArray1() {
+			var writer = new StringDataWriter();
+			JsonWriter.SerializeSync(writer, new List<Object1>() { new Object1() { Value1 = "test1", Value2 = "test2" }, new Object1() { Value1 = "test3", Value2 = "test4" } });
+			var json = writer.GetString();
+			Assert.Equal("[{\"Value1\":\"test1\",\"Value2\":\"test2\"},{\"Value1\":\"test3\",\"Value2\":\"test4\"}]", json);
+			return;
+		}
 	}
 }

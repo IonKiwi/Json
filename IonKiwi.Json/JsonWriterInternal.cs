@@ -111,8 +111,12 @@ namespace IonKiwi.Json {
 			}
 
 			private byte[] HandleObjectProperty(JsonWriterObjectPropertyState state) {
+				if (state.Processed) {
+					_currentState.Pop();
+					return null;
+				}
+				state.Processed = true;
 				var data = HandleValue(state, state.Value, state.TypeInfo.OriginalType, state.TypeInfo, state.TupleContext);
-				_currentState.Pop();
 				return data;
 			}
 
@@ -150,8 +154,12 @@ namespace IonKiwi.Json {
 			}
 
 			private byte[] HandleArrayItem(JsonWriterArrayItemState state) {
+				if (state.Processed) {
+					_currentState.Pop();
+					return null;
+				}
+				state.Processed = true;
 				var data = HandleValue(state, state.Value, state.TypeInfo.OriginalType, state.TypeInfo, state.TupleContext);
-				_currentState.Pop();
 				return data;
 			}
 
