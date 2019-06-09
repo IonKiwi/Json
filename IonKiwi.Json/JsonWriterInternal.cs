@@ -81,7 +81,7 @@ namespace IonKiwi.Json {
 				}
 
 				var currentProperty = state.Properties.Current;
-				string prefix = state.IsFirst ? "," : string.Empty;
+				string prefix = !state.IsFirst ? "," : string.Empty;
 				if (state.IsFirst) {
 					state.IsFirst = false;
 				}
@@ -107,7 +107,7 @@ namespace IonKiwi.Json {
 				_currentState.Push(newState);
 				return Encoding.UTF8.GetBytes(prefix + JsonUtilities.JavaScriptStringEncode(propertyName,
 						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired));
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':');
 			}
 
 			private byte[] HandleObjectProperty(JsonWriterObjectPropertyState state) {
@@ -351,7 +351,6 @@ namespace IonKiwi.Json {
 			}
 
 			private byte[] WriteSimpleValue(object value, JsonTypeInfo typeInfo) {
-				_currentState.Pop();
 
 				if (object.ReferenceEquals(null, value)) {
 					return new byte[] { (byte)'n', (byte)'u', (byte)'l', (byte)'l' };
