@@ -46,53 +46,6 @@ namespace IonKiwi.Json.Utilities {
 		private static readonly int[] DaysToMonth365 = new[] { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
 		private static readonly int[] DaysToMonth366 = new[] { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 };
 
-		public static DateTime EnsureDateTime(DateTime value, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling) {
-			if (dateTimeHandling == DateTimeHandling.Utc) {
-				return SwitchToUtcTime(value, unspecifiedDateTimeHandling);
-			}
-			else if (dateTimeHandling == DateTimeHandling.Local) {
-				return SwitchToLocalTime(value, unspecifiedDateTimeHandling);
-			}
-			else {
-				throw new NotSupportedException(dateTimeHandling.ToString());
-			}
-		}
-
-
-		private static DateTime SwitchToLocalTime(DateTime value, UnspecifiedDateTimeHandling dateTimeHandling) {
-			switch (value.Kind) {
-				case DateTimeKind.Unspecified:
-					if (dateTimeHandling == UnspecifiedDateTimeHandling.AssumeLocal)
-						return new DateTime(value.Ticks, DateTimeKind.Local);
-					else
-						return new DateTime(value.Ticks, DateTimeKind.Utc).ToLocalTime();
-
-				case DateTimeKind.Utc:
-					return value.ToLocalTime();
-
-				case DateTimeKind.Local:
-					return value;
-			}
-			return value;
-		}
-
-		private static DateTime SwitchToUtcTime(DateTime value, UnspecifiedDateTimeHandling dateTimeHandling) {
-			switch (value.Kind) {
-				case DateTimeKind.Unspecified:
-					if (dateTimeHandling == UnspecifiedDateTimeHandling.AssumeUtc)
-						return new DateTime(value.Ticks, DateTimeKind.Utc);
-					else
-						return new DateTime(value.Ticks, DateTimeKind.Local).ToUniversalTime();
-
-				case DateTimeKind.Utc:
-					return value;
-
-				case DateTimeKind.Local:
-					return value.ToUniversalTime();
-			}
-			return value;
-		}
-
 		public static int WriteMicrosoftDateTimeString(char[] chars, int start, DateTime value, TimeSpan? offset, DateTimeKind kind) {
 			int pos = start;
 
@@ -150,7 +103,7 @@ namespace IonKiwi.Json.Utilities {
 				}
 				else if (s.Length >= 19 && s.Length <= 40 && char.IsDigit(s[0]) && s[10] == 'T') {
 					if (DateTime.TryParseExact(s, IsoDateFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dt)) {
-						dt = EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
+						dt = JsonUtilities.EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
 						return true;
 					}
 				}
@@ -184,7 +137,7 @@ namespace IonKiwi.Json.Utilities {
 					break;
 			}
 
-			dt = EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
+			dt = JsonUtilities.EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
 			return true;
 		}
 

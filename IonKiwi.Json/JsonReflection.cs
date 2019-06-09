@@ -112,10 +112,11 @@ namespace IonKiwi.Json {
 				ti.ObjectType = JsonObjectType.SimpleValue;
 				ti.IsNullable = isNullable;
 				if (isNullable && t.IsValueType) {
-					ti.ItemType = t.GenericTypeArguments[0];
+					ti.RootType = t.GenericTypeArguments[0];
 				}
-				if (t.IsEnum) {
-					ti.IsFlagsEnum = isNullable ? ti.ItemType.GetCustomAttribute<FlagsAttribute>() != null : ti.OriginalType.GetCustomAttribute<FlagsAttribute>() != null;
+				if (ti.RootType.IsEnum) {
+					ti.IsFlagsEnum = ti.RootType.GetCustomAttribute<FlagsAttribute>() != null;
+					ti.ItemType = Enum.GetUnderlyingType(ti.RootType);
 				}
 				return ti;
 			}
