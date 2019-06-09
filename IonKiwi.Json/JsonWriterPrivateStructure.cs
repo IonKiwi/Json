@@ -49,6 +49,12 @@ namespace IonKiwi.Json {
 				public System.Collections.IEnumerator Items;
 			}
 
+			private sealed class JsonWriterCustomObjectState : JsonWriterInternalState {
+				public object Value;
+				public bool IsFirst = true;
+				public System.Collections.IEnumerator Items;
+			}
+
 			private sealed class JsonWriterArrayItemState : JsonWriterInternalState {
 				public bool Processed = false;
 				public object Value;

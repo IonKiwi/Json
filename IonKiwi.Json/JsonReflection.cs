@@ -144,6 +144,10 @@ namespace IonKiwi.Json {
 				ti.ObjectType = JsonObjectType.Raw;
 				return ti;
 			}
+			else if (t == typeof(JsonWriterProperty)) {
+				ti.ObjectType = JsonObjectType.Raw;
+				return ti;
+			}
 			else if (IsTupleType(t, out var tupleRank, out isNullable, out var placeHolderType, out var finalizeMethod)) {
 				ti.IsTuple = true;
 				ti.IsNullable = isNullable;

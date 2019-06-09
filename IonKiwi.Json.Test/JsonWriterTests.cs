@@ -52,5 +52,14 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal("[{\"Value1\":\"test1\",\"Value2\":\"test2\"},{\"Value1\":\"test3\",\"Value2\":\"test4\"}]", json);
 			return;
 		}
+
+		[Fact]
+		public void CustomObject1() {
+			var writer = new StringDataWriter();
+			JsonWriter.SerializeSync(writer, new List<JsonWriterProperty>() { new JsonWriterProperty("Value1", 42, typeof(int)), new JsonWriterProperty("Value2", "test", typeof(string)) });
+			var json = writer.GetString();
+			Assert.Equal("{\"Value1\":42,\"Value2\":\"test\"}", json);
+			return;
+		}
 	}
 }

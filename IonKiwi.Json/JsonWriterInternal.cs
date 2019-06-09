@@ -62,6 +62,9 @@ namespace IonKiwi.Json {
 				else if (state is JsonWriterStringDictionaryState dictionaryState) {
 					return HandleStringDictionary(dictionaryState);
 				}
+				else if (state is JsonWriterCustomObjectState customObjectState) {
+					return HandleCustomObject(customObjectState);
+				}
 				else {
 					ThrowUnhandledType(state.GetType());
 					return null;
@@ -240,6 +243,41 @@ namespace IonKiwi.Json {
 				return new byte[] { (byte)',' };
 			}
 
+			private byte[] HandleCustomObject(JsonWriterCustomObjectState state) {
+
+				if (!state.Items.MoveNext()) {
+					if (state.Items is IDisposable disposable) {
+						disposable.Dispose();
+					}
+					_currentState.Pop();
+					return new byte[] { (byte)'}' };
+				}
+
+				var currentProperty = (JsonWriterProperty)state.Items.Current;
+				string prefix = !state.IsFirst ? "," : string.Empty;
+				if (state.IsFirst) {
+					state.IsFirst = false;
+				}
+
+				var newState = new JsonWriterObjectPropertyState();
+				newState.Parent = state;
+				newState.Value = currentProperty.Value;
+				newState.ValueType = currentProperty.ValueType;
+				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
+				newState.TypeInfo = JsonReflection.GetTypeInfo(currentProperty.ValueType);
+				newState.TupleContext = new TupleContextInfoWrapper(newState.TypeInfo.TupleContext, null);
+				if (newState.ValueType != realType) {
+					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
+					newState.TypeInfo = newTypeInfo;
+					newState.TupleContext = GetContextForNewType(newState.TupleContext, newTypeInfo);
+					newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+				}
+				_currentState.Push(newState);
+				return Encoding.UTF8.GetBytes(prefix + JsonUtilities.JavaScriptStringEncode(currentProperty.Name,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':');
+			}
+
 			private byte[] HandleValue(JsonWriterInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
 
 				if (!state.WriteValueCallbackCalled && _settings.WriteValueCallback != null) {
@@ -291,6 +329,16 @@ namespace IonKiwi.Json {
 					return new byte[] { (byte)'{' };
 				}
 				else if (typeInfo.ObjectType == JsonObjectType.Array) {
+					if (typeInfo.ItemType == typeof(JsonWriterProperty)) {
+						var customState = new JsonWriterCustomObjectState();
+						customState.Parent = state;
+						customState.Value = value;
+						customState.Items = typeInfo.EnumerateMethod(value);
+						customState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+						_currentState.Push(customState);
+						return new byte[] { (byte)'{' };
+					}
+
 					var arrayState = new JsonWriterArrayState();
 					arrayState.Parent = state;
 					arrayState.Value = value;
