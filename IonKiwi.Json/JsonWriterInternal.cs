@@ -373,7 +373,9 @@ namespace IonKiwi.Json {
 					}
 				}
 				else if (typeInfo.RootType == typeof(string)) {
-					return Encoding.UTF8.GetBytes((string)value);
+					return Encoding.UTF8.GetBytes(JsonUtilities.JavaScriptStringEncode((string)value,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						JsonUtilities.JavaScriptQuoteMode.Always));
 				}
 				else if (typeInfo.RootType == typeof(bool)) {
 					if ((bool)value) {

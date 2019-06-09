@@ -33,6 +33,12 @@ namespace IonKiwi.Json {
 				var chars = Encoding.UTF8.GetString(buffer);
 				_sb.Append(chars);
 			}
+
+			public string GetString() {
+				var r = _sb.ToString();
+				_sb.Clear();
+				return r;
+			}
 		}
 
 		public sealed class TextDataWriter : IOutputWriter {
