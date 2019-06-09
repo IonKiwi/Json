@@ -98,7 +98,7 @@ namespace IonKiwi.Json {
 			}
 
 			bool isSimpleValue = (t.IsValueType && t.IsPrimitive) || t == typeof(string) || t == typeof(Uri) || t == typeof(DateTime) || t == typeof(Decimal) || t == typeof(BigInteger) || t == typeof(TimeSpan) || t.IsEnum;
-			isNullable = t.IsValueType;
+			isNullable = !t.IsValueType;
 			return isSimpleValue;
 		}
 
@@ -111,7 +111,7 @@ namespace IonKiwi.Json {
 			if (ti.IsSimpleValue) {
 				ti.ObjectType = JsonObjectType.SimpleValue;
 				ti.IsNullable = isNullable;
-				if (isNullable) {
+				if (isNullable && t.IsValueType) {
 					ti.ItemType = t.GenericTypeArguments[0];
 				}
 				if (t.IsEnum) {
@@ -248,9 +248,11 @@ namespace IonKiwi.Json {
 				ti.ObjectType = JsonObjectType.Dictionary;
 				ti.DictionaryAddMethod = ReflectionUtility.CreateDictionaryAdd<object, object, object>(t, ti.KeyType, ti.ValueType);
 				ti.DictionaryAddKeyValueMethod = ReflectionUtility.CreateDictionaryAddKeyValue<object, object>(t, ti.KeyType, ti.ValueType);
-				var getEnumerator = dictionaryInterface.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
+
+				ReflectionUtility.HasInterface(dictionaryInterface, typeof(IEnumerable<>), out var dictionaryEnumerableInterface);
+				var getEnumerator = dictionaryEnumerableInterface.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
 				var p1 = Expression.Parameter(typeof(object), "p1");
-				var getEnumeratorCall = Expression.Call(Expression.Convert(p1, dictionaryInterface), getEnumerator);
+				var getEnumeratorCall = Expression.Call(Expression.Convert(p1, dictionaryEnumerableInterface), getEnumerator);
 				ti.EnumerateMethod = Expression.Lambda<Func<object, System.Collections.IEnumerator>>(getEnumeratorCall, p1).Compile();
 				var keyValueAccessor = ReflectionUtility.CreateKeyValuePairGetter<object, object>(ti.ItemType);
 				ti.GetKeyFromKeyValuePair = keyValueAccessor.key;
