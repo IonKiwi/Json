@@ -259,6 +259,35 @@ namespace IonKiwi.Json.Utilities {
 			return _hasEnumFlag(allEnumValues, enumValue);
 		}
 
+		public static IEnumerable<Enum> GetUniqueFlags(Enum flags) {
+			var enumType = flags.GetType();
+			var vv = GetEnumValues(enumType);
+			if (vv.Item5.Length == 0) {
+				throw new InvalidOperationException("'" + ReflectionUtility.GetTypeName(enumType) + "' is not a flags enum");
+			}
+			ulong iev = (ulong)Convert.ChangeType(flags, typeof(ulong));
+			if (iev == 0 && vv.Item5[vv.Item5.Length - 1].Item1 == 0) {
+				return new Enum[] { vv.Item5[vv.Item5.Length - 1].Item2 };
+			}
+			else {
+				List<Enum> r = new List<Enum>();
+				ulong ev = iev;
+				for (int i = 0; i < vv.Item5.Length; i++) {
+					ulong sev = vv.Item5[i].Item1;
+					if ((ev & sev) == sev) {
+						ev -= sev;
+						r.Add(vv.Item5[i].Item2);
+						if (ev == 0) break;
+					}
+				}
+				if (ev > 0) {
+					throw new InvalidOperationException("Unexpected value '" + iev + "' for enum '" + ReflectionUtility.GetTypeName(enumType) + "'.");
+				}
+				r.Reverse();
+				return r.ToArray();
+			}
+		}
+
 		public static Func<TIn, TOut> CreatePropertyGetter<TIn, TOut>(PropertyInfo pi) {
 			var m = pi.GetGetMethod(true);
 			if (m == null) {
@@ -582,6 +611,28 @@ namespace IonKiwi.Json.Utilities {
 			MethodCallExpression methodCall = Expression.Call(p2, mi, p4);
 			var methodLambda = Expression.Lambda<Action<TIn, TValue1>>(methodCall, p1, p3);
 			return methodLambda.Compile();
+		}
+
+		public static (Func<object, TKey> key, Func<object, TValue> value) CreateKeyValuePairGetter<TKey, TValue>(Type keyValuePair) {
+			var k = keyValuePair.GetProperty("Key", BindingFlags.Instance | BindingFlags.Public);
+			var v = keyValuePair.GetProperty("Value", BindingFlags.Instance | BindingFlags.Public);
+
+			var p1 = Expression.Parameter(typeof(object), "p1");
+			var p2 = Expression.Convert(p1, keyValuePair);
+
+			var callExpr1 = Expression.Call(p2, k.GetGetMethod(false));
+			Expression callExpr1e = callExpr1;
+			if (k.PropertyType != typeof(TKey)) {
+				callExpr1e = Expression.Convert(callExpr1, typeof(TKey));
+			}
+			var lambda1 = Expression.Lambda<Func<object, TKey>>(callExpr1e, p1);
+			var callExpr2 = Expression.Call(p2, v.GetGetMethod(false));
+			Expression callExpr2e = callExpr2;
+			if (v.PropertyType != typeof(TValue)) {
+				callExpr2e = Expression.Convert(callExpr2, typeof(TValue));
+			}
+			var lambda2 = Expression.Lambda<Func<object, TValue>>(callExpr2e, p1);
+			return (lambda1.Compile(), lambda2.Compile());
 		}
 
 		public static bool IsTupleType(Type valueType, out int tupleRank, out bool isNullable) {

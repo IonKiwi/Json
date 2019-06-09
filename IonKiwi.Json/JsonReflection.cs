@@ -30,16 +30,22 @@ namespace IonKiwi.Json {
 			public Type OriginalType;
 			public Type RootType;
 			public Type KeyType;
+			public Type ValueType;
 			public Type ItemType;
 			public bool IsSimpleValue;
 			public bool IsTuple;
 			public bool IsSingleOrArrayValue;
 			public bool IsNullable = true;
+			public bool IsEnumDictionary = false;
+			public bool IsFlagsEnum = false;
 			public JsonObjectType ObjectType;
 			public readonly Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
+			public Func<object, System.Collections.IEnumerator> EnumerateMethod;
 			public Action<object, object> CollectionAddMethod;
 			public Action<object, object, object> DictionaryAddMethod;
 			public Action<object, object> DictionaryAddKeyValueMethod;
+			public Func<object, object> GetKeyFromKeyValuePair;
+			public Func<object, object> GetValueFromKeyValuePair;
 			public Func<object, object> FinalizeAction;
 			public TupleContextInfo TupleContext;
 			public readonly List<Action<object>> OnDeserialized = new List<Action<object>>();
@@ -91,7 +97,7 @@ namespace IonKiwi.Json {
 				return result;
 			}
 
-			bool isSimpleValue = (t.IsValueType && t.IsPrimitive) || t == typeof(string) || t == typeof(Uri) || t == typeof(DateTime) || t == typeof(Decimal) || t == typeof(BigInteger) || t == typeof(TimeSpan);
+			bool isSimpleValue = (t.IsValueType && t.IsPrimitive) || t == typeof(string) || t == typeof(Uri) || t == typeof(DateTime) || t == typeof(Decimal) || t == typeof(BigInteger) || t == typeof(TimeSpan) || t.IsEnum;
 			isNullable = t.IsValueType;
 			return isSimpleValue;
 		}
@@ -108,6 +114,9 @@ namespace IonKiwi.Json {
 				if (isNullable) {
 					ti.ItemType = t.GenericTypeArguments[0];
 				}
+				if (t.IsEnum) {
+					ti.IsFlagsEnum = isNullable ? ti.ItemType.GetCustomAttribute<FlagsAttribute>() != null : ti.OriginalType.GetCustomAttribute<FlagsAttribute>() != null;
+				}
 				return ti;
 			}
 
@@ -123,6 +132,10 @@ namespace IonKiwi.Json {
 				ti.ItemType = t.GetElementType();
 				ti.RootType = typeof(List<>).MakeGenericType(ti.ItemType);
 				ti.CollectionAddMethod = ReflectionUtility.CreateCollectionAdd<object, object>(ti.RootType, ti.ItemType);
+				var getEnumerator = t.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
+				var p1 = Expression.Parameter(typeof(object), "p1");
+				var getEnumeratorCall = Expression.Call(Expression.Convert(p1, t), getEnumerator);
+				ti.EnumerateMethod = Expression.Lambda<Func<object, System.Collections.IEnumerator>>(getEnumeratorCall, p1).Compile();
 				ti.FinalizeAction = ReflectionUtility.CreateToArray<object, object>(ti.RootType);
 				return ti;
 			}
@@ -230,10 +243,20 @@ namespace IonKiwi.Json {
 				}
 
 				ti.KeyType = dictionaryInterface.GenericTypeArguments[0];
-				ti.ItemType = dictionaryInterface.GenericTypeArguments[1];
+				ti.ValueType = dictionaryInterface.GenericTypeArguments[1];
+				ti.ItemType = typeof(KeyValuePair<,>).MakeGenericType(ti.KeyType, ti.ValueType);
 				ti.ObjectType = JsonObjectType.Dictionary;
-				ti.DictionaryAddMethod = ReflectionUtility.CreateDictionaryAdd<object, object, object>(t, ti.KeyType, ti.ItemType);
-				ti.DictionaryAddKeyValueMethod = ReflectionUtility.CreateDictionaryAddKeyValue<object, object>(t, ti.KeyType, ti.ItemType);
+				ti.DictionaryAddMethod = ReflectionUtility.CreateDictionaryAdd<object, object, object>(t, ti.KeyType, ti.ValueType);
+				ti.DictionaryAddKeyValueMethod = ReflectionUtility.CreateDictionaryAddKeyValue<object, object>(t, ti.KeyType, ti.ValueType);
+				var getEnumerator = dictionaryInterface.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
+				var p1 = Expression.Parameter(typeof(object), "p1");
+				var getEnumeratorCall = Expression.Call(Expression.Convert(p1, dictionaryInterface), getEnumerator);
+				ti.EnumerateMethod = Expression.Lambda<Func<object, System.Collections.IEnumerator>>(getEnumeratorCall, p1).Compile();
+				var keyValueAccessor = ReflectionUtility.CreateKeyValuePairGetter<object, object>(ti.ItemType);
+				ti.GetKeyFromKeyValuePair = keyValueAccessor.key;
+				ti.GetValueFromKeyValuePair = keyValueAccessor.value;
+				ti.IsEnumDictionary = ti.KeyType.IsEnum;
+				ti.IsFlagsEnum = ti.KeyType.GetCustomAttribute<FlagsAttribute>() != null;
 			}
 			else if (collectionInfo != null) {
 
@@ -258,6 +281,10 @@ namespace IonKiwi.Json {
 				ti.ItemType = collectionInterface.GenericTypeArguments[0];
 				ti.ObjectType = JsonObjectType.Array;
 				ti.CollectionAddMethod = ReflectionUtility.CreateCollectionAdd<object, object>(t, ti.ItemType);
+				var getEnumerator = collectionInterface.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
+				var p1 = Expression.Parameter(typeof(object), "p1");
+				var getEnumeratorCall = Expression.Call(Expression.Convert(p1, collectionInterface), getEnumerator);
+				ti.EnumerateMethod = Expression.Lambda<Func<object, System.Collections.IEnumerator>>(getEnumeratorCall, p1).Compile();
 			}
 			else if (objectInfo != null) {
 

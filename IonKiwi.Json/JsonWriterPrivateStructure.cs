@@ -21,7 +21,7 @@ namespace IonKiwi.Json {
 			private sealed class JsonWriterRootState : JsonWriterInternalState {
 				public object Value;
 				public Type ValueType;
-				public JsonTypeInfo TypeInfo;				
+				public JsonTypeInfo TypeInfo;
 				public TupleContextInfoWrapper TupleContext;
 			}
 
@@ -38,6 +38,37 @@ namespace IonKiwi.Json {
 				public Type ValueType;
 				public JsonTypeInfo TypeInfo;
 				public TupleContextInfoWrapper TupleContext;
+			}
+
+			private sealed class JsonWriterArrayState : JsonWriterInternalState {
+				public object Value;
+				public bool IsFirst = true;
+				public JsonTypeInfo TypeInfo;
+				public TupleContextInfoWrapper TupleContext;
+				public System.Collections.IEnumerator Items;
+			}
+
+			private sealed class JsonWriterArrayItemState : JsonWriterInternalState {
+				public object Value;
+				public Type ValueType;
+				public JsonTypeInfo TypeInfo;
+				public TupleContextInfoWrapper TupleContext;
+			}
+
+			private sealed class JsonWriterStringDictionaryState : JsonWriterInternalState {
+				public object Value;
+				public bool IsFirst = true;
+				public JsonTypeInfo TypeInfo;
+				public TupleContextInfoWrapper TupleContext;
+				public System.Collections.IEnumerator Items;
+			}
+
+			private sealed class JsonWriterDictionaryState : JsonWriterInternalState {
+				public object Value;
+				public bool IsFirst = true;
+				public JsonTypeInfo TypeInfo;
+				public TupleContextInfoWrapper TupleContext;
+				public System.Collections.IEnumerator Items;
 			}
 		}
 	}

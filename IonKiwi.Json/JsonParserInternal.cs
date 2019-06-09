@@ -360,7 +360,7 @@ namespace IonKiwi.Json {
 						JsonParserDictionaryValueState propertyState = new JsonParserDictionaryValueState();
 						propertyState.Parent = dictionaryState;
 						propertyState.PropertyName = propertyName;
-						propertyState.TypeInfo = JsonReflection.GetTypeInfo(dictionaryState.TypeInfo.ItemType);
+						propertyState.TypeInfo = JsonReflection.GetTypeInfo(dictionaryState.TypeInfo.ValueType);
 						propertyState.TupleContext = GetNewContext(dictionaryState.TupleContext, "Value", propertyState.TypeInfo);
 						_currentState.Push(propertyState);
 						return HandleStateResult.None;
@@ -388,7 +388,7 @@ namespace IonKiwi.Json {
 
 					var itemState = new JsonParserArrayItemState();
 					itemState.Parent = dictionaryState;
-					itemState.TypeInfo = JsonReflection.GetTypeInfo(typeof(KeyValuePair<,>).MakeGenericType(dictionaryState.TypeInfo.KeyType, dictionaryState.TypeInfo.ItemType));
+					itemState.TypeInfo = JsonReflection.GetTypeInfo(dictionaryState.TypeInfo.ItemType);
 					itemState.TupleContext = dictionaryState.TupleContext;
 					//objectState.StartDepth = reader.Depth;
 					_currentState.Push(itemState);
