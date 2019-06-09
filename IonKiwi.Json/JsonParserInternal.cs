@@ -654,12 +654,24 @@ namespace IonKiwi.Json {
 					HandleStateCompletion(parentState, state);
 				}
 				else if (typeInfo.ObjectType == JsonObjectType.Raw) {
-					return HandleStateResult.Raw;
+					if (typeInfo.OriginalType == typeof(RawJson)) {
+						return HandleStateResult.Raw;
+					}
+					ThrowNotSupportedException(typeInfo.OriginalType);
 				}
 				else {
-					throw new NotImplementedException();
+					ThrowNotImplementedException();
+					return HandleStateResult.None;
 				}
 				return HandleStateResult.None;
+			}
+
+			private void ThrowNotSupportedException(Type t) {
+				throw new NotSupportedException(ReflectionUtility.GetTypeName(t));
+			}
+
+			private void ThrowNotImplementedException() {
+				throw new NotImplementedException();
 			}
 
 			private void HandleStateCompletion(JsonParserInternalState parentState, JsonParserInternalState completedState) {
