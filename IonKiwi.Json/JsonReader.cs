@@ -265,7 +265,7 @@ namespace IonKiwi.Json {
 					}
 					WriteToken(sb, currentToken, position.IsFirst);
 					position.IsFirst = false;
-					if (position.IsProperty) {
+					if (position.IsProperty && (currentToken == JsonToken.Boolean || currentToken == JsonToken.Null || currentToken == JsonToken.Number || currentToken == JsonToken.String)) {
 						stack.Pop();
 					}
 				}
@@ -322,7 +322,7 @@ namespace IonKiwi.Json {
 					}
 					WriteToken(sb, currentToken, position.IsFirst);
 					position.IsFirst = false;
-					if (position.IsProperty) {
+					if (position.IsProperty && (currentToken == JsonToken.Boolean || currentToken == JsonToken.Null || currentToken == JsonToken.Number || currentToken == JsonToken.String)) {
 						stack.Pop();
 					}
 				}
