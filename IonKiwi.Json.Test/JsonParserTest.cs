@@ -175,5 +175,72 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal(42, v.Value1);
 			Assert.Equal(43, v.Value2);
 		}
+
+		[DataContract]
+		public class Object2 {
+
+			[DataMember]
+			public RawJson Property1 { get; set; }
+		}
+
+		[Fact]
+		public void TestRaw1() {
+			string json = "{Property1:\"value1\"}";
+			var v = JsonParser.ParseSync<Object2>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Property1);
+			Assert.Equal("\"value1\"", v.Property1.Json);
+			return;
+		}
+
+		[Fact]
+		public void TestRaw2() {
+			string json = "{Property1:null}";
+			var v = JsonParser.ParseSync<Object2>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Property1);
+			Assert.Equal("null", v.Property1.Json);
+			return;
+		}
+
+		[Fact]
+		public void TestRaw3() {
+			string json = "{Property1:true}";
+			var v = JsonParser.ParseSync<Object2>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Property1);
+			Assert.Equal("true", v.Property1.Json);
+			return;
+		}
+
+		[Fact]
+		public void TestRaw4() {
+			string json = "{Property1:false}";
+			var v = JsonParser.ParseSync<Object2>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Property1);
+			Assert.Equal("false", v.Property1.Json);
+			return;
+		}
+
+		[Fact]
+		public void TestRaw5() {
+			string json = "{Property1:42}";
+			var v = JsonParser.ParseSync<Object2>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Property1);
+			Assert.Equal("42", v.Property1.Json);
+			return;
+		}
+
+		[Fact]
+		public void TestRaw6() {
+			string json = "{Property1:[{v1:1,v2:2},{v1:3,v2:4}]}";
+			var v = JsonParser.ParseSync<Object2>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Property1);
+			Assert.Equal("[{\"v1\":1,\"v2\":2},{\"v1\":3,\"v2\":4}]", v.Property1.Json);
+			return;
+		}
 	}
 }

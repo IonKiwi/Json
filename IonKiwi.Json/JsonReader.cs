@@ -217,6 +217,169 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		private sealed class RawPosition {
+			public bool IsFirst = true;
+			public bool IsProperty = false;
+		}
+
+		public async ValueTask<string> ReadRaw() {
+			var currentToken = Token;
+			if (currentToken == JsonToken.ObjectProperty) {
+				await Read().NoSync();
+			}
+
+			if (JsonReader.IsValueToken(currentToken)) {
+				if (currentToken == JsonToken.String) {
+					return "\"" + GetValue() + "\"";
+				}
+				return GetValue();
+			}
+			else if (currentToken == JsonToken.ObjectStart || currentToken == JsonToken.ArrayStart) {
+
+				Stack<RawPosition> stack = new Stack<RawPosition>();
+				stack.Push(new RawPosition());
+
+				StringBuilder sb = new StringBuilder();
+				WriteToken(sb, currentToken, true);
+
+				int startDepth = Depth;
+
+				do {
+					currentToken = await Read().NoSync();
+					RawPosition position = stack.Peek();
+					if (currentToken == JsonToken.None) {
+						throw new MoreDataExpectedException();
+					}
+					else if (currentToken == JsonToken.ObjectStart || currentToken == JsonToken.ArrayStart) {
+						stack.Push(new RawPosition());
+					}
+					else if (currentToken == JsonToken.ObjectProperty) {
+						stack.Push(new RawPosition() { IsProperty = true });
+					}
+					else if (currentToken == JsonToken.ObjectEnd || currentToken == JsonToken.ArrayEnd) {
+						stack.Pop();
+						if (stack.Count > 0) {
+							position = stack.Peek();
+							if (position.IsProperty) { stack.Pop(); }
+						}
+					}
+					WriteToken(sb, currentToken, position.IsFirst);
+					position.IsFirst = false;
+					if (position.IsProperty) {
+						stack.Pop();
+					}
+				}
+				while (Depth != startDepth);
+
+				return sb.ToString();
+			}
+			else {
+				ThrowNotStartTag(currentToken);
+				return null;
+			}
+		}
+
+		public string ReadRawSync() {
+			var currentToken = Token;
+			if (currentToken == JsonToken.ObjectProperty) {
+				ReadSync();
+			}
+
+			if (JsonReader.IsValueToken(currentToken)) {
+				if (currentToken == JsonToken.String) {
+					return "\"" + GetValue() + "\"";
+				}
+				return GetValue();
+			}
+			else if (currentToken == JsonToken.ObjectStart || currentToken == JsonToken.ArrayStart) {
+
+				Stack<RawPosition> stack = new Stack<RawPosition>();
+				stack.Push(new RawPosition());
+
+				StringBuilder sb = new StringBuilder();
+				WriteToken(sb, currentToken, true);
+
+				int startDepth = Depth;
+
+				do {
+					currentToken = ReadSync();
+					RawPosition position = stack.Peek();
+					if (currentToken == JsonToken.None) {
+						throw new MoreDataExpectedException();
+					}
+					else if (currentToken == JsonToken.ObjectStart || currentToken == JsonToken.ArrayStart) {
+						stack.Push(new RawPosition());
+					}
+					else if (currentToken == JsonToken.ObjectProperty) {
+						stack.Push(new RawPosition() { IsProperty = true });
+					}
+					else if (currentToken == JsonToken.ObjectEnd || currentToken == JsonToken.ArrayEnd) {
+						stack.Pop();
+						if (stack.Count > 0) {
+							position = stack.Peek();
+							if (position.IsProperty) { stack.Pop(); }
+						}
+					}
+					WriteToken(sb, currentToken, position.IsFirst);
+					position.IsFirst = false;
+					if (position.IsProperty) {
+						stack.Pop();
+					}
+				}
+				while (Depth != startDepth);
+
+				return sb.ToString();
+			}
+			else {
+				ThrowNotStartTag(currentToken);
+				return null;
+			}
+		}
+
+		private void WriteToken(StringBuilder sb, JsonToken token, bool isFirst) {
+			if (token == JsonToken.ObjectStart) {
+				if (!isFirst) { sb.Append(','); }
+				sb.Append("{");
+			}
+			else if (token == JsonToken.ArrayStart) {
+				if (!isFirst) { sb.Append(','); }
+				sb.Append("[");
+			}
+			else if (token == JsonToken.ObjectEnd) {
+				sb.Append("}");
+			}
+			else if (token == JsonToken.ArrayEnd) {
+				sb.Append("]");
+			}
+			else if (token == JsonToken.ObjectProperty) {
+				if (!isFirst) { sb.Append(','); }
+				sb.Append(JsonUtilities.JavaScriptStringEncode(GetValue(), JsonUtilities.JavaScriptEncodeMode.Hex, JsonUtilities.JavaScriptQuoteMode.Always));
+				sb.Append(":");
+			}
+			else if (token == JsonToken.Comment) {
+				return;
+			}
+			else if (token == JsonToken.Boolean || token == JsonToken.Null || token == JsonToken.Number) {
+				if (!isFirst) { sb.Append(','); }
+				sb.Append(GetValue());
+			}
+			else if (token == JsonToken.String) {
+				if (!isFirst) { sb.Append(','); }
+				sb.Append(JsonUtilities.JavaScriptStringEncode(GetValue(), JsonUtilities.JavaScriptEncodeMode.Hex, JsonUtilities.JavaScriptQuoteMode.Always));
+			}
+			else {
+				ThrowUnhandledToken(token);
+			}
+		}
+
+		private void ThrowUnhandledToken(JsonToken token) {
+			throw new NotImplementedException(token.ToString());
+		}
+
+		private void ThrowNotStartTag(JsonToken token) {
+			throw new InvalidOperationException("Reader is not positioned on a start tag. token: " + token);
+		}
+
 		internal void RewindReaderPositionForVisitor(JsonToken tokenType) {
 			if (!(tokenType == JsonToken.ObjectStart || tokenType == JsonToken.ArrayStart)) {
 				throw new InvalidOperationException($"'{nameof(tokenType)}' should be {JsonToken.ObjectStart} or {JsonToken.ArrayStart}, actual: {tokenType}");
@@ -2165,7 +2328,7 @@ namespace IonKiwi.Json {
 					state.Data.Append(c);
 					continue;
 				}
-				else if (c == 's' && state.Data.Length == 4) {
+				else if (c == 'e' && state.Data.Length == 4) {
 					state.Data.Append(c);
 					state.IsComplete = true;
 					token = JsonToken.Boolean;

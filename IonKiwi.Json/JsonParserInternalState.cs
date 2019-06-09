@@ -15,6 +15,7 @@ namespace IonKiwi.Json {
 				ProcessTypeToken,
 				CreateInstance,
 				HandleToken,
+				Raw,
 			}
 
 			private abstract class JsonParserInternalState {

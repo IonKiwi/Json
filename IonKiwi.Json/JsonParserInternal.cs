@@ -1,4 +1,5 @@
 ﻿using IonKiwi.Extenions;
+using IonKiwi.Json.MetaData;
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
@@ -44,6 +45,15 @@ namespace IonKiwi.Json {
 				else if (result == HandleStateResult.HandleToken) {
 					await HandleToken(reader).NoSync();
 				}
+				else if (result == HandleStateResult.Raw) {
+					string json = await reader.ReadRaw().NoSync();
+					var state = new JsonParserSimpleValueState();
+					state.Parent = _currentState.Peek();
+					state.Value = new RawJson(json);
+					state.IsComplete = true;
+					_currentState.Push(state);
+					HandleStateCompletion(state.Parent, state);
+				}
 			}
 
 			public void HandleTokenSync(JsonReader reader) {
@@ -69,6 +79,15 @@ namespace IonKiwi.Json {
 				}
 				else if (result == HandleStateResult.HandleToken) {
 					HandleTokenSync(reader);
+				}
+				else if (result == HandleStateResult.Raw) {
+					string json = reader.ReadRawSync();
+					var state = new JsonParserSimpleValueState();
+					state.Parent = _currentState.Peek();
+					state.Value = new RawJson(json);
+					state.IsComplete = true;
+					_currentState.Push(state);
+					HandleStateCompletion(state.Parent, state);
 				}
 			}
 
@@ -633,6 +652,9 @@ namespace IonKiwi.Json {
 					state.IsComplete = true;
 					_currentState.Push(state);
 					HandleStateCompletion(parentState, state);
+				}
+				else if (typeInfo.ObjectType == JsonObjectType.Raw) {
+					return HandleStateResult.Raw;
 				}
 				else {
 					throw new NotImplementedException();
