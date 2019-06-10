@@ -138,7 +138,7 @@ namespace IonKiwi.Json {
 		public async Task Skip() {
 			var token = _token;
 			if (IsValueToken(token) || token == JsonToken.Comment) {
-				await Read().NoSync();
+				return;
 			}
 			else if (token == JsonToken.ObjectStart) {
 				int depth = Depth;
@@ -179,7 +179,7 @@ namespace IonKiwi.Json {
 		public void SkipSync() {
 			var token = _token;
 			if (IsValueToken(token) || token == JsonToken.Comment) {
-				ReadSync();
+				return;
 			}
 			else if (token == JsonToken.ObjectStart) {
 				int depth = Depth;
