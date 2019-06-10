@@ -342,7 +342,8 @@ namespace IonKiwi.Json {
 						}
 					}
 					if (emitType) {
-						return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\",");
+						objectState.IsFirst = false;
+						return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
 					}
 					return new byte[] { (byte)'{' };
 				}
@@ -379,7 +380,8 @@ namespace IonKiwi.Json {
 						}
 					}
 					if (emitType) {
-						return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\",");
+						arrayState.IsFirst = false;
+						return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
 					}
 					return new byte[] { (byte)'[' };
 				}
@@ -407,7 +409,8 @@ namespace IonKiwi.Json {
 							}
 						}
 						if (emitType) {
-							return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\",");
+							objectState.IsFirst = false;
+							return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
 						}
 						return new byte[] { (byte)'{' };
 					}
@@ -434,7 +437,8 @@ namespace IonKiwi.Json {
 							}
 						}
 						if (emitType) {
-							return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\",");
+							arrayState.IsFirst = false;
+							return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
 						}
 						return new byte[] { (byte)'[' };
 					}

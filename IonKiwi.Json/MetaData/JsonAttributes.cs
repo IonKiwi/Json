@@ -4,7 +4,7 @@ using System.Text;
 
 namespace IonKiwi.Json.MetaData {
 
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Field, Inherited = false)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Property | AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
 	public sealed class JsonKnownTypeAttribute : Attribute {
 
 		public JsonKnownTypeAttribute() { }

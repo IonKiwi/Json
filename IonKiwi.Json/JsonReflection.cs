@@ -24,6 +24,7 @@ namespace IonKiwi.Json {
 			Dictionary,
 			SimpleValue,
 			Raw,
+			Untyped,
 		}
 
 		internal sealed class JsonTypeInfo {
@@ -156,6 +157,16 @@ namespace IonKiwi.Json {
 				ti.ObjectType = JsonObjectType.Raw;
 				return ti;
 			}
+			else if (t == typeof(object) || t.IsInterface) {
+				ti.ObjectType = JsonObjectType.Untyped;
+				if (t.IsInterface) {
+					var interfaceKnownTypes = t.GetCustomAttributes<JsonKnownTypeAttribute>();
+					foreach (var knownType in interfaceKnownTypes) {
+						ti.KnownTypes.Add(knownType.KnownType);
+					}
+				}
+				return ti;
+			}
 			else if (IsTupleType(t, out var tupleRank, out isNullable, out var placeHolderType, out var finalizeMethod)) {
 				ti.IsTuple = true;
 				ti.IsNullable = isNullable;
@@ -239,6 +250,12 @@ namespace IonKiwi.Json {
 						else if (td == typeof(Dictionary<,>)) {
 							dictInfo = new JsonDictionaryAttribute();
 						}
+					}
+
+					if (t.IsInterface) {
+						ti.KnownTypes.AddRange(md.KnownTypes);
+						ti.ObjectType = JsonObjectType.Untyped;
+						return ti;
 					}
 				}
 			}
