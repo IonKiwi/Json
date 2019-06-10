@@ -27,6 +27,16 @@ namespace IonKiwi.Json.Newtonsoft {
 					var currentType = typeHierarchy[i];
 					var m = currentType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
 					foreach (MethodInfo mi in m) {
+						var l3 = mi.GetCustomAttributes(typeof(OnSerializingAttribute), false);
+						if (l3 != null && l3.Length > 0) {
+							e.AddOnSerializing(CreateCallbackAction(mi));
+						}
+
+						var l4 = mi.GetCustomAttributes(typeof(OnSerializedAttribute), false);
+						if (l4 != null && l4.Length > 0) {
+							e.AddOnSerialized(CreateCallbackAction(mi));
+						}
+
 						var l2 = mi.GetCustomAttributes(typeof(OnDeserializingAttribute), false);
 						if (l2 != null && l2.Length > 0) {
 							e.AddOnDeserializing(CreateCallbackAction(mi));

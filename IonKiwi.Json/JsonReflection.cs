@@ -50,6 +50,8 @@ namespace IonKiwi.Json {
 			public Func<object, object> GetValueFromKeyValuePair;
 			public Func<object, object> FinalizeAction;
 			public TupleContextInfo TupleContext;
+			public readonly List<Action<object>> OnSerialized = new List<Action<object>>();
+			public readonly List<Action<object>> OnSerializing = new List<Action<object>>();
 			public readonly List<Action<object>> OnDeserialized = new List<Action<object>>();
 			public readonly List<Action<object>> OnDeserializing = new List<Action<object>>();
 			public readonly HashSet<Type> KnownTypes = new HashSet<Type>();
@@ -134,8 +136,7 @@ namespace IonKiwi.Json {
 			var collectionInfo = t.GetCustomAttribute<JsonCollectionAttribute>(false);
 			var dictInfo = t.GetCustomAttribute<JsonDictionaryAttribute>(false);
 
-			Dictionary<string, JsonMetaDataEventArgs.PropertyInfo> customProperties = null;
-			List<Type> customKnownTypes = null;
+			JsonMetaDataEventArgs md = null;
 
 			if (t.IsArray) {
 				ti.ObjectType = JsonObjectType.Array;
@@ -223,22 +224,12 @@ namespace IonKiwi.Json {
 			}
 			else if (objectInfo == null && collectionInfo == null && dictInfo == null) {
 
-				var md = new JsonMetaDataEventArgs(t);
+				md = new JsonMetaDataEventArgs(t);
 				JsonMetaData.OnMetaData(md);
 
-				if (md.ObjectAttribute != null) {
-					objectInfo = md.ObjectAttribute;
-					customProperties = md.Properties;
-					customKnownTypes = md.KnownTypes;
-				}
-				if (md.CollectionAttribute != null) {
-					collectionInfo = md.CollectionAttribute;
-					customKnownTypes = md.KnownTypes;
-				}
-				if (md.DictionaryAttribute != null) {
-					dictInfo = md.DictionaryAttribute;
-					customKnownTypes = md.KnownTypes;
-				}
+				objectInfo = md.ObjectAttribute;
+				collectionInfo = md.CollectionAttribute;
+				dictInfo = md.DictionaryAttribute;
 
 				// non explicit json type support
 				if (objectInfo == null && collectionInfo == null && dictInfo == null) {
@@ -246,9 +237,11 @@ namespace IonKiwi.Json {
 						var td = t.GetGenericTypeDefinition();
 						if (td == typeof(List<>)) {
 							collectionInfo = new JsonCollectionAttribute();
+							md = null;
 						}
 						else if (td == typeof(Dictionary<,>)) {
 							dictInfo = new JsonDictionaryAttribute();
+							md = null;
 						}
 					}
 
@@ -343,8 +336,8 @@ namespace IonKiwi.Json {
 					ti.LogMissingNonRequiredProperties = false;
 				}
 
-				if (customProperties != null) {
-					foreach (var cp in customProperties) {
+				if (md != null) {
+					foreach (var cp in md.Properties) {
 						var pix = new JsonPropertyInfo() {
 							PropertyType = cp.Value.PropertyType,
 							Setter1 = cp.Value.Setter,
@@ -465,6 +458,16 @@ namespace IonKiwi.Json {
 				var currentType = typeHierarchy[i];
 				var m = currentType.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
 				foreach (MethodInfo mi in m) {
+					var l3 = mi.GetCustomAttributes(typeof(JsonOnSerializingAttribute), false);
+					if (l3 != null && l3.Length > 0) {
+						ti.OnSerializing.Add(CreateCallbackAction(mi));
+					}
+
+					var l4 = mi.GetCustomAttributes(typeof(JsonOnSerializedAttribute), false);
+					if (l4 != null && l4.Length > 0) {
+						ti.OnSerialized.Add(CreateCallbackAction(mi));
+					}
+
 					var l2 = mi.GetCustomAttributes(typeof(JsonOnDeserializingAttribute), false);
 					if (l2 != null && l2.Length > 0) {
 						ti.OnDeserializing.Add(CreateCallbackAction(mi));
@@ -477,6 +480,13 @@ namespace IonKiwi.Json {
 				}
 			}
 
+			if (md != null) {
+				ti.OnSerializing.AddRange(md.OnSerializing);
+				ti.OnSerialized.AddRange(md.OnSerialized);
+				ti.OnDeserializing.AddRange(md.OnDeserializing);
+				ti.OnDeserialized.AddRange(md.OnDeserialized);
+			}
+
 			ti.IsSingleOrArrayValue = collectionInfo?.IsSingleOrArrayValue == true;
 			if (ti.IsSingleOrArrayValue && ti.ObjectType != JsonObjectType.Array) {
 				throw new InvalidOperationException("IsSingleOrArrayValue is only valid for 'array' types.");
@@ -487,8 +497,8 @@ namespace IonKiwi.Json {
 				ti.KnownTypes.Add(knownType.KnownType);
 			}
 
-			if (customKnownTypes != null) {
-				ti.KnownTypes.AddRange(customKnownTypes);
+			if (md != null) {
+				ti.KnownTypes.AddRange(md.KnownTypes);
 			}
 
 			ti.TupleContext = CreateTupleContextInfo(t);

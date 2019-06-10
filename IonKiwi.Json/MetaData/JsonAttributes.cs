@@ -17,6 +17,14 @@ namespace IonKiwi.Json.MetaData {
 	}
 
 	[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+	public sealed class JsonOnSerializingAttribute : Attribute {
+	}
+
+	[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+	public sealed class JsonOnSerializedAttribute : Attribute {
+	}
+
+	[AttributeUsage(AttributeTargets.Method, Inherited = false)]
 	public sealed class JsonOnDeserializingAttribute : Attribute {
 	}
 

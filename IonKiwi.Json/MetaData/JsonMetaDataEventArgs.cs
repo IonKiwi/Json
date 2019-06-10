@@ -24,6 +24,10 @@ namespace IonKiwi.Json.MetaData {
 
 		internal Dictionary<string, PropertyInfo> Properties { get; } = new Dictionary<string, PropertyInfo>(StringComparer.Ordinal);
 
+		internal List<Action<object>> OnSerializing { get; } = new List<Action<object>>();
+
+		internal List<Action<object>> OnSerialized { get; } = new List<Action<object>>();
+
 		internal List<Action<object>> OnDeserializing { get; } = new List<Action<object>>();
 
 		internal List<Action<object>> OnDeserialized { get; } = new List<Action<object>>();
@@ -36,6 +40,56 @@ namespace IonKiwi.Json.MetaData {
 
 		public void AddKnownTypes(params Type[] knownTypes) {
 			KnownTypes.AddRange(knownTypes);
+		}
+
+		public void AddOnSerializing<TValue>(Action<TValue> callback) where TValue : class {
+			var valueType = typeof(TValue);
+			var validValueType = valueType == RootType;
+			if (!validValueType) {
+				if (valueType.IsInterface) {
+					validValueType = ReflectionUtility.HasInterface(RootType, valueType);
+				}
+				else if (RootType.IsSubclassOf(valueType)) {
+					validValueType = true;
+				}
+			}
+
+			if (!validValueType) {
+				throw new InvalidOperationException("Invalid value type '" + ReflectionUtility.GetTypeName(valueType) + "' for root type '" + ReflectionUtility.GetTypeName(RootType) + "'.");
+			}
+
+			if (valueType == typeof(object)) {
+				OnSerializing.Add((Action<object>)callback);
+			}
+			else {
+				Action<object> callbackWrapper = (obj) => callback((TValue)obj);
+				OnSerializing.Add(callbackWrapper);
+			}
+		}
+
+		public void AddOnSerialized<TValue>(Action<TValue> callback) where TValue : class {
+			var valueType = typeof(TValue);
+			var validValueType = valueType == RootType;
+			if (!validValueType) {
+				if (valueType.IsInterface) {
+					validValueType = ReflectionUtility.HasInterface(RootType, valueType);
+				}
+				else if (RootType.IsSubclassOf(valueType)) {
+					validValueType = true;
+				}
+			}
+
+			if (!validValueType) {
+				throw new InvalidOperationException("Invalid value type '" + ReflectionUtility.GetTypeName(valueType) + "' for root type '" + ReflectionUtility.GetTypeName(RootType) + "'.");
+			}
+
+			if (valueType == typeof(object)) {
+				OnSerialized.Add((Action<object>)callback);
+			}
+			else {
+				Action<object> callbackWrapper = (obj) => callback((TValue)obj);
+				OnSerialized.Add(callbackWrapper);
+			}
 		}
 
 		public void AddOnDeserializing<TValue>(Action<TValue> callback) where TValue : class {

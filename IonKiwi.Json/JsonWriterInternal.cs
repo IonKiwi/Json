@@ -83,6 +83,11 @@ namespace IonKiwi.Json {
 				if (!state.Properties.MoveNext()) {
 					state.Properties.Dispose();
 					_currentState.Pop();
+
+					foreach (var cb in state.TypeInfo.OnSerialized) {
+						cb(state.Value);
+					}
+
 					return new byte[] { (byte)'}' };
 				}
 
@@ -140,6 +145,11 @@ namespace IonKiwi.Json {
 						disposable.Dispose();
 					}
 					_currentState.Pop();
+
+					foreach (var cb in state.TypeInfo.OnSerialized) {
+						cb(state.Value);
+					}
+
 					if (state.IsSingleOrArrayValue) {
 						if (state.IsFirst) {
 							return new byte[] { (byte)'[', (byte)']' };
@@ -197,6 +207,11 @@ namespace IonKiwi.Json {
 						disposable.Dispose();
 					}
 					_currentState.Pop();
+
+					foreach (var cb in state.TypeInfo.OnSerialized) {
+						cb(state.Value);
+					}
+
 					return new byte[] { (byte)'}' };
 				}
 
@@ -246,6 +261,11 @@ namespace IonKiwi.Json {
 						disposable.Dispose();
 					}
 					_currentState.Pop();
+
+					foreach (var cb in state.TypeInfo.OnSerialized) {
+						cb(state.Value);
+					}
+
 					return new byte[] { (byte)']' };
 				}
 
@@ -340,6 +360,10 @@ namespace IonKiwi.Json {
 					objectState.TupleContext = tupleContext;
 					_currentState.Push(objectState);
 
+					foreach (var cb in objectState.TypeInfo.OnSerializing) {
+						cb(value);
+					}
+
 					bool emitType = false;
 					if (typeInfo.OriginalType != objectType) {
 						emitType = true;
@@ -385,6 +409,10 @@ namespace IonKiwi.Json {
 					arrayState.TupleContext = tupleContext;
 					_currentState.Push(arrayState);
 
+					foreach (var cb in arrayState.TypeInfo.OnSerializing) {
+						cb(value);
+					}
+
 					if (singleOrArrayValue) {
 						// no $type support
 						return null;
@@ -419,6 +447,11 @@ namespace IonKiwi.Json {
 						objectState.TypeInfo = typeInfo;
 						objectState.TupleContext = tupleContext;
 						_currentState.Push(objectState);
+
+						foreach (var cb in objectState.TypeInfo.OnSerializing) {
+							cb(value);
+						}
+
 						bool emitType = false;
 						if (typeInfo.OriginalType != objectType) {
 							emitType = true;
@@ -446,6 +479,10 @@ namespace IonKiwi.Json {
 						arrayState.TypeInfo = typeInfo;
 						arrayState.TupleContext = tupleContext;
 						_currentState.Push(arrayState);
+
+						foreach (var cb in arrayState.TypeInfo.OnSerializing) {
+							cb(value);
+						}
 
 						bool emitType = false;
 						if (typeInfo.OriginalType != objectType) {
