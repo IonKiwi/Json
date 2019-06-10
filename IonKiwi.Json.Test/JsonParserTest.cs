@@ -252,5 +252,21 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal("{\"v1\":1,\"v2\":[42,{\"v3\":\"test\"}]}", v.Property1.Json);
 			return;
 		}
+
+		[DataContract]
+		private class Object3 {
+			[DataMember]
+			public byte[] Value { get; set; }
+		}
+
+		[Fact]
+		public void TestByteArray() {
+			string json = "{Value:\"AQ==\"}";
+			var v = JsonParser.ParseSync<Object3>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(v);
+			Assert.NotNull(v.Value);
+			Assert.Single(v.Value);
+			Assert.Equal(1, v.Value[0]);
+		}
 	}
 }

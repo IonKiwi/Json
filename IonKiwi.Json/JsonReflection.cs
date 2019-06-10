@@ -103,7 +103,7 @@ namespace IonKiwi.Json {
 				return result;
 			}
 
-			bool isSimpleValue = (t.IsValueType && t.IsPrimitive) || t == typeof(string) || t == typeof(Uri) || t == typeof(DateTime) || t == typeof(Decimal) || t == typeof(BigInteger) || t == typeof(TimeSpan) || t.IsEnum;
+			bool isSimpleValue = (t.IsValueType && t.IsPrimitive) || t == typeof(string) || t == typeof(Uri) || t == typeof(DateTime) || t == typeof(Decimal) || t == typeof(BigInteger) || t == typeof(TimeSpan) || t.IsEnum || t == typeof(byte[]);
 			isNullable = !t.IsValueType;
 			return isSimpleValue;
 		}
