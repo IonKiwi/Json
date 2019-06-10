@@ -270,6 +270,132 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		private static void FindTuples(Type[] typeArguments, Type[] genericTypeParameters, ref int offset, TupleElementNamesAttribute tupleNames, TypeLevelTupleInfo typeInfo) {
+			for (int i = 0; i < typeArguments.Length; i++) {
+				var ta = typeArguments[i];
+				if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
+
+					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
+					pInfo.Parameter = genericTypeParameters[i];
+					pInfo.RealType = ta;
+					for (int ii = offset; ii < offset + tupleRank; ii++) {
+						pInfo.TupleNames.Add(tupleNames.TransformNames[ii]);
+					}
+
+					typeInfo.SubTypes.Add(pInfo.Parameter, pInfo);
+					offset += tupleRank;
+
+					var subTypeArguments = pInfo.RealType.GenericTypeArguments;
+					var subTypeParameters = pInfo.RealType.GetGenericTypeDefinition().GetGenericArguments();
+					FindTuples(subTypeArguments, subTypeParameters, ref offset, tupleNames, pInfo);
+				}
+				else if (ta.IsGenericType) {
+					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
+					pInfo.Parameter = genericTypeParameters[i];
+					pInfo.RealType = ta;
+
+					var subTypeArguments = pInfo.RealType.GenericTypeArguments;
+					var subTypeParameters = pInfo.RealType.GetGenericTypeDefinition().GetGenericArguments();
+					FindTuples(subTypeArguments, subTypeParameters, ref offset, tupleNames, pInfo);
+				}
+			}
+		}
+
+		private static void FindTuples(Type[] typeArguments, Type[] genericTypeParameters, ref int offset, TupleElementNamesAttribute tupleNames, Dictionary<Type, TypeLevelTupleInfo> typeInfo) {
+			for (int i = 0; i < typeArguments.Length; i++) {
+				var ta = typeArguments[i];
+				if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
+
+					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
+					pInfo.Parameter = genericTypeParameters[i];
+					pInfo.RealType = ta;
+					for (int ii = offset; ii < offset + tupleRank; ii++) {
+						pInfo.TupleNames.Add(tupleNames.TransformNames[ii]);
+					}
+
+					typeInfo.Add(pInfo.Parameter, pInfo);
+					offset += tupleRank;
+
+					var subTypeArguments = pInfo.RealType.GenericTypeArguments;
+					var subTypeParameters = pInfo.RealType.GetGenericTypeDefinition().GetGenericArguments();
+					FindTuples(subTypeArguments, subTypeParameters, ref offset, tupleNames, pInfo);
+				}
+				else if (ta.IsGenericType) {
+					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
+					pInfo.Parameter = genericTypeParameters[i];
+					pInfo.RealType = ta;
+					typeInfo.Add(pInfo.Parameter, pInfo);
+
+					var subTypeArguments = pInfo.RealType.GenericTypeArguments;
+					var subTypeParameters = pInfo.RealType.GetGenericTypeDefinition().GetGenericArguments();
+					FindTuples(subTypeArguments, subTypeParameters, ref offset, tupleNames, pInfo);
+				}
+			}
+		}
+
+		private static void FindTuples(Type[] typeArguments, Type[] genericTypeParameters, ref int offset, TypeLevelTupleInfo typeInfo) {
+			for (int i = 0; i < typeArguments.Length; i++) {
+				var ta = typeArguments[i];
+				if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
+
+					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
+					pInfo.Parameter = genericTypeParameters[i];
+					pInfo.RealType = ta;
+					for (int ii = offset; ii < offset + tupleRank; ii++) {
+						pInfo.TupleIndexes.Add(ii);
+					}
+
+					typeInfo.SubTypes.Add(pInfo.Parameter, pInfo);
+					offset += tupleRank;
+
+					var subTypeArguments = pInfo.RealType.GenericTypeArguments;
+					var subTypeParameters = pInfo.RealType.GetGenericTypeDefinition().GetGenericArguments();
+					FindTuples(subTypeArguments, subTypeParameters, ref offset, pInfo);
+				}
+				else if (ta.IsGenericType) {
+					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
+					pInfo.Parameter = genericTypeParameters[i];
+					pInfo.RealType = ta;
+
+					var subTypeArguments = pInfo.RealType.GenericTypeArguments;
+					var subTypeParameters = pInfo.RealType.GetGenericTypeDefinition().GetGenericArguments();
+					FindTuples(subTypeArguments, subTypeParameters, ref offset, pInfo);
+				}
+			}
+		}
+
+		private static void FindTuples(Type[] typeArguments, Type[] genericTypeParameters, ref int offset, Dictionary<Type, TypeLevelTupleInfo> typeInfo) {
+			for (int i = 0; i < typeArguments.Length; i++) {
+				var ta = typeArguments[i];
+				if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
+
+					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
+					pInfo.Parameter = genericTypeParameters[i];
+					pInfo.RealType = ta;
+					for (int ii = offset; ii < offset + tupleRank; ii++) {
+						pInfo.TupleIndexes.Add(ii);
+					}
+
+					typeInfo.Add(pInfo.Parameter, pInfo);
+					offset += tupleRank;
+
+					var subTypeArguments = pInfo.RealType.GenericTypeArguments;
+					var subTypeParameters = pInfo.RealType.GetGenericTypeDefinition().GetGenericArguments();
+					FindTuples(subTypeArguments, subTypeParameters, ref offset, pInfo);
+				}
+				else if (ta.IsGenericType) {
+					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
+					pInfo.Parameter = genericTypeParameters[i];
+					pInfo.RealType = ta;
+					typeInfo.Add(pInfo.Parameter, pInfo);
+
+					var subTypeArguments = pInfo.RealType.GenericTypeArguments;
+					var subTypeParameters = pInfo.RealType.GetGenericTypeDefinition().GetGenericArguments();
+					FindTuples(subTypeArguments, subTypeParameters, ref offset, pInfo);
+				}
+			}
+		}
+
 		private static void HandleTypeLevelTupleNames(TupleElementNamesAttribute typeTupleNames, Type currentType, TupleContextInfo context) {
 			var baseType = currentType.BaseType;
 			var baseTypeDefinition = baseType.GetGenericTypeDefinition();
@@ -282,62 +408,7 @@ namespace IonKiwi.Json {
 			}
 
 			Dictionary<Type, TypeLevelTupleInfo> typeInfo = new Dictionary<Type, TypeLevelTupleInfo>();
-
-			for (int i = 0; i < typeArguments.Length; i++) {
-				var ta = typeArguments[i];
-				if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
-
-					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-					pInfo.Parameter = baseTypeArguments[i];
-					pInfo.RealType = ta;
-					for (int ii = offset; ii < offset + tupleRank; ii++) {
-						pInfo.TupleNames.Add(typeTupleNames.TransformNames[ii]);
-					}
-
-					typeInfo.Add(pInfo.Parameter, pInfo);
-					offset += tupleRank;
-				}
-				else if (ta.IsGenericType) {
-					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-					pInfo.Parameter = baseTypeArguments[i];
-					pInfo.RealType = ta;
-					typeInfo.Add(pInfo.Parameter, pInfo);
-				}
-			}
-
-			List<Dictionary<Type, TypeLevelTupleInfo>> currentTypeInfo = new List<Dictionary<Type, TypeLevelTupleInfo>>() { typeInfo };
-			do {
-				foreach (var item in currentTypeInfo) {
-					foreach (var ti in item) {
-						var currentTypeArguments = ti.Value.RealType.GenericTypeArguments;
-						var currentTypeParameters = ti.Value.RealType.GetGenericTypeDefinition().GetGenericArguments();
-
-						for (int i = 0; i < currentTypeArguments.Length; i++) {
-							var ta = currentTypeArguments[i];
-							if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
-
-								TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-								pInfo.Parameter = currentTypeParameters[i];
-								pInfo.RealType = ta;
-								for (int ii = offset; ii < offset + tupleRank; ii++) {
-									pInfo.TupleNames.Add(typeTupleNames.TransformNames[ii]);
-								}
-
-								ti.Value.SubTypes.Add(pInfo.Parameter, pInfo);
-								offset += tupleRank;
-							}
-							else if (ta.IsGenericType) {
-								TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-								pInfo.Parameter = currentTypeParameters[i];
-								pInfo.RealType = ta;
-								ti.Value.SubTypes.Add(pInfo.Parameter, pInfo);
-							}
-						}
-					}
-				}
-				currentTypeInfo = currentTypeInfo.SelectMany(z => z.Values).Select(z => z.SubTypes).ToList();
-			}
-			while (currentTypeInfo.Count > 0);
+			FindTuples(typeArguments, baseTypeArguments, ref offset, typeTupleNames, typeInfo);
 
 			// find generic parameters
 			if (typeInfo.Count > 0) {
@@ -345,81 +416,26 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		private static void HandlePropertyLevelTupleNames(TupleElementNamesAttribute typeTupleNames, Type currentType, TupleContextInfo context) {
+		private static void HandlePropertyLevelTupleNames(TupleElementNamesAttribute tupleNames, Type currentType, TupleContextInfo context) {
 
 			int offset = 0;
 			var typeDefinition = currentType.GetGenericTypeDefinition();
 			var typeParameters = typeDefinition.GetGenericArguments();
 			var typeArguments = currentType.GenericTypeArguments;
 
-			Dictionary<Type, TypeLevelTupleInfo> typeInfo = new Dictionary<Type, TypeLevelTupleInfo>();
-
-			if (ReflectionUtility.IsTupleType(currentType, out var tupleRank, out var isNullable)) {
-				for (int ii = offset, i = 0; ii < offset + tupleRank; ii++, i++) {
-					context.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), typeTupleNames.TransformNames[ii]);
-				}
-				offset += tupleRank;
-			}
-
 			if (typeArguments.Length != typeParameters.Length) {
 				throw new Exception("Unexpected generic type arguments for type: " + ReflectionUtility.GetTypeName(currentType));
 			}
 
-			for (int i = 0; i < typeArguments.Length; i++) {
-				var ta = typeArguments[i];
-				if (ReflectionUtility.IsTupleType(ta, out tupleRank, out isNullable)) {
-
-					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-					pInfo.Parameter = typeParameters[i];
-					pInfo.RealType = ta;
-					for (int ii = offset; ii < offset + tupleRank; ii++) {
-						pInfo.TupleNames.Add(typeTupleNames.TransformNames[ii]);
-					}
-
-					typeInfo.Add(pInfo.Parameter, pInfo);
-					offset += tupleRank;
+			if (ReflectionUtility.IsTupleType(currentType, out var tupleRank, out var isNullable)) {
+				for (int ii = offset, i = 0; ii < offset + tupleRank; ii++, i++) {
+					context.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleNames.TransformNames[ii]);
 				}
-				else if (ta.IsGenericType) {
-					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-					pInfo.Parameter = typeParameters[i];
-					pInfo.RealType = ta;
-					typeInfo.Add(pInfo.Parameter, pInfo);
-				}
+				offset += tupleRank;
 			}
 
-			List<Dictionary<Type, TypeLevelTupleInfo>> currentTypeInfo = new List<Dictionary<Type, TypeLevelTupleInfo>>() { typeInfo };
-			do {
-				foreach (var item in currentTypeInfo) {
-					foreach (var ti in item) {
-						var currentTypeArguments = ti.Value.RealType.GenericTypeArguments;
-						var currentTypeParameters = ti.Value.RealType.GetGenericTypeDefinition().GetGenericArguments();
-
-						for (int i = 0; i < currentTypeArguments.Length; i++) {
-							var ta = currentTypeArguments[i];
-							if (ReflectionUtility.IsTupleType(ta, out tupleRank, out isNullable)) {
-
-								TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-								pInfo.Parameter = currentTypeParameters[i];
-								pInfo.RealType = ta;
-								for (int ii = offset; ii < offset + tupleRank; ii++) {
-									pInfo.TupleNames.Add(typeTupleNames.TransformNames[ii]);
-								}
-
-								ti.Value.SubTypes.Add(pInfo.Parameter, pInfo);
-								offset += tupleRank;
-							}
-							else if (ta.IsGenericType) {
-								TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-								pInfo.Parameter = currentTypeParameters[i];
-								pInfo.RealType = ta;
-								ti.Value.SubTypes.Add(pInfo.Parameter, pInfo);
-							}
-						}
-					}
-				}
-				currentTypeInfo = currentTypeInfo.SelectMany(z => z.Values).Select(z => z.SubTypes).ToList();
-			}
-			while (currentTypeInfo.Count > 0);
+			Dictionary<Type, TypeLevelTupleInfo> typeInfo = new Dictionary<Type, TypeLevelTupleInfo>();
+			FindTuples(typeArguments, typeParameters, ref offset, tupleNames, typeInfo);
 
 			// find generic parameters
 			if (typeInfo.Count > 0) {
@@ -436,7 +452,6 @@ namespace IonKiwi.Json {
 			}
 
 			int offset = 0;
-			Dictionary<Type, TypeLevelTupleInfo> typeInfo = new Dictionary<Type, TypeLevelTupleInfo>();
 
 			if (ReflectionUtility.IsTupleType(rootType, out var tupleRank, out var isNullable)) {
 				for (int i = 0, ii = offset; ii < offset + tupleRank; ii++, i++) {
@@ -445,61 +460,8 @@ namespace IonKiwi.Json {
 				offset += tupleRank;
 			}
 
-			for (int i = 0; i < typeArguments.Length; i++) {
-				var ta = typeArguments[i];
-				if (ReflectionUtility.IsTupleType(ta, out tupleRank, out isNullable)) {
-
-					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-					pInfo.Parameter = genericTypeParameters[i];
-					pInfo.RealType = ta;
-					for (int ii = offset; ii < offset + tupleRank; ii++) {
-						pInfo.TupleIndexes.Add(ii);
-					}
-
-					typeInfo.Add(pInfo.Parameter, pInfo);
-					offset += tupleRank;
-				}
-				else if (ta.IsGenericType) {
-					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-					pInfo.Parameter = genericTypeParameters[i];
-					pInfo.RealType = ta;
-					typeInfo.Add(pInfo.Parameter, pInfo);
-				}
-			}
-
-			List<Dictionary<Type, TypeLevelTupleInfo>> currentTypeInfo = new List<Dictionary<Type, TypeLevelTupleInfo>>() { typeInfo };
-			do {
-				foreach (var item in currentTypeInfo) {
-					foreach (var ti in item) {
-						var currentTypeArguments = ti.Value.RealType.GenericTypeArguments;
-						var currentTypeParameters = ti.Value.RealType.GetGenericTypeDefinition().GetGenericArguments();
-
-						for (int i = 0; i < currentTypeArguments.Length; i++) {
-							var ta = currentTypeArguments[i];
-							if (ReflectionUtility.IsTupleType(ta, out tupleRank, out isNullable)) {
-
-								TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-								pInfo.Parameter = currentTypeParameters[i];
-								pInfo.RealType = ta;
-								for (int ii = offset; ii < offset + tupleRank; ii++) {
-									pInfo.TupleIndexes.Add(ii);
-								}
-
-								ti.Value.SubTypes.Add(pInfo.Parameter, pInfo);
-								offset += tupleRank;
-							}
-							else if (ta.IsGenericType) {
-								TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
-								pInfo.Parameter = currentTypeParameters[i];
-								pInfo.RealType = ta;
-								ti.Value.SubTypes.Add(pInfo.Parameter, pInfo);
-							}
-						}
-					}
-				}
-				currentTypeInfo = currentTypeInfo.SelectMany(z => z.Values).Select(z => z.SubTypes).ToList();
-			}
-			while (currentTypeInfo.Count > 0);
+			Dictionary<Type, TypeLevelTupleInfo> typeInfo = new Dictionary<Type, TypeLevelTupleInfo>();
+			FindTuples(typeArguments, genericTypeParameters, ref offset, typeInfo);
 
 			// find generic parameters
 			if (typeInfo.Count > 0) {
