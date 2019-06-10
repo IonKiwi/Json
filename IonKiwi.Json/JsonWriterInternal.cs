@@ -129,7 +129,7 @@ namespace IonKiwi.Json {
 					return null;
 				}
 				state.Processed = true;
-				var data = HandleValue(state, state.Value, state.TypeInfo.OriginalType, state.TypeInfo, state.TupleContext);
+				var data = HandleValue(state, state.Value, state.ValueType, state.TypeInfo, state.TupleContext);
 				return data;
 			}
 
@@ -152,7 +152,7 @@ namespace IonKiwi.Json {
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
 				newState.TypeInfo = JsonReflection.GetTypeInfo(state.TypeInfo.ItemType);
 				newState.TupleContext = GetNewContext(state.TupleContext, "Item", newState.TypeInfo);
-				if (newState.ValueType != realType) {
+				if (newState.ValueType != realType && !(newState.TypeInfo.OriginalType.IsValueType && newState.TypeInfo.IsNullable && newState.TypeInfo.ItemType == realType)) {
 					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 					newState.TypeInfo = newTypeInfo;
 					newState.TupleContext = GetContextForNewType(newState.TupleContext, newTypeInfo);
@@ -172,7 +172,7 @@ namespace IonKiwi.Json {
 					return null;
 				}
 				state.Processed = true;
-				var data = HandleValue(state, state.Value, state.TypeInfo.OriginalType, state.TypeInfo, state.TupleContext);
+				var data = HandleValue(state, state.Value, state.ValueType, state.TypeInfo, state.TupleContext);
 				return data;
 			}
 
@@ -213,7 +213,7 @@ namespace IonKiwi.Json {
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
 				newState.TypeInfo = JsonReflection.GetTypeInfo(state.TypeInfo.ValueType);
 				newState.TupleContext = GetNewContext(state.TupleContext, "Value", newState.TypeInfo);
-				if (newState.ValueType != realType) {
+				if (newState.ValueType != realType && !(newState.TypeInfo.OriginalType.IsValueType && newState.TypeInfo.IsNullable && newState.TypeInfo.ItemType == realType)) {
 					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 					newState.TypeInfo = newTypeInfo;
 					newState.TupleContext = GetContextForNewType(newState.TupleContext, newTypeInfo);
@@ -276,12 +276,12 @@ namespace IonKiwi.Json {
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
 				newState.TypeInfo = JsonReflection.GetTypeInfo(currentProperty.ValueType);
 				newState.TupleContext = new TupleContextInfoWrapper(newState.TypeInfo.TupleContext, null);
-				if (newState.ValueType != realType) {
+				if (newState.ValueType != realType && !(newState.TypeInfo.OriginalType.IsValueType && newState.TypeInfo.IsNullable && newState.TypeInfo.ItemType == realType)) {
 					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 					newState.TypeInfo = newTypeInfo;
 					newState.TupleContext = GetContextForNewType(newState.TupleContext, newTypeInfo);
-					newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				}
+				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
 				return Encoding.UTF8.GetBytes(prefix + JsonUtilities.JavaScriptStringEncode(currentProperty.Name,
 						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
