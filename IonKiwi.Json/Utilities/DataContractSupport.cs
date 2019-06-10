@@ -48,7 +48,7 @@ namespace IonKiwi.Json.Utilities {
 					}
 				}
 
-				if (ReflectionUtility.HasInterface(e.RootType, typeof(IDictionary<,>))) {
+				if (arrayAttr != null && ReflectionUtility.HasInterface(e.RootType, typeof(IDictionary<,>))) {
 					e.IsDictionary(new JsonDictionaryAttribute() {
 
 					});
