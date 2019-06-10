@@ -490,7 +490,7 @@ namespace IonKiwi.Json {
 						JsonParserObjectPropertyState propertyState = new JsonParserObjectPropertyState();
 						propertyState.Parent = objectState;
 						propertyState.TypeInfo = JsonReflection.GetTypeInfo(newType);
-						propertyState.TupleContext = GetNewContext(objectState.TupleContext, propertyName, propertyState.TypeInfo);
+						propertyState.TupleContext = GetNewContext(objectState.TupleContext, propertyInfo.OriginalName, propertyState.TypeInfo);
 						propertyState.PropertyInfo = propertyInfo;
 						_currentState.Push(propertyState);
 

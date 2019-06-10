@@ -99,7 +99,7 @@ namespace IonKiwi.Json {
 				}
 
 				string propertyName = currentProperty.Name;
-				if (state.TupleContext != null && state.TupleContext.TryGetPropertyMapping(currentProperty.Name, out var newName)) {
+				if (state.TupleContext != null && state.TupleContext.TryGetPropertyMapping(currentProperty.OriginalName, out var newName)) {
 					propertyName = newName;
 				}
 
@@ -110,8 +110,8 @@ namespace IonKiwi.Json {
 				newState.ValueType = currentProperty.PropertyType;
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
 				newState.TypeInfo = JsonReflection.GetTypeInfo(currentProperty.PropertyType);
-				newState.TupleContext = GetNewContext(state.TupleContext, currentProperty.Name, newState.TypeInfo);
-				if (newState.ValueType != realType) {
+				newState.TupleContext = GetNewContext(state.TupleContext, currentProperty.OriginalName, newState.TypeInfo);
+				if (newState.ValueType != realType && !(newState.TypeInfo.OriginalType.IsValueType && newState.TypeInfo.IsNullable && newState.TypeInfo.ItemType == realType)) {
 					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 					newState.TypeInfo = newTypeInfo;
 					newState.TupleContext = GetContextForNewType(newState.TupleContext, newTypeInfo);

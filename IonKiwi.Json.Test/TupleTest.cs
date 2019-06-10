@@ -291,5 +291,55 @@ namespace IonKiwi.Json.Test {
 
 			return;
 		}
+
+		[DataContract]
+		public sealed class Object13 {
+			[DataMember(Name = "result")]
+			public (string name, string value)? Result { get; set; }
+		}
+
+		[Fact]
+		public void Test13() {
+			var testObject = new Object13();
+			testObject.Result = ("x1", "x2");
+			var output = new JsonWriter.StringDataWriter();
+			JsonWriter.SerializeSync(output, testObject);
+			var json = output.GetString();
+			Assert.Equal("{\"result\":{\"name\":\"x1\",\"value\":\"x2\"}}", json);
+
+			var testObject2 = JsonParser.ParseSync<Object13>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(testObject2);
+			Assert.NotNull(testObject2.Result);
+			Assert.Equal("x1", testObject2.Result.Value.name);
+			Assert.Equal("x2", testObject2.Result.Value.value);
+
+			return;
+		}
+
+		[DataContract]
+		public sealed class Object14 {
+			[DataMember(Name = "result")]
+			public (string x, (int z1, int z2)? y)? Result { get; set; }
+		}
+
+		[Fact]
+		public void Test14() {
+			var testObject = new Object14();
+			testObject.Result = ("x1", (1, 2));
+			var output = new JsonWriter.StringDataWriter();
+			JsonWriter.SerializeSync(output, testObject);
+			var json = output.GetString();
+			Assert.Equal("{\"result\":{\"x\":\"x1\",\"y\":{\"z1\":1,\"z2\":2}}}", json);
+
+			var testObject2 = JsonParser.ParseSync<Object14>(new JsonReader(Encoding.UTF8.GetBytes(json)));
+			Assert.NotNull(testObject2);
+			Assert.NotNull(testObject2.Result);
+			Assert.Equal("x1", testObject2.Result.Value.x);
+			Assert.NotNull(testObject2.Result.Value.y);
+			Assert.Equal(1, testObject2.Result.Value.y.Value.z1);
+			Assert.Equal(2, testObject2.Result.Value.y.Value.z2);
+
+			return;
+		}
 	}
 }

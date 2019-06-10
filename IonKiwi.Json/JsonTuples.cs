@@ -275,6 +275,10 @@ namespace IonKiwi.Json {
 				var ta = typeArguments[i];
 				if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
 
+					if (isNullable) {
+						ta = ta.GenericTypeArguments[0];
+					}
+
 					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
 					pInfo.Parameter = genericTypeParameters[i];
 					pInfo.RealType = ta;
@@ -290,6 +294,14 @@ namespace IonKiwi.Json {
 					FindTuples(subTypeArguments, subTypeParameters, ref offset, tupleNames, pInfo);
 				}
 				else if (ta.IsGenericType) {
+
+					if (ta.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+						ta = ta.GenericTypeArguments[0];
+						if (!ta.IsGenericType) {
+							continue;
+						}
+					}
+
 					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
 					pInfo.Parameter = genericTypeParameters[i];
 					pInfo.RealType = ta;
@@ -306,6 +318,10 @@ namespace IonKiwi.Json {
 				var ta = typeArguments[i];
 				if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
 
+					if (isNullable) {
+						ta = ta.GenericTypeArguments[0];
+					}
+
 					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
 					pInfo.Parameter = genericTypeParameters[i];
 					pInfo.RealType = ta;
@@ -321,6 +337,14 @@ namespace IonKiwi.Json {
 					FindTuples(subTypeArguments, subTypeParameters, ref offset, tupleNames, pInfo);
 				}
 				else if (ta.IsGenericType) {
+
+					if (ta.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+						ta = ta.GenericTypeArguments[0];
+						if (!ta.IsGenericType) {
+							continue;
+						}
+					}
+
 					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
 					pInfo.Parameter = genericTypeParameters[i];
 					pInfo.RealType = ta;
@@ -338,6 +362,10 @@ namespace IonKiwi.Json {
 				var ta = typeArguments[i];
 				if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
 
+					if (isNullable) {
+						ta = ta.GenericTypeArguments[0];
+					}
+
 					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
 					pInfo.Parameter = genericTypeParameters[i];
 					pInfo.RealType = ta;
@@ -353,6 +381,14 @@ namespace IonKiwi.Json {
 					FindTuples(subTypeArguments, subTypeParameters, ref offset, pInfo);
 				}
 				else if (ta.IsGenericType) {
+
+					if (ta.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+						ta = ta.GenericTypeArguments[0];
+						if (!ta.IsGenericType) {
+							continue;
+						}
+					}
+
 					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
 					pInfo.Parameter = genericTypeParameters[i];
 					pInfo.RealType = ta;
@@ -369,6 +405,10 @@ namespace IonKiwi.Json {
 				var ta = typeArguments[i];
 				if (ReflectionUtility.IsTupleType(ta, out var tupleRank, out var isNullable)) {
 
+					if (isNullable) {
+						ta = ta.GenericTypeArguments[0];
+					}
+
 					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
 					pInfo.Parameter = genericTypeParameters[i];
 					pInfo.RealType = ta;
@@ -384,6 +424,14 @@ namespace IonKiwi.Json {
 					FindTuples(subTypeArguments, subTypeParameters, ref offset, pInfo);
 				}
 				else if (ta.IsGenericType) {
+
+					if (ta.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+						ta = ta.GenericTypeArguments[0];
+						if (!ta.IsGenericType) {
+							continue;
+						}
+					}
+
 					TypeLevelTupleInfo pInfo = new TypeLevelTupleInfo();
 					pInfo.Parameter = genericTypeParameters[i];
 					pInfo.RealType = ta;
@@ -434,6 +482,16 @@ namespace IonKiwi.Json {
 				offset += tupleRank;
 			}
 
+			if (isNullable) {
+				currentType = currentType.GenericTypeArguments[0];
+				typeDefinition = currentType.GetGenericTypeDefinition();
+				typeParameters = typeDefinition.GetGenericArguments();
+				typeArguments = currentType.GenericTypeArguments;
+				if (typeArguments.Length != typeParameters.Length) {
+					throw new Exception("Unexpected generic type arguments for type: " + ReflectionUtility.GetTypeName(currentType));
+				}
+			}
+
 			Dictionary<Type, TypeLevelTupleInfo> typeInfo = new Dictionary<Type, TypeLevelTupleInfo>();
 			FindTuples(typeArguments, typeParameters, ref offset, tupleNames, typeInfo);
 
@@ -458,6 +516,16 @@ namespace IonKiwi.Json {
 					context.PropertyMapping1.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), ii);
 				}
 				offset += tupleRank;
+			}
+
+			if (isNullable) {
+				rootType = rootType.GenericTypeArguments[0];
+				typeDefinition = rootType.GetGenericTypeDefinition();
+				genericTypeParameters = typeDefinition.GetGenericArguments();
+				typeArguments = rootType.GenericTypeArguments;
+				if (genericTypeParameters.Length != typeArguments.Length) {
+					throw new Exception($"Unexpected generic type definition '{ReflectionUtility.GetTypeName(typeDefinition)}'. rootType: {ReflectionUtility.GetTypeName(rootType)}");
+				}
 			}
 
 			Dictionary<Type, TypeLevelTupleInfo> typeInfo = new Dictionary<Type, TypeLevelTupleInfo>();

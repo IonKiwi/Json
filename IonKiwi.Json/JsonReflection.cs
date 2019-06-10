@@ -58,6 +58,7 @@ namespace IonKiwi.Json {
 			public int Order1 = -1;
 			public int Order2 = -1;
 			public string Name;
+			public string OriginalName;
 			public Type PropertyType;
 			public bool Required;
 			public JsonEmitTypeName EmitTypeName = JsonEmitTypeName.DifferentType;
@@ -172,6 +173,7 @@ namespace IonKiwi.Json {
 				foreach (PropertyInfo p in properties) {
 					JsonPropertyInfo pi = new JsonPropertyInfo();
 					pi.Name = p.Name;
+					pi.OriginalName = p.Name;
 					pi.PropertyType = p.PropertyType;
 					pi.Setter2 = ReflectionUtility.CreatePropertySetterAction<object, object>(p);
 					var realProperty = realType.GetProperty(p.Name, BindingFlags.Instance | BindingFlags.Public);
@@ -189,6 +191,7 @@ namespace IonKiwi.Json {
 				foreach (FieldInfo f in fields) {
 					JsonPropertyInfo pi = new JsonPropertyInfo();
 					pi.Name = f.Name;
+					pi.OriginalName = f.Name;
 					pi.PropertyType = f.FieldType;
 					pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
 					var realProperty = realType.GetProperty(f.Name, BindingFlags.Instance | BindingFlags.Public);
@@ -333,6 +336,7 @@ namespace IonKiwi.Json {
 							EmitTypeName = cp.Value.EmitTypeName,
 							EmitNullValue = cp.Value.EmitNullValue,
 							Name = cp.Key,
+							OriginalName = cp.Value.OriginalName,
 							IsSingleOrArrayValue = cp.Value.IsSingleOrArrayValue,
 						};
 						pix.KnownTypes.AddRange(cp.Value.KnownTypes);
@@ -357,6 +361,7 @@ namespace IonKiwi.Json {
 
 								JsonPropertyInfo pi = new JsonPropertyInfo();
 								pi.Name = name;
+								pi.OriginalName = f.Name;
 								pi.PropertyType = f.FieldType;
 								pi.Required = propInfo.Required;
 								pi.Order1 = propInfo.Order;
@@ -397,6 +402,7 @@ namespace IonKiwi.Json {
 
 								JsonPropertyInfo pi = new JsonPropertyInfo();
 								pi.Name = name;
+								pi.OriginalName = p.Name;
 								pi.PropertyType = p.PropertyType;
 								pi.Required = propInfo.Required;
 								pi.Order1 = propInfo.Order;
