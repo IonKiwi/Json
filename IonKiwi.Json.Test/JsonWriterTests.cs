@@ -79,5 +79,14 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal("{\"test1\":1,\"test2\":2}", json);
 			return;
 		}
+
+		[Fact]
+		public void ArrayDictionary2() {
+			var writer = new StringDataWriter();
+			JsonWriter.SerializeSync(writer, new Dictionary<(int a, int b), int>() { { (1, 2), 1 }, { (2, 3), 2 } }, tupleNames: new string[] { "a", "b" });
+			var json = writer.GetString();
+			Assert.Equal("[{\"Key\":{\"a\":1,\"b\":2},\"Value\":1},{\"Key\":{\"a\":2,\"b\":3},\"Value\":2}]", json);
+			return;
+		}
 	}
 }
