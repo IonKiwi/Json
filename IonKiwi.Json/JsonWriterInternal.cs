@@ -335,9 +335,10 @@ namespace IonKiwi.Json {
 						state.WriteValueCallbackCalled = true;
 
 						objectType = e2.InputType;
-						var newTypeInfo = JsonReflection.GetTypeInfo(objectType);
-
 						value = e2.Value;
+						var realType = object.ReferenceEquals(null, value) ? objectType : value.GetType();
+						var newTypeInfo = JsonReflection.GetTypeInfo(realType);
+
 						typeInfo = newTypeInfo;
 						tupleContext = new TupleContextInfoWrapper(newTypeInfo.TupleContext, null);
 					}
