@@ -613,8 +613,16 @@ namespace IonKiwi.Json {
 				var token = reader.Token;
 				if (typeInfo.ObjectType == JsonObjectType.Object) {
 					if (token == JsonToken.Null) {
-						parentState.IsComplete = true;
-						HandleStateCompletion(parentState.Parent, parentState);
+						//object v = null;
+						//if (typeInfo.FinalizeAction != null) {
+						//	v = typeInfo.FinalizeAction(v);
+						//}
+						var state = new JsonParserSimpleValueState();
+						state.Parent = parentState;
+						state.Value = null;
+						state.IsComplete = true;
+						_currentState.Push(state);
+						HandleStateCompletion(state.Parent, state);
 					}
 					else if (token == JsonToken.ObjectStart) {
 						var objectState = new JsonParserObjectState();
