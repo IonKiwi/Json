@@ -140,10 +140,24 @@ namespace IonKiwi.Json {
 						disposable.Dispose();
 					}
 					_currentState.Pop();
+					if (state.IsSingleOrArrayValue) {
+						if (state.IsFirst) {
+							return new byte[] { (byte)'[', (byte)']' };
+						}
+						return null;
+					}
 					return new byte[] { (byte)']' };
 				}
 
 				var currentItem = state.Items.Current;
+				if (state.IsFirst && state.IsSingleOrArrayValue) {
+					if (state.Items.MoveNext()) {
+						// multiple items
+						state.IsSingleOrArrayValue = false;
+						state.Items.Reset();
+						return new byte[] { (byte)'[' };
+					}
+				}
 
 				var newState = new JsonWriterArrayItemState();
 				newState.Parent = state;
@@ -310,7 +324,7 @@ namespace IonKiwi.Json {
 				}
 
 				if (object.ReferenceEquals(null, value)) {
-					return Encoding.UTF8.GetBytes("null");
+					return new byte[] { (byte)'n', (byte)'u', (byte)'l', (byte)'l' };
 				}
 
 				if (typeInfo.ObjectType == JsonObjectType.Raw) {
@@ -358,20 +372,29 @@ namespace IonKiwi.Json {
 						return new byte[] { (byte)'{' };
 					}
 
+					var propertyState = state as JsonWriterObjectPropertyState;
+					var singleOrArrayValue = typeInfo.IsSingleOrArrayValue || (propertyState != null && propertyState.PropertyInfo != null && propertyState.PropertyInfo.IsSingleOrArrayValue);
+
 					var arrayState = new JsonWriterArrayState();
 					arrayState.Parent = state;
 					arrayState.Value = value;
 					arrayState.Items = typeInfo.EnumerateMethod(value);
+					arrayState.IsSingleOrArrayValue = singleOrArrayValue;
 					arrayState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 					arrayState.TypeInfo = typeInfo;
 					arrayState.TupleContext = tupleContext;
 					_currentState.Push(arrayState);
 
+					if (singleOrArrayValue) {
+						// no $type support
+						return null;
+					}
+
 					bool emitType = false;
 					if (typeInfo.OriginalType != objectType) {
 						emitType = true;
 					}
-					if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+					if (propertyState != null && propertyState.PropertyInfo != null) {
 						if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
 							emitType = true;
 						}

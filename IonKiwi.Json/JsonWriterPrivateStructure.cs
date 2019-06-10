@@ -44,6 +44,7 @@ namespace IonKiwi.Json {
 
 			private sealed class JsonWriterArrayState : JsonWriterInternalState {
 				public object Value;
+				public bool IsSingleOrArrayValue = false;
 				public bool IsFirst = true;
 				public JsonTypeInfo TypeInfo;
 				public TupleContextInfoWrapper TupleContext;
