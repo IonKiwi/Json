@@ -235,7 +235,7 @@ namespace IonKiwi.Json {
 				if (objectInfo == null && collectionInfo == null && dictInfo == null) {
 					if (t.IsGenericType) {
 						var td = t.GetGenericTypeDefinition();
-						if (td == typeof(List<>)) {
+						if (td == typeof(List<>) || td == typeof(HashSet<>)) {
 							collectionInfo = new JsonCollectionAttribute();
 							md = null;
 						}
