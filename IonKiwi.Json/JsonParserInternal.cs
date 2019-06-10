@@ -103,7 +103,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private async ValueTask HandleUntypedObject(JsonReader reader) {
+			private async Task HandleUntypedObject(JsonReader reader) {
 				var token = await reader.Read().NoSync();
 				while (token == JsonToken.Comment) {
 					token = await reader.Read().NoSync();
@@ -139,7 +139,7 @@ namespace IonKiwi.Json {
 				HandleUntypedObjectInternal(reader.GetValue(), false);
 			}
 
-			private async ValueTask HandleUntypedArray(JsonReader reader) {
+			private async Task HandleUntypedArray(JsonReader reader) {
 				var token = await reader.Read().NoSync();
 				while (token == JsonToken.Comment) {
 					token = await reader.Read().NoSync();
