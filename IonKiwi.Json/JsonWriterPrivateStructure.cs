@@ -30,13 +30,14 @@ namespace IonKiwi.Json {
 				public bool IsFirst = true;
 				public JsonTypeInfo TypeInfo;
 				public TupleContextInfoWrapper TupleContext;
-				public Dictionary<string, JsonPropertyInfo>.Enumerator Properties;
+				public IEnumerator<JsonPropertyInfo> Properties;
 			}
 
 			private sealed class JsonWriterObjectPropertyState : JsonWriterInternalState {
 				public bool Processed = false;
 				public object Value;
 				public Type ValueType;
+				public JsonPropertyInfo PropertyInfo;
 				public JsonTypeInfo TypeInfo;
 				public TupleContextInfoWrapper TupleContext;
 			}

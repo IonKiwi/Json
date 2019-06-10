@@ -21,7 +21,7 @@ namespace IonKiwi.Json {
 				_currentState.Push(new JsonParserRootState() { TypeInfo = typeInfo, TupleContext = wrapper });
 			}
 
-			public async ValueTask HandleToken(JsonReader reader) {
+			public async Task HandleToken(JsonReader reader) {
 				var result = HandleTokenInternal(reader);
 				if (result == HandleStateResult.Skip) {
 					await reader.Skip().NoSync();
@@ -136,7 +136,7 @@ namespace IonKiwi.Json {
 				return t;
 			}
 
-			private async ValueTask HandleTypeAndVisitor(JsonReader reader, JsonParserInternalState state) {
+			private async Task HandleTypeAndVisitor(JsonReader reader, JsonParserInternalState state) {
 				JsonTypeInfo typeInfo = null;
 				JsonToken token = JsonToken.None;
 				if (state is JsonParserDictionaryState dictionaryState) {
@@ -222,7 +222,7 @@ namespace IonKiwi.Json {
 				HandleTokenSync(reader);
 			}
 
-			private async ValueTask HandleNewTypeAndVisitor(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
+			private async Task HandleNewTypeAndVisitor(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
 				if (_settings.Visitor != null) {
 					IJsonParserVisitor visitor = _settings.Visitor;
 
@@ -477,12 +477,24 @@ namespace IonKiwi.Json {
 						return HandleStateResult.Skip;
 					}
 					else {
+
+						Type newType = null;
+						if (objectState.Value is IJsonCustomMemberTypeProvider typeProvider) {
+							newType = typeProvider.ProvideMemberType(propertyName);
+						}
+
+						if (newType == null) {
+							newType = propertyInfo.PropertyType;
+						}
+
 						JsonParserObjectPropertyState propertyState = new JsonParserObjectPropertyState();
 						propertyState.Parent = objectState;
-						propertyState.TypeInfo = JsonReflection.GetTypeInfo(propertyInfo.PropertyType);
+						propertyState.TypeInfo = JsonReflection.GetTypeInfo(newType);
 						propertyState.TupleContext = GetNewContext(objectState.TupleContext, propertyName, propertyState.TypeInfo);
 						propertyState.PropertyInfo = propertyInfo;
 						_currentState.Push(propertyState);
+
+						objectState.Properties.Add(propertyName);
 					}
 				}
 				else if (token == JsonToken.ObjectEnd) {
@@ -526,8 +538,38 @@ namespace IonKiwi.Json {
 				}
 
 				objectState.IsComplete = true;
+
+				// validate required properties
+				HashSet<string> missingRequiredProperties = new HashSet<string>();
+				HashSet<string> missingOptionalProperties = new HashSet<string>();
+				foreach (var p in objectState.TypeInfo.Properties) {
+					if (!objectState.Properties.Contains(p.Key)) {
+
+						if (p.Value.Required) {
+							missingRequiredProperties.Add(p.Key);
+						}
+						else if (p.Value.EmitNullValue) {
+							missingOptionalProperties.Add(p.Key);
+						}
+
+					}
+				}
+
+				if (missingRequiredProperties.Count > 0) {
+					ThrowMissingRequiredProperties(missingRequiredProperties);
+				}
+				if (missingOptionalProperties.Count > 0) {
+					if ((_settings.LogMissingNonRequiredProperties || objectState.TypeInfo.LogMissingNonRequiredProperties == true) && objectState.TypeInfo.LogMissingNonRequiredProperties != false) {
+						// TODO log missing properties
+					}
+				}
+
 				HandleStateCompletion(objectState.Parent, objectState);
 				return HandleStateResult.None;
+			}
+
+			private void ThrowMissingRequiredProperties(HashSet<string> missingProperties) {
+				throw new RequiredPropertiesMissingException("Missing required properties: " + string.Join(",", missingProperties));
 			}
 
 			private HandleStateResult CompleteArray(JsonParserArrayState arrayState) {

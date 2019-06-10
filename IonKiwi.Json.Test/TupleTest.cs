@@ -261,5 +261,35 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal(2, v.Value1.Value2.y.z1);
 			Assert.Equal(3, v.Value1.Value2.y.z2);
 		}
+
+		public Dictionary<((int item2, int item3) item1, (int item6, int item5) item4), (int item7, int item8)> JsonTestValue12() {
+			Dictionary<((int item2, int item3) item1, (int item6, int item5) item4), (int item7, int item8)> result = new Dictionary<((int item2, int item3) item1, (int item6, int item5) item4), (int item7, int item8)>();
+			result.Add(((1, 2), (3, 4)), (5, 6));
+			return result;
+		}
+
+		[Fact]
+		public void Test12() {
+			var result = JsonTestValue12();
+			var t = typeof(TupleTest).GetMethod("JsonTestValue12", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+			var tupleNames = t.ReturnParameter.GetCustomAttribute<TupleElementNamesAttribute>().TransformNames.ToArray();
+			var output = new JsonWriter.StringDataWriter();
+			JsonWriter.SerializeSync(output, result, tupleNames: tupleNames);
+			var json = output.GetString();
+			var expectedJson = "[{\"Key\":{\"item1\":{\"item2\":1,\"item3\":2},\"item4\":{\"item6\":3,\"item5\":4}},\"Value\":{\"item7\":5,\"item8\":6}}]";
+
+			Assert.Equal(expectedJson, json);
+
+			var result2 = JsonParser.ParseSync<Dictionary<((int item2, int item3) item1, (int item6, int item5) item4), (int item7, int item8)>>(new JsonReader(Encoding.UTF8.GetBytes(json)), tupleNames: tupleNames);
+
+			Assert.NotNull(result2);
+			Assert.Single(result2);
+			var key = ((1, 2), (3, 4));
+			Assert.True(result2.ContainsKey(key));
+			Assert.Equal(result[key].item7, result2[key].item7);
+			Assert.Equal(result[key].item8, result2[key].item8);
+
+			return;
+		}
 	}
 }

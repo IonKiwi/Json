@@ -26,7 +26,7 @@ namespace IonKiwi.Json.Test {
 			public List<Type> Types { get; } = new List<Type>();
 			public int Count { get; set; }
 
-			protected override ValueTask<bool> ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override Task<bool> ParseObject(JsonReader reader, JsonParserContext context) {
 				throw new NotImplementedException();
 			}
 
@@ -186,7 +186,7 @@ namespace IonKiwi.Json.Test {
 			public List<Type> Types { get; } = new List<Type>();
 			public int Count { get; set; }
 
-			protected override ValueTask<bool> ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override Task<bool> ParseObject(JsonReader reader, JsonParserContext context) {
 				throw new NotImplementedException();
 			}
 
@@ -489,7 +489,7 @@ namespace IonKiwi.Json.Test {
 			public List<Type> Types { get; } = new List<Type>();
 			public int Count { get; set; }
 
-			protected override ValueTask<bool> ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override Task<bool> ParseObject(JsonReader reader, JsonParserContext context) {
 				throw new NotImplementedException();
 			}
 

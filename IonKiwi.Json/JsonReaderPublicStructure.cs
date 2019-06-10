@@ -50,30 +50,28 @@ namespace IonKiwi.Json {
 		}
 
 		public interface IInputReader {
-			ValueTask<int> ReadBlock(Memory<byte> buffer);
-			int ReadBlockSync(Span<byte> buffer);
+			Task<int> ReadBlock(byte[] buffer);
+			int ReadBlockSync(byte[] buffer);
 		}
 
 		public sealed class Utf8ByteArrayInputReader : IInputReader {
-			private readonly Memory<byte> _buffer;
+			private readonly byte[] _buffer;
 			private int _offset;
 
 			public Utf8ByteArrayInputReader(byte[] data) {
 				_buffer = data;
 			}
 
-			ValueTask<int> IInputReader.ReadBlock(Memory<byte> buffer) {
+			Task<int> IInputReader.ReadBlock(byte[] buffer) {
 				var bs = Math.Min(_buffer.Length - _offset, buffer.Length);
-				var slice = _buffer.Slice(_offset, bs);
-				slice.CopyTo(buffer);
+				Buffer.BlockCopy(_buffer, _offset, buffer, 0, bs);
 				_offset += bs;
-				return new ValueTask<int>(bs);
+				return Task.FromResult(bs);
 			}
 
-			int IInputReader.ReadBlockSync(Span<byte> buffer) {
+			int IInputReader.ReadBlockSync(byte[] buffer) {
 				var bs = Math.Min(_buffer.Length - _offset, buffer.Length);
-				var slice = _buffer.Slice(_offset, bs);
-				slice.Span.CopyTo(buffer);
+				Buffer.BlockCopy(_buffer, _offset, buffer, 0, bs);
 				_offset += bs;
 				return bs;
 			}
@@ -86,12 +84,12 @@ namespace IonKiwi.Json {
 				_stream = stream;
 			}
 
-			ValueTask<int> IInputReader.ReadBlock(Memory<byte> buffer) {
-				return _stream.ReadAsync(buffer);
+			Task<int> IInputReader.ReadBlock(byte[] buffer) {
+				return _stream.ReadAsync(buffer, 0, buffer.Length);
 			}
 
-			int IInputReader.ReadBlockSync(Span<byte> buffer) {
-				return _stream.Read(buffer);
+			int IInputReader.ReadBlockSync(byte[] buffer) {
+				return _stream.Read(buffer, 0, buffer.Length);
 			}
 		}
 	}

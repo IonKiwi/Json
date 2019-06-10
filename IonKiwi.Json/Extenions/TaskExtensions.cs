@@ -14,6 +14,7 @@ namespace IonKiwi.Extenions {
 			return task.ConfigureAwait(false);
 		}
 
+#if NETCOREAPP2_2
 		public static ConfiguredValueTaskAwaitable<T> NoSync<T>(this ValueTask<T> task) {
 			return task.ConfigureAwait(false);
 		}
@@ -21,5 +22,6 @@ namespace IonKiwi.Extenions {
 		public static ConfiguredValueTaskAwaitable NoSync(this ValueTask task) {
 			return task.ConfigureAwait(false);
 		}
+#endif
 	}
 }

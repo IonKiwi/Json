@@ -54,28 +54,52 @@ namespace IonKiwi.Json.Newtonsoft {
 
 					});
 
-					foreach (var p in e.RootType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-						var ignoreAttr = p.GetCustomAttribute<global::Newtonsoft.Json.JsonIgnoreAttribute>();
-						var propAttr = p.GetCustomAttribute<global::Newtonsoft.Json.JsonPropertyAttribute>();
-						var reqAttr = p.GetCustomAttribute<global::Newtonsoft.Json.JsonRequiredAttribute>();
-						if (ignoreAttr != null) {
-							continue;
-						}
-						else if (propAttr != null || reqAttr != null) {
-							e.AddProperty(string.IsNullOrEmpty(propAttr?.PropertyName) ? p.Name : propAttr.PropertyName, p,
-								required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always);
-						}
+					JsonEmitTypeName GetEmitTypeName(global::Newtonsoft.Json.TypeNameHandling? typeHandling) {
+						if (!typeHandling.HasValue) { return JsonEmitTypeName.DifferentType; }
+						else if (typeHandling == global::Newtonsoft.Json.TypeNameHandling.All) { return JsonEmitTypeName.Always; }
+						else if (typeHandling == global::Newtonsoft.Json.TypeNameHandling.Auto) { return JsonEmitTypeName.DifferentType; }
+						else if (typeHandling == global::Newtonsoft.Json.TypeNameHandling.None) { return JsonEmitTypeName.None; }
+						return JsonEmitTypeName.DifferentType;
 					}
-					foreach (var f in e.RootType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-						var ignoreAttr = f.GetCustomAttribute<global::Newtonsoft.Json.JsonIgnoreAttribute>();
-						var propAttr = f.GetCustomAttribute<global::Newtonsoft.Json.JsonPropertyAttribute>();
-						var reqAttr = f.GetCustomAttribute<global::Newtonsoft.Json.JsonRequiredAttribute>();
-						if (ignoreAttr != null) {
-							continue;
+
+					bool GetEmitNull(global::Newtonsoft.Json.DefaultValueHandling? defaultValueHandling) {
+						if (!defaultValueHandling.HasValue) { return true; }
+						else if (defaultValueHandling == global::Newtonsoft.Json.DefaultValueHandling.Ignore) { return false; }
+						else if (defaultValueHandling == global::Newtonsoft.Json.DefaultValueHandling.IgnoreAndPopulate) { return false; }
+						return true;
+					}
+
+					for (int i = typeHierarchy.Count - 1; i >= 0; i--) {
+						var currentType = typeHierarchy[i];
+						foreach (var f in currentType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
+							var ignoreAttr = f.GetCustomAttribute<global::Newtonsoft.Json.JsonIgnoreAttribute>();
+							var propAttr = f.GetCustomAttribute<global::Newtonsoft.Json.JsonPropertyAttribute>();
+							var reqAttr = f.GetCustomAttribute<global::Newtonsoft.Json.JsonRequiredAttribute>();
+							if (ignoreAttr != null) {
+								continue;
+							}
+							else if (propAttr != null || reqAttr != null) {
+								e.AddField(string.IsNullOrEmpty(propAttr?.PropertyName) ? f.Name : propAttr.PropertyName, f,
+									required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always,
+									order: propAttr?.Order ?? -1,
+									emitTypeName: GetEmitTypeName(propAttr?.TypeNameHandling),
+									emitNullValue: GetEmitNull(propAttr?.DefaultValueHandling));
+							}
 						}
-						else if (propAttr != null || reqAttr != null) {
-							e.AddField(string.IsNullOrEmpty(propAttr?.PropertyName) ? f.Name : propAttr.PropertyName, f,
-								required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always);
+						foreach (var p in currentType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
+							var ignoreAttr = p.GetCustomAttribute<global::Newtonsoft.Json.JsonIgnoreAttribute>();
+							var propAttr = p.GetCustomAttribute<global::Newtonsoft.Json.JsonPropertyAttribute>();
+							var reqAttr = p.GetCustomAttribute<global::Newtonsoft.Json.JsonRequiredAttribute>();
+							if (ignoreAttr != null) {
+								continue;
+							}
+							else if (propAttr != null || reqAttr != null) {
+								e.AddProperty(string.IsNullOrEmpty(propAttr?.PropertyName) ? p.Name : propAttr.PropertyName, p,
+									required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always,
+									order: propAttr?.Order ?? -1,
+									emitTypeName: GetEmitTypeName(propAttr?.TypeNameHandling),
+									emitNullValue: GetEmitNull(propAttr?.DefaultValueHandling));
+							}
 						}
 					}
 				}

@@ -24,7 +24,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static async Task<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 
 			if (objectType == null) {
 				objectType = typeof(T);

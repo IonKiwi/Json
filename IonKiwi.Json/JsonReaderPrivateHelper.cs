@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace IonKiwi.Json {
 	partial class JsonReader {
 
-		private async ValueTask<bool> ReadData() {
+		private async Task<bool> ReadData() {
 			if (_length - _offset > 0) {
 				return true;
 			}

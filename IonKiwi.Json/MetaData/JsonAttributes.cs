@@ -26,7 +26,7 @@ namespace IonKiwi.Json.MetaData {
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 	public class JsonObjectAttribute : Attribute {
-
+		public bool DisableLogMissingNonRequiredProperties { get; set; }
 	}
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
@@ -58,6 +58,10 @@ namespace IonKiwi.Json.MetaData {
 			Required = required;
 			EmitTypeName = emitTypeName;
 		}
+
+		public int Order { get; set; } = -1;
+
+		public bool EmitNullValue { get; set; } = true;
 
 		public string Name { get; set; }
 

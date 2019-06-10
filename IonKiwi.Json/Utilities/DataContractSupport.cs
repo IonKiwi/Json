@@ -56,24 +56,33 @@ namespace IonKiwi.Json.Utilities {
 					});
 					e.AddKnownTypes(ReflectionUtility.GetAllDataContractKnownTypeAttributes(e.RootType));
 
-					foreach (var p in e.RootType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-						var ignoreAttr = p.GetCustomAttribute<IgnoreDataMemberAttribute>();
-						var propAttr = p.GetCustomAttribute<DataMemberAttribute>();
-						if (ignoreAttr != null) {
-							continue;
+					for (int i = typeHierarchy.Count - 1; i >= 0; i--) {
+						var currentType = typeHierarchy[i];
+						foreach (var f in currentType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
+							var ignoreAttr = f.GetCustomAttribute<IgnoreDataMemberAttribute>();
+							var propAttr = f.GetCustomAttribute<DataMemberAttribute>();
+							if (ignoreAttr != null) {
+								continue;
+							}
+							else if (propAttr != null) {
+								e.AddField(
+									string.IsNullOrEmpty(propAttr.Name) ? f.Name : propAttr.Name, f, required: propAttr.IsRequired, knownTypes: ReflectionUtility.GetAllDataContractKnownTypeAttributes(f.FieldType),
+									order: propAttr.Order,
+									emitNullValue: propAttr.EmitDefaultValue);
+							}
 						}
-						else if (propAttr != null) {
-							e.AddProperty(string.IsNullOrEmpty(propAttr.Name) ? p.Name : propAttr.Name, p, required: propAttr.IsRequired, knownTypes: ReflectionUtility.GetAllDataContractKnownTypeAttributes(p.PropertyType));
-						}
-					}
-					foreach (var f in e.RootType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-						var ignoreAttr = f.GetCustomAttribute<IgnoreDataMemberAttribute>();
-						var propAttr = f.GetCustomAttribute<DataMemberAttribute>();
-						if (ignoreAttr != null) {
-							continue;
-						}
-						else if (propAttr != null) {
-							e.AddField(string.IsNullOrEmpty(propAttr.Name) ? f.Name : propAttr.Name, f, required: propAttr.IsRequired, knownTypes: ReflectionUtility.GetAllDataContractKnownTypeAttributes(f.FieldType));
+						foreach (var p in currentType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
+							var ignoreAttr = p.GetCustomAttribute<IgnoreDataMemberAttribute>();
+							var propAttr = p.GetCustomAttribute<DataMemberAttribute>();
+							if (ignoreAttr != null) {
+								continue;
+							}
+							else if (propAttr != null) {
+								e.AddProperty(
+									string.IsNullOrEmpty(propAttr.Name) ? p.Name : propAttr.Name, p, required: propAttr.IsRequired, knownTypes: ReflectionUtility.GetAllDataContractKnownTypeAttributes(p.PropertyType),
+									order: propAttr.Order,
+									emitNullValue: propAttr.EmitDefaultValue);
+							}
 						}
 					}
 				}

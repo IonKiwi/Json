@@ -7,7 +7,7 @@ using System.Text;
 
 namespace IonKiwi.Json {
 
-	public class JsonDefaultAssemblyVersion {
+	public sealed class JsonDefaultAssemblyVersion {
 		public JsonDefaultAssemblyVersion(AssemblyName name) {
 			Version = name.Version;
 			PublicKeyTokenBytes = name.GetPublicKeyToken();

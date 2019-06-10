@@ -7,7 +7,7 @@ namespace IonKiwi.Json {
 	internal interface IJsonParserVisitor {
 		void Initialize(JsonParserSettings parserSettings);
 		bool ParseObjectSync(JsonReader reader, JsonParserContext context);
-		ValueTask<bool> ParseObject(JsonReader reader, JsonParserContext context);
+		Task<bool> ParseObject(JsonReader reader, JsonParserContext context);
 	}
 
 	internal interface IJsonParserContext {
@@ -39,11 +39,11 @@ namespace IonKiwi.Json {
 			return JsonParser.ParseSync<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
 		}
 
-		protected ValueTask<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		protected Task<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
 			return JsonParser.Parse<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
 		}
 
-		protected abstract ValueTask<bool> ParseObject(JsonReader reader, JsonParserContext context);
+		protected abstract Task<bool> ParseObject(JsonReader reader, JsonParserContext context);
 
 		protected abstract bool ParseObjectSync(JsonReader reader, JsonParserContext context);
 
@@ -56,7 +56,7 @@ namespace IonKiwi.Json {
 			return ParseObjectSync(reader, context);
 		}
 
-		ValueTask<bool> IJsonParserVisitor.ParseObject(JsonReader reader, JsonParserContext context) {
+		Task<bool> IJsonParserVisitor.ParseObject(JsonReader reader, JsonParserContext context) {
 			return ParseObject(reader, context);
 		}
 	}

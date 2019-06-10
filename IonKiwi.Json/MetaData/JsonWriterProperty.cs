@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace IonKiwi.Json.MetaData {
-	public sealed class JsonWriterProperty {
+	public class JsonWriterProperty {
 		public JsonWriterProperty(string name, object value, Type valueType) {
 			Name = name;
 			Value = value;

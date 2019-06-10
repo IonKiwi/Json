@@ -88,7 +88,11 @@ namespace IonKiwi.Json.MetaData {
 			}
 		}
 
-		public void AddProperty<TValue, TProperty>(string name, Func<TValue, TProperty> getter, Func<TValue, TProperty, TValue> setter, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null) {
+		public void AddProperty<TValue, TProperty>(string name, Func<TValue, TProperty> getter, Func<TValue, TProperty, TValue> setter, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType, bool emitNullValue = true, int order = -1) {
+
+			if (required && !emitNullValue) {
+				throw new InvalidOperationException("Required & !EmitNullValue");
+			}
 
 			var valueType = typeof(TValue);
 			var validValueType = valueType == RootType;
@@ -116,8 +120,11 @@ namespace IonKiwi.Json.MetaData {
 			}
 
 			var pi = new PropertyInfo() {
+				Order = order,
 				PropertyType = propertyType,
 				Required = required,
+				EmitTypeName = emitTypeName,
+				EmitNullValue = emitNullValue,
 				Setter = setterWrapper,
 				Getter = getterWrapper,
 				IsSingleOrArrayValue = isSingleOrArrayValue,
@@ -135,7 +142,11 @@ namespace IonKiwi.Json.MetaData {
 			}
 		}
 
-		public void AddProperty(string name, System.Reflection.PropertyInfo pi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null) {
+		public void AddProperty(string name, System.Reflection.PropertyInfo pi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType, bool emitNullValue = true, int order = -1) {
+
+			if (required && !emitNullValue) {
+				throw new InvalidOperationException("Required & !EmitNullValue");
+			}
 
 			var validProperty = pi.DeclaringType == RootType;
 			if (!validProperty) {
@@ -152,8 +163,11 @@ namespace IonKiwi.Json.MetaData {
 			}
 
 			var tpi = new PropertyInfo() {
+				Order = order,
 				PropertyType = pi.PropertyType,
 				Required = required,
+				EmitTypeName = emitTypeName,
+				EmitNullValue = emitNullValue,
 				Setter = pi.CanWrite ? ReflectionUtility.CreatePropertySetterFunc<object, object>(pi) : null,
 				Getter = pi.CanRead ? ReflectionUtility.CreatePropertyGetter<object, object>(pi) : null,
 				IsSingleOrArrayValue = isSingleOrArrayValue,
@@ -171,7 +185,11 @@ namespace IonKiwi.Json.MetaData {
 			}
 		}
 
-		public void AddField(string name, System.Reflection.FieldInfo fi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null) {
+		public void AddField(string name, System.Reflection.FieldInfo fi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType, bool emitNullValue = true, int order = -1) {
+
+			if (required && !emitNullValue) {
+				throw new InvalidOperationException("Required & !EmitNullValue");
+			}
 
 			var validProperty = fi.DeclaringType == RootType;
 			if (!validProperty) {
@@ -188,8 +206,11 @@ namespace IonKiwi.Json.MetaData {
 			}
 
 			var tpi = new PropertyInfo() {
+				Order = order,
 				PropertyType = fi.FieldType,
 				Required = required,
+				EmitTypeName = emitTypeName,
+				EmitNullValue = emitNullValue,
 				Setter = ReflectionUtility.CreateFieldSetterFunc<object, object>(fi),
 				Getter = ReflectionUtility.CreateFieldGetter<object, object>(fi),
 				IsSingleOrArrayValue = isSingleOrArrayValue,
@@ -208,8 +229,11 @@ namespace IonKiwi.Json.MetaData {
 		}
 
 		internal class PropertyInfo {
+			public int Order;
 			public Type PropertyType;
 			public bool Required;
+			public JsonEmitTypeName EmitTypeName;
+			public bool EmitNullValue;
 			public Func<object, object, object> Setter;
 			public Func<object, object> Getter;
 			public bool IsSingleOrArrayValue;

@@ -23,7 +23,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public static async ValueTask Serialize<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static async Task Serialize<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 			if (objectType == null) {
 				objectType = typeof(T);
 			}

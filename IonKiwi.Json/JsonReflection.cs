@@ -38,6 +38,7 @@ namespace IonKiwi.Json {
 			public bool IsNullable = true;
 			public bool IsEnumDictionary = false;
 			public bool IsFlagsEnum = false;
+			public bool? LogMissingNonRequiredProperties = null;
 			public JsonObjectType ObjectType;
 			public readonly Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
 			public Func<object, System.Collections.IEnumerator> EnumerateMethod;
@@ -54,9 +55,13 @@ namespace IonKiwi.Json {
 		}
 
 		internal sealed class JsonPropertyInfo {
+			public int Order1 = -1;
+			public int Order2 = -1;
 			public string Name;
 			public Type PropertyType;
 			public bool Required;
+			public JsonEmitTypeName EmitTypeName = JsonEmitTypeName.DifferentType;
+			public bool EmitNullValue = true;
 			public Func<object, object, object> Setter1;
 			public Action<object, object> Setter2;
 			public Func<object, object> Getter;
@@ -157,6 +162,7 @@ namespace IonKiwi.Json {
 				ti.RootType = placeHolderType;
 				ti.ObjectType = JsonObjectType.Object;
 
+				var realType = isNullable ? ti.ItemType : t;
 				var finalizeMethodParameter = Expression.Parameter(typeof(object), "p1");
 				var finalizeMethodExprCall = Expression.Call(Expression.Convert(finalizeMethodParameter, placeHolderType), finalizeMethod);
 				var finalizeMethodExprResult = Expression.Convert(finalizeMethodExprCall, typeof(object));
@@ -168,6 +174,14 @@ namespace IonKiwi.Json {
 					pi.Name = p.Name;
 					pi.PropertyType = p.PropertyType;
 					pi.Setter2 = ReflectionUtility.CreatePropertySetterAction<object, object>(p);
+					var realProperty = realType.GetProperty(p.Name, BindingFlags.Instance | BindingFlags.Public);
+					if (realProperty != null) {
+						pi.Getter = ReflectionUtility.CreatePropertyGetter<object, object>(realProperty);
+					}
+					else {
+						var realField = realType.GetField(p.Name, BindingFlags.Instance | BindingFlags.Public);
+						pi.Getter = ReflectionUtility.CreateFieldGetter<object, object>(realField);
+					}
 					ti.Properties.Add(pi.Name, pi);
 				}
 
@@ -177,6 +191,14 @@ namespace IonKiwi.Json {
 					pi.Name = f.Name;
 					pi.PropertyType = f.FieldType;
 					pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
+					var realProperty = realType.GetProperty(f.Name, BindingFlags.Instance | BindingFlags.Public);
+					if (realProperty != null) {
+						pi.Getter = ReflectionUtility.CreatePropertyGetter<object, object>(realProperty);
+					}
+					else {
+						var realField = realType.GetField(f.Name, BindingFlags.Instance | BindingFlags.Public);
+						pi.Getter = ReflectionUtility.CreateFieldGetter<object, object>(realField);
+					}
 					ti.Properties.Add(pi.Name, pi);
 				}
 
@@ -295,6 +317,10 @@ namespace IonKiwi.Json {
 			}
 			else if (objectInfo != null) {
 
+				if (objectInfo.DisableLogMissingNonRequiredProperties) {
+					ti.LogMissingNonRequiredProperties = false;
+				}
+
 				if (customProperties != null) {
 					foreach (var cp in customProperties) {
 						var pix = new JsonPropertyInfo() {
@@ -302,6 +328,10 @@ namespace IonKiwi.Json {
 							Setter1 = cp.Value.Setter,
 							Getter = cp.Value.Getter,
 							Required = cp.Value.Required,
+							Order1 = cp.Value.Order,
+							Order2 = ti.Properties.Count + 1,
+							EmitTypeName = cp.Value.EmitTypeName,
+							EmitNullValue = cp.Value.EmitNullValue,
 							Name = cp.Key,
 							IsSingleOrArrayValue = cp.Value.IsSingleOrArrayValue,
 						};
@@ -313,6 +343,46 @@ namespace IonKiwi.Json {
 
 					for (int i = typeHierarchy.Count - 1; i >= 0; i--) {
 						var currentType = typeHierarchy[i];
+						foreach (var f in currentType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
+							var propInfo = f.GetCustomAttribute<JsonPropertyAttribute>(false);
+							if (propInfo != null) {
+								string name = propInfo.Name;
+								if (string.IsNullOrEmpty(name)) {
+									name = f.Name;
+								}
+
+								if (propInfo.Required && !propInfo.EmitNullValue) {
+									throw new InvalidOperationException("Required & !EmitNullValue");
+								}
+
+								JsonPropertyInfo pi = new JsonPropertyInfo();
+								pi.Name = name;
+								pi.PropertyType = f.FieldType;
+								pi.Required = propInfo.Required;
+								pi.Order1 = propInfo.Order;
+								pi.Order2 = ti.Properties.Count + 1;
+								pi.EmitTypeName = propInfo.EmitTypeName;
+								pi.EmitNullValue = propInfo.EmitNullValue;
+								pi.IsSingleOrArrayValue = propInfo.IsSingleOrArrayValue;
+								if (t.IsValueType) {
+									pi.Setter1 = ReflectionUtility.CreateFieldSetterFunc<object, object>(f);
+								}
+								else {
+									pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
+								}
+								pi.Getter = ReflectionUtility.CreateFieldGetter<object, object>(f);
+								if (ti.Properties.ContainsKey(name)) {
+									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
+								}
+
+								var propertyKnownTypes = f.GetCustomAttributes<JsonKnownTypeAttribute>();
+								foreach (var knownType in propertyKnownTypes) {
+									pi.KnownTypes.Add(knownType.KnownType);
+								}
+
+								ti.Properties.Add(name, pi);
+							}
+						}
 						foreach (var p in currentType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
 							var propInfo = p.GetCustomAttribute<JsonPropertyAttribute>(false);
 							if (propInfo != null) {
@@ -321,10 +391,18 @@ namespace IonKiwi.Json {
 									name = p.Name;
 								}
 
+								if (propInfo.Required && !propInfo.EmitNullValue) {
+									throw new InvalidOperationException("Required & !EmitNullValue");
+								}
+
 								JsonPropertyInfo pi = new JsonPropertyInfo();
 								pi.Name = name;
 								pi.PropertyType = p.PropertyType;
 								pi.Required = propInfo.Required;
+								pi.Order1 = propInfo.Order;
+								pi.Order2 = ti.Properties.Count + 1;
+								pi.EmitTypeName = propInfo.EmitTypeName;
+								pi.EmitNullValue = propInfo.EmitNullValue;
 								pi.IsSingleOrArrayValue = propInfo.IsSingleOrArrayValue;
 								if (p.CanWrite) {
 									if (t.IsValueType) {
@@ -342,38 +420,6 @@ namespace IonKiwi.Json {
 								}
 
 								var propertyKnownTypes = p.GetCustomAttributes<JsonKnownTypeAttribute>();
-								foreach (var knownType in propertyKnownTypes) {
-									pi.KnownTypes.Add(knownType.KnownType);
-								}
-
-								ti.Properties.Add(name, pi);
-							}
-						}
-						foreach (var f in currentType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
-							var propInfo = f.GetCustomAttribute<JsonPropertyAttribute>(false);
-							if (propInfo != null) {
-								string name = propInfo.Name;
-								if (string.IsNullOrEmpty(name)) {
-									name = f.Name;
-								}
-
-								JsonPropertyInfo pi = new JsonPropertyInfo();
-								pi.Name = name;
-								pi.PropertyType = f.FieldType;
-								pi.Required = propInfo.Required;
-								pi.IsSingleOrArrayValue = propInfo.IsSingleOrArrayValue;
-								if (t.IsValueType) {
-									pi.Setter1 = ReflectionUtility.CreateFieldSetterFunc<object, object>(f);
-								}
-								else {
-									pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
-								}
-								pi.Getter = ReflectionUtility.CreateFieldGetter<object, object>(f);
-								if (ti.Properties.ContainsKey(name)) {
-									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
-								}
-
-								var propertyKnownTypes = f.GetCustomAttributes<JsonKnownTypeAttribute>();
 								foreach (var knownType in propertyKnownTypes) {
 									pi.KnownTypes.Add(knownType.KnownType);
 								}
