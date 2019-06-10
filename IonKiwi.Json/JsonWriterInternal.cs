@@ -641,13 +641,16 @@ namespace IonKiwi.Json {
 					char[] chars = new char[64];
 					int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, v, null, v.Kind);
 					//int pos = JsonDateTimeUtility.WriteMicrosoftDateTimeString(chars, 0, value, null, value.Kind);
-					return Encoding.UTF8.GetBytes(new string(chars.Take(pos).ToArray()));
+					return Encoding.UTF8.GetBytes('"' + new string(chars.Take(pos).ToArray()) + '"');
 				}
 				else if (typeInfo.RootType == typeof(TimeSpan)) {
 					return Encoding.UTF8.GetBytes(((TimeSpan)value).Ticks.ToString(CultureInfo.InvariantCulture));
 				}
 				else if (typeInfo.RootType == typeof(Uri)) {
-					return Encoding.UTF8.GetBytes(((Uri)value).OriginalString);
+					return Encoding.UTF8.GetBytes(JsonUtilities.JavaScriptStringEncode(
+						((Uri)value).OriginalString,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						JsonUtilities.JavaScriptQuoteMode.Always));
 				}
 				else if (typeInfo.RootType == typeof(Guid)) {
 					return Encoding.UTF8.GetBytes('"' + ((Guid)value).ToString("D") + '"');
