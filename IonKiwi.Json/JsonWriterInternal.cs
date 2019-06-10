@@ -199,7 +199,7 @@ namespace IonKiwi.Json {
 					propertyName = (string)key;
 				}
 				else {
-					if (state.TypeInfo.IsFlagsEnum) {
+					if (!state.TypeInfo.IsFlagsEnum) {
 						propertyName = Enum.GetName(state.TypeInfo.KeyType, key);
 					}
 					else {

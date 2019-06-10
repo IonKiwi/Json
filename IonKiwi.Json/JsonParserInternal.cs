@@ -748,7 +748,17 @@ namespace IonKiwi.Json {
 				else if (parentState is JsonParserDictionaryState dictionaryState) {
 					if (dictionaryState.IsStringDictionary) {
 						var propertyState = (JsonParserDictionaryValueState)completedState;
-						dictionaryState.TypeInfo.DictionaryAddMethod(dictionaryState.Value, propertyState.PropertyName, propertyState.Value);
+						if (dictionaryState.TypeInfo.IsEnumDictionary) {
+							if (ReflectionUtility.TryParseEnum(dictionaryState.TypeInfo.KeyType, propertyState.PropertyName, true, out var result)) {
+								dictionaryState.TypeInfo.DictionaryAddMethod(dictionaryState.Value, result, propertyState.Value);
+							}
+							else {
+								ThrowInvalidEnumValue(dictionaryState.TypeInfo.KeyType, propertyState.PropertyName);
+							}
+						}
+						else {
+							dictionaryState.TypeInfo.DictionaryAddMethod(dictionaryState.Value, propertyState.PropertyName, propertyState.Value);
+						}
 					}
 					else {
 						dictionaryState.TypeInfo.DictionaryAddKeyValueMethod(dictionaryState.Value, completedState.Value);
@@ -763,6 +773,10 @@ namespace IonKiwi.Json {
 				else {
 					ThrowUnhandledType(parentState.GetType());
 				}
+			}
+
+			private void ThrowInvalidEnumValue(Type enumType, string value) {
+				throw new NotSupportedException("Value '" + value + "' is not valid for enum type '" + ReflectionUtility.GetTypeName(enumType) + "'.");
 			}
 
 			private void EnsureNotComplete(JsonParserInternalState state) {
