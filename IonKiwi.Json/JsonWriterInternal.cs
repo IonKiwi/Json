@@ -458,11 +458,17 @@ namespace IonKiwi.Json {
 					if (_settings.EnumValuesAsString) {
 						if (!typeInfo.IsFlagsEnum) {
 							string name = Enum.GetName(typeInfo.RootType, value);
-							return Encoding.UTF8.GetBytes(name);
+							return Encoding.UTF8.GetBytes(JsonUtilities.JavaScriptStringEncode(
+								name,
+								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+								JsonUtilities.JavaScriptQuoteMode.Always));
 						}
 						else {
 							string name = string.Join(", ", ReflectionUtility.GetUniqueFlags((Enum)value).Select(x => Enum.GetName(typeInfo.RootType, x)));
-							return Encoding.UTF8.GetBytes(name);
+							return Encoding.UTF8.GetBytes(JsonUtilities.JavaScriptStringEncode(
+								name,
+								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+								JsonUtilities.JavaScriptQuoteMode.Always));
 						}
 					}
 					else {
