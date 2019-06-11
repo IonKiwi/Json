@@ -46,7 +46,7 @@ namespace IonKiwi.Json {
 						}
 					case HandleStateResult.ProcessTypeToken: {
 							var state = _currentState.Peek();
-							var t = HandleTypeToken(reader, state, reader.GetValue().Substring("$type".Length));
+							var t = HandleTypeToken(reader, state, reader.GetValue().Substring("$type:".Length));
 							await HandleNewTypeAndVisitor(reader, state, t, JsonToken.ArrayStart).NoSync();
 							break;
 						}
