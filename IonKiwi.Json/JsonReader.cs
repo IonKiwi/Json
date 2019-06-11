@@ -145,7 +145,14 @@ namespace IonKiwi.Json {
 		public async Task Skip() {
 #endif
 			var token = _token;
-			if (IsValueToken(token) || token == JsonToken.Comment) {
+			if (token == JsonToken.Comment) {
+				do {
+					token = await Read().NoSync();
+				}
+				while (token == JsonToken.Comment);
+			}
+
+			if (IsValueToken(token)) {
 				return;
 			}
 			else switch (token) {
@@ -191,7 +198,14 @@ namespace IonKiwi.Json {
 
 		public void SkipSync() {
 			var token = _token;
-			if (IsValueToken(token) || token == JsonToken.Comment) {
+			if (token == JsonToken.Comment) {
+				do {
+					token = ReadSync();
+				}
+				while (token == JsonToken.Comment);
+			}
+
+			if (IsValueToken(token)) {
 			}
 			else switch (token) {
 					case JsonToken.ObjectStart: {
@@ -245,8 +259,23 @@ namespace IonKiwi.Json {
 		public async Task<string> ReadRaw() {
 #endif
 			var currentToken = Token;
+
+			if (currentToken == JsonToken.Comment) {
+				do {
+					currentToken = await Read().NoSync();
+				}
+				while (currentToken == JsonToken.Comment);
+			}
+
 			if (currentToken == JsonToken.ObjectProperty) {
-				await Read().NoSync();
+				currentToken = await Read().NoSync();
+			}
+
+			if (currentToken == JsonToken.Comment) {
+				do {
+					currentToken = await Read().NoSync();
+				}
+				while (currentToken == JsonToken.Comment);
 			}
 
 			if (JsonReader.IsValueToken(currentToken)) {
@@ -267,6 +296,13 @@ namespace IonKiwi.Json {
 
 				do {
 					currentToken = await Read().NoSync();
+					if (currentToken == JsonToken.Comment) {
+						do {
+							currentToken = await Read().NoSync();
+						}
+						while (currentToken == JsonToken.Comment);
+					}
+
 					var position = stack.Peek();
 					switch (currentToken) {
 						case JsonToken.None:
@@ -307,8 +343,23 @@ namespace IonKiwi.Json {
 
 		public string ReadRawSync() {
 			var currentToken = Token;
+
+			if (currentToken == JsonToken.Comment) {
+				do {
+					currentToken = ReadSync();
+				}
+				while (currentToken == JsonToken.Comment);
+			}
+
 			if (currentToken == JsonToken.ObjectProperty) {
-				ReadSync();
+				currentToken = ReadSync();
+			}
+
+			if (currentToken == JsonToken.Comment) {
+				do {
+					currentToken = ReadSync();
+				}
+				while (currentToken == JsonToken.Comment);
 			}
 
 			if (JsonReader.IsValueToken(currentToken)) {
@@ -329,6 +380,13 @@ namespace IonKiwi.Json {
 
 				do {
 					currentToken = ReadSync();
+					if (currentToken == JsonToken.Comment) {
+						do {
+							currentToken = ReadSync();
+						}
+						while (currentToken == JsonToken.Comment);
+					}
+
 					var position = stack.Peek();
 					switch (currentToken) {
 						case JsonToken.None:
@@ -391,8 +449,6 @@ namespace IonKiwi.Json {
 						sb.Append(":");
 						break;
 					}
-				case JsonToken.Comment:
-					return;
 				case JsonToken.Boolean:
 				case JsonToken.Null:
 				case JsonToken.Number: {
@@ -742,7 +798,7 @@ namespace IonKiwi.Json {
 				var state = _currentState.Peek();
 				if (state is JsonInternalRootState rootState) {
 					if (!state.IsComplete) {
-						if (rootState.Token != JsonInternalRootToken.Value) {
+						if (rootState.Token != JsonInternalRootToken.Value || rootState.IsForwardSlash) {
 							ThrowMoreDataExpectedException();
 						}
 						state.IsComplete = true;
@@ -763,6 +819,12 @@ namespace IonKiwi.Json {
 				ValidateNumberState(numberState);
 				state.IsComplete = true;
 				token = JsonToken.Number;
+				return true;
+			}
+			// trailing single line comment without newline
+			else if (state is JsonInternalSingleLineCommentState commentState && !commentState.IsComplete) {
+				state.IsComplete = true;
+				token = JsonToken.Comment;
 				return true;
 			}
 			else if (state.IsComplete) {
@@ -1143,8 +1205,9 @@ namespace IonKiwi.Json {
 #else
 		private void HandleTrailingWhiteSpace(JsonInternalRootState state, byte[] block, int offset, int length) {
 #endif
-			var currentToken = state.Token;
 			var isMultiByteSequence = state.IsMultiByteSequence;
+			var isForwardSlash = state.IsForwardSlash;
+			var isCarriageReturn = state.IsCarriageReturn;
 			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
@@ -1156,10 +1219,10 @@ namespace IonKiwi.Json {
 					continue;
 				}
 				else if (cl > 1) {
-					if (currentToken == JsonInternalRootToken.CarriageReturn) {
+					if (isCarriageReturn) {
 						_lineIndex++;
 						_lineOffset = cl;
-						state.Token = currentToken = JsonInternalRootToken.None;
+						state.IsCarriageReturn = isCarriageReturn = false;
 					}
 					ThrowUnexpectedDataException();
 				}
@@ -1167,7 +1230,7 @@ namespace IonKiwi.Json {
 				_lineOffset += cl;
 				var c = cc[0];
 
-				if (currentToken == JsonInternalRootToken.CarriageReturn) {
+				if (isCarriageReturn) {
 					// assert i == 0
 					if (i != 0) {
 						ThrowInternalStateCorruption();
@@ -1175,12 +1238,29 @@ namespace IonKiwi.Json {
 
 					_lineIndex++;
 					_lineOffset = 0;
-					state.Token = currentToken = JsonInternalRootToken.None;
+					state.IsCarriageReturn = isCarriageReturn = false;
 
 					if (c == '\n') {
 						continue;
 					}
 					_lineOffset = 1;
+				}
+				else if (isForwardSlash) {
+					state.IsForwardSlash = isForwardSlash = false;
+					if (c == '*') {
+						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return;
+					}
+					else if (c == '/') {
+						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						_currentState.Push(newState);
+						_offset += i + 1;
+						return;
+					}
+					ThrowUnexpectedDataException();
+					return;
 				}
 				else if (c == '\r') {
 					if (remaining > 0) {
@@ -1193,7 +1273,7 @@ namespace IonKiwi.Json {
 						continue;
 					}
 					else {
-						state.Token = currentToken = JsonInternalRootToken.CarriageReturn;
+						state.IsCarriageReturn = isCarriageReturn = true;
 						// need more data
 						_offset += length;
 						return;
@@ -1207,6 +1287,10 @@ namespace IonKiwi.Json {
 
 				// white-space
 				if (c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0' || c == '\uFEFF') {
+					continue;
+				}
+				else if (c == '/') {
+					state.IsForwardSlash = isForwardSlash = true;
 					continue;
 				}
 				else {

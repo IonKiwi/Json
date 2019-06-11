@@ -81,6 +81,9 @@ namespace IonKiwi.Json {
 			public Charset Charset = Charset.Utf8;
 			public byte[] ByteOrderMark;
 			public int ByteOrderMarkIndex;
+
+			public bool IsCarriageReturn;
+			public bool IsForwardSlash;
 		}
 
 		private sealed class JsonInternalObjectState : JsonInternalState {
