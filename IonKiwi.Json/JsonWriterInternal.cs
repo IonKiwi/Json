@@ -74,10 +74,6 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private void ThrowUnhandledType(Type t) {
-				throw new NotImplementedException(ReflectionUtility.GetTypeName(t));
-			}
-
 			private byte[] HandleObject(JsonWriterObjectState state) {
 
 				if (!state.Properties.MoveNext()) {
@@ -679,22 +675,6 @@ namespace IonKiwi.Json {
 					}
 				}
 				return input;
-			}
-
-			private void ThowNotSupportedIntPtrSize() {
-				throw new NotSupportedException("IntPtr size " + IntPtr.Size.ToString(CultureInfo.InvariantCulture));
-			}
-
-			private void ThowNotSupportedUIntPtrSize() {
-				throw new NotSupportedException("UIntPtr size " + UIntPtr.Size.ToString(CultureInfo.InvariantCulture));
-			}
-
-			private void ThrowNotSupported(Type t) {
-				throw new NotSupportedException(ReflectionUtility.GetTypeName(t));
-			}
-
-			private void ThrowNotImplementedException() {
-				throw new NotImplementedException();
 			}
 
 			private TupleContextInfoWrapper GetNewContext(TupleContextInfoWrapper context, string propertyName, JsonTypeInfo propertyTypeInfo) {

@@ -40,7 +40,8 @@ namespace IonKiwi.Json {
 					return mbChar.Length;
 				}
 				else if (!isMultiByteSequence) {
-					throw new InvalidOperationException("Internal state corruption");
+					ThrowInternalStateCorruption();
+					return 0;
 				}
 				else {
 					return 0;
@@ -53,7 +54,8 @@ namespace IonKiwi.Json {
 				}
 				else if (b >= 0 && b <= 0x1f) {
 					// C0 control block
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 				else if (b == 0x85) {
 					// NEL (newline)
@@ -62,7 +64,8 @@ namespace IonKiwi.Json {
 				}
 				else if (b >= 0x80 && b <= 0x9F) {
 					// C1 control block
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 				else if ((b & 0xE0) == 0xC0) {
 					state.IsMultiByteSequence = isMultiByteSequence = true;
@@ -120,7 +123,8 @@ namespace IonKiwi.Json {
 					return 1;
 				}
 				else {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 			}
 		}
@@ -129,18 +133,21 @@ namespace IonKiwi.Json {
 			if (state.MultiByteIndex == 1 && state.MultiByteSequenceLength == 2) {
 				if ((b & 0xC0) != 0x80) {
 					// not a continuing byte in a multi-byte sequence
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				int v = (state.MultiByteSequence[0] & 0x1F) << 6;
 				v |= (b & 0x3F);
 
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				else if (v == 0xFFFE || v == 0xFFFF) {
 					// BOM
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
@@ -152,7 +159,8 @@ namespace IonKiwi.Json {
 			else if (state.MultiByteIndex == 2 && state.MultiByteSequenceLength == 3) {
 				if ((b & 0xC0) != 0x80) {
 					// not a continuing byte in a multi-byte sequence
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				int v = (state.MultiByteSequence[0] & 0xF) << 12;
 				v |= (state.MultiByteSequence[1] & 0x3F) << 6;
@@ -160,11 +168,13 @@ namespace IonKiwi.Json {
 
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				else if (v == 0xFFFE || v == 0xFFFF) {
 					// BOM
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
@@ -176,7 +186,8 @@ namespace IonKiwi.Json {
 			else if (state.MultiByteIndex == 3 && state.MultiByteSequenceLength == 4) {
 				if ((b & 0xC0) != 0x80) {
 					// not a continuing byte in a multi-byte sequence
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				int v = (state.MultiByteSequence[0] & 0x7) << 18;
 				v |= (state.MultiByteSequence[1] & 0x3F) << 12;
@@ -185,11 +196,13 @@ namespace IonKiwi.Json {
 
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				else if (v == 0xFFFE || v == 0xFFFF) {
 					// BOM
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
@@ -201,7 +214,8 @@ namespace IonKiwi.Json {
 			else if (state.MultiByteIndex == 4 && state.MultiByteSequenceLength == 5) {
 				if ((b & 0xC0) != 0x80) {
 					// not a continuing byte in a multi-byte sequence
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				int v = (state.MultiByteSequence[0] & 0x3) << 24;
 				v |= (state.MultiByteSequence[1] & 0x3F) << 18;
@@ -211,11 +225,13 @@ namespace IonKiwi.Json {
 
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				else if (v == 0xFFFE || v == 0xFFFF) {
 					// BOM
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
@@ -227,7 +243,8 @@ namespace IonKiwi.Json {
 			else if (state.MultiByteIndex == 5 && state.MultiByteSequenceLength == 6) {
 				if ((b & 0xC0) != 0x80) {
 					// not a continuing byte in a multi-byte sequence
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 
 				int v = (state.MultiByteSequence[0] & 0x1) << 30;
@@ -239,11 +256,13 @@ namespace IonKiwi.Json {
 
 				if (v >= 0xD800 && v <= 0xDFFF) {
 					// surrogate block
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				else if (v == 0xFFFE || v == 0xFFFF) {
 					// BOM
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 
 				state.MultiByteSequence[state.MultiByteIndex] = b;
@@ -255,20 +274,23 @@ namespace IonKiwi.Json {
 			else if (state.MultiByteIndex < (state.MultiByteSequenceLength - 1)) {
 				if (!(b >= 0x80 && b <= 0xBF)) {
 					// not a continuing byte in a multi-byte sequence
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return null;
 				}
 				state.MultiByteSequence[state.MultiByteIndex++] = b;
 				return null;
 			}
 			else {
-				throw new InvalidOperationException("Internal state corruption");
+				ThrowInternalStateCorruption();
+				return null;
 			}
 		}
 
 		private int GetCharacterFromEscapeSequence(JsonInternalState state, char c, ref char[] result, bool isMultiByteCharacter, ref JsonInternalEscapeToken escapeToken) {
 			if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicode) {
 				if (isMultiByteCharacter) {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 				if (c == '{') {
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.EscapeSequenceUnicodeCodePoint;
@@ -286,12 +308,14 @@ namespace IonKiwi.Json {
 					return 0;
 				}
 				else {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 			}
 			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicodeHex) {
 				if (isMultiByteCharacter) {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
 					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
@@ -318,7 +342,8 @@ namespace IonKiwi.Json {
 					}
 					// low/trail surrogate
 					else if (v >= 0xDC00 && v <= 0xDFFF) {
-						throw new NotSupportedException("Low surrogate without high surrogate");
+						ThrowLowSurrogateWithoutHighSurrogate();
+						return 0;
 					}
 
 					var utf16 = Char.ConvertFromUtf32(v);
@@ -329,23 +354,27 @@ namespace IonKiwi.Json {
 					return utf16.Length;
 				}
 				else {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 			}
 			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicodeHexSurrogate) {
 				if (isMultiByteCharacter) {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 				else if (state.MultiByteIndex == 4) {
 					if (c != '\\') {
-						throw new UnexpectedDataException("Expected unicode escape sequence for low surrogate");
+						ThrowLowSurrogateExpected();
+						return 0;
 					}
 					state.MultiByteIndex++;
 					return 0;
 				}
 				else if (state.MultiByteIndex == 5) {
 					if (c != 'u') {
-						throw new UnexpectedDataException("Expected unicode escape sequence for low surrogate");
+						ThrowLowSurrogateExpected();
+						return 0;
 					}
 					state.MultiByteIndex++;
 					return 0;
@@ -367,7 +396,8 @@ namespace IonKiwi.Json {
 					v2 |= GetByte(state.MultiByteSequence[9], out _);
 
 					if (!(v2 >= 0xDC00 && v2 <= 0xDFFF)) {
-						throw new NotSupportedException("Expected low surrogate pair");
+						ThrowExpectedLowSurrogatePair();
+						return 0;
 					}
 
 					int utf16v = (v1 - 0xD800) * 0x400 + v2 - 0xDC00 + 0x10000;
@@ -379,16 +409,19 @@ namespace IonKiwi.Json {
 					return utf16.Length;
 				}
 				else {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 			}
 			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicodeCodePoint) {
 				if (isMultiByteCharacter) {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 				else if (c == '}') {
 					if (state.MultiByteIndex == 0) {
-						throw new NotSupportedException("CodePoint with 0 HexDigits");
+						ThowCodePointZeroHexDigits();
+						return 0;
 					}
 					int v = 0;
 					for (int ii = 0, ls = (state.MultiByteIndex - 1) * 4; ii < state.MultiByteIndex - 1; ii++, ls -= 4) {
@@ -404,20 +437,23 @@ namespace IonKiwi.Json {
 				}
 				else {
 					if (state.MultiByteIndex == state.MultiByteSequenceLength) {
-						throw new NotSupportedException("CodePoint > 8 HexDigits");
+						ThowCodePointHexDigitsOverflow();
+						return 0;
 					}
 					if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || c >= 'A' && c <= 'Z') {
 						state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
 						return 0;
 					}
 					else {
-						throw new UnexpectedDataException();
+						ThrowUnexpectedDataException();
+						return 0;
 					}
 				}
 			}
 			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceHex) {
 				if (isMultiByteCharacter) {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
 					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
@@ -434,7 +470,8 @@ namespace IonKiwi.Json {
 					return utf16.Length;
 				}
 				else {
-					throw new UnexpectedDataException();
+					ThrowUnexpectedDataException();
+					return 0;
 				}
 			}
 			else if (escapeToken == JsonInternalEscapeToken.Detect) {
@@ -506,7 +543,8 @@ namespace IonKiwi.Json {
 				}
 			}
 			else {
-				throw new NotImplementedException(escapeToken.ToString());
+				ThrowUnhandledEscapeToken(escapeToken);
+				return 0;
 			}
 		}
 

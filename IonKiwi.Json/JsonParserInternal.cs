@@ -169,10 +169,6 @@ namespace IonKiwi.Json {
 				HandleUntypedObjectInternal(typeValue.Substring("$type:".Length), true);
 			}
 
-			private void ThrowNotProperty() {
-				throw new NotSupportedException("$type member is required for untyped objects.");
-			}
-
 			private void HandleUntypedObjectInternal(string typeValue, bool isArray) {
 				if (string.IsNullOrEmpty(typeValue)) {
 					ThrowEmptyTypeName();
@@ -275,25 +271,9 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private void ThrowEmptyTypeName() {
-				throw new Exception("$type is empty and not a valid type.");
-			}
-
-			private void ThrowInvalidTypeName(string typeName) {
-				throw new Exception("$type '" + typeName + "' is not a valid type.");
-			}
-
-			private void ThrowSingleOrArrayValueNotSupportedException() {
-				throw new NotSupportedException("IsSingleOrArrayValue is not supported for untyped values.");
-			}
-
-			private void ThrowTypeNotAllowed(Type t) {
-				throw new InvalidOperationException("Type '" + ReflectionUtility.GetTypeName(t) + "' is not allowed.");
-			}
-
 			private void ValidateTypeTokenIsString(JsonReader reader) {
 				if (reader.Token != JsonToken.String) {
-					throw new Exception("Expected string data for property '$type'. actual: " + reader.Token);
+					ThrowExpectedStringForTypeProperty(reader.Token);
 				}
 			}
 
@@ -482,10 +462,10 @@ namespace IonKiwi.Json {
 					}
 
 					if ((newValueType != null && !(newValueType == typeInfo.OriginalType || newValueType.IsSubclassOf(typeInfo.OriginalType))) || (newValue == null && !typeInfo.IsNullable)) {
-						throw new InvalidOperationException("Visitor provided an invalid value. Expected value to be of type '" + ReflectionUtility.GetTypeName(expectedType) + "'.");
+						ThrowInvalidValueFromVisitor(expectedType);
 					}
 					if ((token == JsonToken.ObjectStart && reader.Token != JsonToken.ObjectEnd) || (token == JsonToken.ArrayStart && reader.Token != JsonToken.ArrayEnd) || reader.Depth != startDepth) {
-						throw new InvalidOperationException("Visitor left the reader at an invalid position");
+						ThrowVisitorInvalidPosition();
 					}
 
 					state.Value = newValue;
@@ -495,7 +475,7 @@ namespace IonKiwi.Json {
 				}
 				else {
 					if ((token == JsonToken.ObjectStart && reader.Token != JsonToken.ObjectStart) || (token == JsonToken.ArrayStart && reader.Token != JsonToken.ArrayStart) || reader.Depth != startDepth) {
-						throw new InvalidOperationException("Visitor left the reader at an invalid position");
+						ThrowVisitorInvalidPosition();
 					}
 					// restore original position
 					reader.Unwind();
@@ -768,10 +748,6 @@ namespace IonKiwi.Json {
 				return HandleStateResult.None;
 			}
 
-			private void ThrowMissingRequiredProperties(HashSet<string> missingProperties) {
-				throw new RequiredPropertiesMissingException("Missing required properties: " + string.Join(",", missingProperties));
-			}
-
 			private HandleStateResult CompleteArray(JsonParserArrayState arrayState) {
 				if (object.ReferenceEquals(null, arrayState.Value)) {
 					return HandleStateResult.CreateInstance;
@@ -936,18 +912,6 @@ namespace IonKiwi.Json {
 				return HandleStateResult.None;
 			}
 
-			private void ThrowNotSupportedTokenException(JsonToken token) {
-				throw new NotSupportedException(token.ToString());
-			}
-
-			private void ThrowNotSupportedException(Type t) {
-				throw new NotSupportedException(ReflectionUtility.GetTypeName(t));
-			}
-
-			private void ThrowNotImplementedException() {
-				throw new NotImplementedException();
-			}
-
 			private void HandleStateCompletion(JsonParserInternalState parentState, JsonParserInternalState completedState) {
 				if (parentState is JsonParserObjectPropertyState || parentState is JsonParserArrayItemState || parentState is JsonParserDictionaryValueState || parentState is JsonParserSimpleValueState) {
 					parentState.Value = completedState.Value;
@@ -1007,33 +971,21 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private void ThrowInvalidEnumValue(Type enumType, string value) {
-				throw new NotSupportedException("Value '" + value + "' is not valid for enum type '" + ReflectionUtility.GetTypeName(enumType) + "'.");
-			}
-
 			private void EnsureNotComplete(JsonParserInternalState state) {
 				if (state.IsComplete) {
-					throw new Exception("Internal state corruption");
+					ThrowInternalStateCorruption();
 				}
-			}
-
-			private void UnexpectedToken(JsonToken token) {
-				throw new Exception("Unexpected token '" + token + "'.");
-			}
-
-			private void ThrowUnhandledType(Type t) {
-				throw new NotImplementedException(ReflectionUtility.GetTypeName(t));
 			}
 
 			public T GetValue<T>() {
 
 				if (_currentState.Count != 1) {
-					throw new InvalidOperationException("Parse result is incomplete, value is not yet available.");
+					ThrowValueNotAvailable();
 				}
 
 				var rootState = (JsonParserRootState)_currentState.Peek();
 				if (!rootState.IsComplete) {
-					throw new InvalidOperationException("Parse result is incomplete, value is not yet available.");
+					ThrowValueNotAvailable();
 				}
 
 				return (T)rootState.Value;

@@ -19,18 +19,18 @@ namespace IonKiwi.Json {
 					return null;
 				}
 				else if (token != JsonToken.String) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(string))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(string));
 				}
 				return reader.GetValue();
 			}
 
 			private bool GetValueAsBoolean(JsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(bool))}' was requested.");
+					ThrowNonNullableTypeRequested(typeof(bool));
 				}
 
 				if (token != JsonToken.Boolean) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(bool))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(bool));
 				}
 
 				string v = reader.GetValue();
@@ -41,7 +41,8 @@ namespace IonKiwi.Json {
 					return false;
 				}
 				else {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(bool))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(bool));
+					return false;
 				}
 			}
 
@@ -51,7 +52,7 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.Boolean) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(bool?))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(bool?));
 				}
 
 				string v = reader.GetValue();
@@ -62,22 +63,23 @@ namespace IonKiwi.Json {
 					return false;
 				}
 				else {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(bool?))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(bool));
+					return null;
 				}
 			}
 
 			private int GetValueAsInt(JsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(int))}' was requested.");
+					ThrowNonNullableTypeRequested(typeof(int));
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(int))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(int));
 				}
 
 				string v = reader.GetValue();
 				if (!int.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out var intValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(int))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(int));
 				}
 				return intValue;
 			}
@@ -88,28 +90,28 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(int?))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(int?));
 				}
 
 				string v = reader.GetValue();
 				if (!int.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out var intValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(int?))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(int?));
 				}
 				return intValue;
 			}
 
 			private long GetValueAsLong(JsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(long))}' was requested.");
+					ThrowNonNullableTypeRequested(typeof(long));
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(long))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(long));
 				}
 
 				string v = reader.GetValue();
 				if (!long.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out var longValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(long))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(long));
 				}
 				return longValue;
 			}
@@ -120,28 +122,28 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(long?))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(long?));
 				}
 
 				string v = reader.GetValue();
 				if (!long.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out var longValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(long?))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(long?));
 				}
 				return longValue;
 			}
 
 			private float GetValueAsSingle(JsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(float))}' was requested.");
+					ThrowNonNullableTypeRequested(typeof(float));
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(float))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(float));
 				}
 
 				string v = reader.GetValue();
 				if (!float.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var floatValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(float))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(float));
 				}
 				return floatValue;
 			}
@@ -152,28 +154,28 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(float?))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(float?));
 				}
 
 				string v = reader.GetValue();
 				if (!float.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var floatValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(float?))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(float?));
 				}
 				return floatValue;
 			}
 
 			private double GetValueAsDouble(JsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(double))}' was requested.");
+					ThrowNonNullableTypeRequested(typeof(double));
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(double))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(double));
 				}
 
 				string v = reader.GetValue();
 				if (!double.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var doubleValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(double))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(double));
 				}
 				return doubleValue;
 			}
@@ -184,27 +186,27 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(double?))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(double?));
 				}
 
 				string v = reader.GetValue();
 				if (!double.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var doubleValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(double?))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(double?));
 				}
 				return doubleValue;
 			}
 
 			private BigInteger GetValueAsBigInteger(JsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(BigInteger))}' was requested.");
+					ThrowNonNullableTypeRequested(typeof(BigInteger));
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(BigInteger))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(BigInteger));
 				}
 				string v = reader.GetValue();
 				if (!BigInteger.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out var bigIntegerValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(BigInteger))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(BigInteger));
 				}
 				return bigIntegerValue;
 			}
@@ -215,27 +217,27 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(BigInteger?))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(BigInteger?));
 				}
 				string v = reader.GetValue();
 				if (!BigInteger.TryParse(v, NumberStyles.AllowLeadingSign | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out var bigIntegerValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(BigInteger?))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(BigInteger?));
 				}
 				return bigIntegerValue;
 			}
 
 			private DateTime GetValueAsDateTime(JsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(DateTime))}' was requested.");
+					ThrowNonNullableTypeRequested(typeof(DateTime));
 				}
 
 				if (token != JsonToken.String) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(DateTime))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(DateTime));
 				}
 
 				string v = reader.GetValue();
 				if (!JsonDateTimeUtility.TryParseDateTime(v, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling, out var dt)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(DateTime))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(DateTime));
 				}
 
 				return dt;
@@ -247,12 +249,12 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.String) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(DateTime?))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(DateTime?));
 				}
 
 				string v = reader.GetValue();
 				if (!JsonDateTimeUtility.TryParseDateTime(v, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling, out var dt)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(DateTime?))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(DateTime?));
 				}
 
 				return dt;
@@ -260,16 +262,16 @@ namespace IonKiwi.Json {
 
 			private TimeSpan GetValueAsTimeSpan(JsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(TimeSpan))}' was requested.");
+					ThrowNonNullableTypeRequested(typeof(TimeSpan));
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(TimeSpan))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(TimeSpan));
 				}
 
 				string v = reader.GetValue();
 				if (!long.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var longValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(TimeSpan))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(TimeSpan));
 				}
 
 				return new TimeSpan(longValue);
@@ -281,12 +283,12 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.Number) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(TimeSpan?))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(TimeSpan?));
 				}
 
 				string v = reader.GetValue();
 				if (!long.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var longValue)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(TimeSpan?))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(TimeSpan?));
 				}
 
 				return new TimeSpan(longValue);
@@ -298,7 +300,7 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.String) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(Uri))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(Uri));
 				}
 
 				string v = reader.GetValue();
@@ -310,22 +312,23 @@ namespace IonKiwi.Json {
 					return u;
 				}
 
-				throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(Uri))}'");
+				ThrowDataDoesNotMatchTypeRequested(v, typeof(Uri));
+				return null;
 			}
 
 			private Guid GetValueAsGuid(JsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(Guid))}' was requested.");
+					ThrowNonNullableTypeRequested(typeof(Guid));
 				}
 
 				if (token != JsonToken.String) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(Guid))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(Guid));
 				}
 
 				Guid guid;
 				string v = reader.GetValue();
 				if (!Guid.TryParse(v, out guid)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(Guid))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(Guid));
 				}
 
 				return guid;
@@ -337,7 +340,7 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.String) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(Guid?))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(Guid?));
 				}
 
 				string v = reader.GetValue();
@@ -346,7 +349,7 @@ namespace IonKiwi.Json {
 				}
 
 				if (!Guid.TryParse(v, out var guid)) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(Guid?))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(Guid?));
 				}
 
 				return guid;
@@ -358,7 +361,7 @@ namespace IonKiwi.Json {
 				}
 
 				if (token != JsonToken.String) {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(byte[]))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(byte[]));
 				}
 
 				string v = reader.GetValue();
@@ -370,26 +373,28 @@ namespace IonKiwi.Json {
 					return Convert.FromBase64String(v);
 				}
 				catch (FormatException fe) {
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(byte[]))}'", fe);
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(byte[]), fe);
+					return null;
 				}
 			}
 
 			//private T GetValueAsEnum<T>(JsonReader reader, JsonToken token) where T : struct {
 			//	if (token == JsonToken.Null) {
-			//		throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(T))}' was requested.");
+			//		ThrowNonNullableTypeRequested(typeof(T));
 			//	}
 
 			//	if (token == JsonToken.String) {
 			//		string v = reader.GetValue();
 			//		if (string.IsNullOrEmpty(v)) {
-			//			throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(typeof(T))}' was requested.");
+			//			ThrowEmptyValueNonNullableTypeRequested(typeof(T));
 			//		}
 
 			//		if (ReflectionUtility.TryParseEnum<T>(v, true, out var result)) {
 			//			return result;
 			//		}
 
-			//		throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//		ThrowDataDoesNotMatchTypeRequested(v, typeof(T));
+			//		return default(T);
 			//	}
 			//	else if (token == JsonToken.Number) {
 			//		var enumType = typeof(T);
@@ -410,29 +415,32 @@ namespace IonKiwi.Json {
 			//			}
 			//		}
 
-			//		throw new InvalidOperationException($"Json data '{reader.GetValue()}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//		ThrowDataDoesNotMatchTypeRequested(reader.GetValue(), typeof(T));
+			//		return default(T);
 			//	}
 			//	else {
-			//		throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//		ThrowTokenDoesNotMatchRequestedType(token, typeof(T));
+			//		return default(T);
 			//	}
 			//}
 
 			private object GetValueAsEnumUntyped(JsonReader reader, JsonToken token, Type enumType) {
 				if (token == JsonToken.Null) {
-					throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(enumType)}' was requested.");
+					ThrowNonNullableTypeRequested(enumType);
 				}
 
 				if (token == JsonToken.String) {
 					string v = reader.GetValue();
 					if (string.IsNullOrEmpty(v)) {
-						throw new Exception($"Json value is null but the non nullable value type '{ReflectionUtility.GetTypeName(enumType)}' was requested.");
+						ThrowEmptyValueNonNullableTypeRequested(enumType);
 					}
 
 					if (ReflectionUtility.TryParseEnum(enumType, v, true, out var result)) {
 						return result;
 					}
 
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(enumType)}'");
+					ThrowDataDoesNotMatchTypeRequested(v, enumType);
+					return null;
 				}
 				else if (token == JsonToken.Number) {
 					var realTypex = Enum.GetUnderlyingType(enumType);
@@ -452,10 +460,12 @@ namespace IonKiwi.Json {
 						}
 					}
 
-					throw new InvalidOperationException($"Json data '{reader.GetValue()}' does not match request value type '{ReflectionUtility.GetTypeName(enumType)}'");
+					ThrowDataDoesNotMatchTypeRequested(reader.GetValue(), enumType);
+					return null;
 				}
 				else {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(enumType)}'");
+					ThrowTokenDoesNotMatchRequestedType(token, enumType);
+					return null;
 				}
 			}
 
@@ -474,7 +484,8 @@ namespace IonKiwi.Json {
 			//			return result;
 			//		}
 
-			//		throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//		ThrowDataDoesNotMatchTypeRequested(v, typeof(T?));
+			//		return null;
 			//	}
 			//	else if (token == JsonToken.Number) {
 			//		var enumType = typeof(T);
@@ -495,10 +506,12 @@ namespace IonKiwi.Json {
 			//			}
 			//		}
 
-			//		throw new InvalidOperationException($"Json data '{reader.GetValue()}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//		ThrowDataDoesNotMatchTypeRequested(reader.GetValue(), typeof(T?));
+			//		return null;
 			//	}
 			//	else {
-			//		throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(T))}'");
+			//		ThrowTokenDoesNotMatchRequestedType(token, typeof(T?));
+			//		return null;
 			//	}
 			//}
 
@@ -517,7 +530,8 @@ namespace IonKiwi.Json {
 						return result;
 					}
 
-					throw new InvalidOperationException($"Json data '{v}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(Nullable<>).MakeGenericType(enumType))}'");
+					ThrowDataDoesNotMatchTypeRequested(v, typeof(Nullable<>).MakeGenericType(enumType));
+					return null;
 				}
 				else if (token == JsonToken.Number) {
 					var realTypex = Enum.GetUnderlyingType(enumType);
@@ -537,10 +551,12 @@ namespace IonKiwi.Json {
 						}
 					}
 
-					throw new InvalidOperationException($"Json data '{reader.GetValue()}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(Nullable<>).MakeGenericType(enumType))}'");
+					ThrowDataDoesNotMatchTypeRequested(reader.GetValue(), typeof(Nullable<>).MakeGenericType(enumType));
+					return null;
 				}
 				else {
-					throw new InvalidOperationException($"Json data type '{token}' does not match request value type '{ReflectionUtility.GetTypeName(typeof(Nullable<>).MakeGenericType(enumType))}'");
+					ThrowTokenDoesNotMatchRequestedType(token, typeof(Nullable<>).MakeGenericType(enumType));
+					return null;
 				}
 			}
 
@@ -615,7 +631,8 @@ namespace IonKiwi.Json {
 					return GetValueAsNullableEnumUntyped(reader, token, expectedValueType.GenericTypeArguments[0]);
 				}
 
-				throw new NotSupportedException($"Requested value type '{ReflectionUtility.GetTypeName(expectedValueType)}' is not supported.");
+				ThrowUnsupportedValueType(expectedValueType);
+				return null;
 			}
 		}
 	}

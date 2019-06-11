@@ -46,7 +46,7 @@ namespace IonKiwi.Json {
 			if (JsonReader.IsValueToken(currentToken)) {
 				await parser.HandleToken(reader).NoSync();
 				if (reader.Depth != startDepth) {
-					throw new Exception("Parser left the reader at an invalid position");
+					ThrowInvalidPosition();
 				}
 				return parser.GetValue<T>();
 			}
@@ -55,14 +55,14 @@ namespace IonKiwi.Json {
 				do {
 					currentToken = await reader.Read().NoSync();
 					if (currentToken == JsonToken.None) {
-						throw new MoreDataExpectedException();
+						ThowMoreDataExpectedException();
 					}
 					await parser.HandleToken(reader).NoSync();
 				}
 				while (reader.Depth != startDepth);
 
 				if (currentToken != JsonToken.ObjectEnd) {
-					throw new Exception("Parser left the reader at an invalid position");
+					ThrowInvalidPosition();
 				}
 
 				return parser.GetValue<T>();
@@ -72,14 +72,14 @@ namespace IonKiwi.Json {
 				do {
 					currentToken = await reader.Read().NoSync();
 					if (currentToken == JsonToken.None) {
-						throw new MoreDataExpectedException();
+						ThowMoreDataExpectedException();
 					}
 					await parser.HandleToken(reader).NoSync();
 				}
 				while (reader.Depth != startDepth);
 
 				if (currentToken != JsonToken.ArrayEnd) {
-					throw new Exception("Parser left the reader at an invalid position");
+					ThrowInvalidPosition();
 				}
 
 				return parser.GetValue<T>();
@@ -89,12 +89,13 @@ namespace IonKiwi.Json {
 					await parser.HandleToken(reader).NoSync();
 				}
 				if (reader.Depth != 0) {
-					throw new Exception("Parser left the reader at an invalid position");
+					ThrowInvalidPosition();
 				}
 				return parser.GetValue<T>();
 			}
 			else {
-				throw new InvalidOperationException("Reader is not positioned on a start tag. token: " + currentToken);
+				ThrowNotStartTag(currentToken);
+				return default(T);
 			}
 		}
 
@@ -121,7 +122,7 @@ namespace IonKiwi.Json {
 			if (JsonReader.IsValueToken(currentToken)) {
 				parser.HandleTokenSync(reader);
 				if (reader.Depth != startDepth) {
-					throw new Exception("Parser left the reader at an invalid position");
+					ThrowInvalidPosition();
 				}
 				return parser.GetValue<T>();
 			}
@@ -130,14 +131,14 @@ namespace IonKiwi.Json {
 				do {
 					currentToken = reader.ReadSync();
 					if (currentToken == JsonToken.None) {
-						throw new MoreDataExpectedException();
+						ThowMoreDataExpectedException();
 					}
 					parser.HandleTokenSync(reader);
 				}
 				while (reader.Depth != startDepth);
 
 				if (currentToken != JsonToken.ObjectEnd) {
-					throw new Exception("Parser left the reader at an invalid position");
+					ThrowInvalidPosition();
 				}
 
 				return parser.GetValue<T>();
@@ -147,14 +148,14 @@ namespace IonKiwi.Json {
 				do {
 					currentToken = reader.ReadSync();
 					if (currentToken == JsonToken.None) {
-						throw new MoreDataExpectedException();
+						ThowMoreDataExpectedException();
 					}
 					parser.HandleTokenSync(reader);
 				}
 				while (reader.Depth != startDepth);
 
 				if (currentToken != JsonToken.ArrayEnd) {
-					throw new Exception("Parser left the reader at an invalid position");
+					ThrowInvalidPosition();
 				}
 
 				return parser.GetValue<T>();
@@ -164,12 +165,13 @@ namespace IonKiwi.Json {
 					parser.HandleTokenSync(reader);
 				}
 				if (reader.Depth != 0) {
-					throw new Exception("Parser left the reader at an invalid position");
+					ThrowInvalidPosition();
 				}
 				return parser.GetValue<T>();
 			}
 			else {
-				throw new InvalidOperationException("Reader is not positioned on a start tag. token: " + currentToken);
+				ThrowNotStartTag(currentToken);
+				return default(T);
 			}
 		}
 	}

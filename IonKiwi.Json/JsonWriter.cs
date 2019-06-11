@@ -104,7 +104,7 @@ namespace IonKiwi.Json {
 
 				if (offset + 10 >= input.Length) { return false; }
 				if (input[offset + 5] != '\\' && input[offset + 6] != 'u') {
-					throw new Exception("Expected low surrogate for high surrogate");
+					ThrowExpectedLowSurrogateForHighSurrogate();
 				}
 				else if (!IsHexDigit(input[offset + 7])) { return false; }
 				else if (!IsHexDigit(input[offset + 8])) { return false; }
@@ -117,7 +117,7 @@ namespace IonKiwi.Json {
 				v2 |= CommonUtility.GetByte(input[offset + 10], out _);
 
 				if (!(v2 >= 0xDC00 && v2 <= 0xDFFF)) {
-					throw new NotSupportedException("Expected low surrogate pair");
+					ThrowExpectedLowSurrogatePair();
 				}
 
 				int utf16v = (v - 0xD800) * 0x400 + v2 - 0xDC00 + 0x10000;
@@ -126,7 +126,7 @@ namespace IonKiwi.Json {
 				return true;
 			}
 			else if (v >= 0xDC00 && v <= 0xDFFF) {
-				throw new Exception("Low surrogate without high surrogate");
+				ThrowLowSurrogateWithoutHighSurrogate();
 			}
 
 			length = 5;

@@ -20,13 +20,17 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		private static void ThrowResourceNotFound(string resourceName) {
+			throw new InvalidOperationException($"Resource '{resourceName}' not found.");
+		}
+
 		private static Stream GetStringData(string resourceName) {
 			var asm = typeof(UnicodeExtension).Assembly;
 			var asmName = asm.GetName(false);
 			var fullResourceName = asmName.Name + ".Resources." + resourceName;
 			var s = asm.GetManifestResourceStream(fullResourceName);
 			if (s == null) {
-				throw new InvalidOperationException($"Resource '{resourceName}' not found.");
+				ThrowResourceNotFound(resourceName);
 			}
 			return s;
 		}
@@ -49,10 +53,19 @@ namespace IonKiwi.Json {
 			return _ID_Start.Contains(c);
 		}
 
+		private static void ThrowArgumentNullException(string argument) {
+			throw new ArgumentNullException(argument);
+		}
+
+		private static void ThrowInvalidOperationException() {
+			throw new InvalidOperationException();
+		}
+
 		public static bool ID_Start(char[] c) {
 			EnsureInitialized();
 			if (c == null) {
-				throw new ArgumentNullException(nameof(c));
+				ThrowArgumentNullException(nameof(c));
+				return false;
 			}
 			else if (c.Length == 1) {
 				return _ID_Start.Contains(c[0]);
@@ -62,7 +75,8 @@ namespace IonKiwi.Json {
 				return _ID_Start.Contains(v);
 			}
 			else {
-				throw new InvalidOperationException();
+				ThrowInvalidOperationException();
+				return false;
 			}
 		}
 
@@ -74,7 +88,8 @@ namespace IonKiwi.Json {
 		public static bool ID_Continue(char[] c) {
 			EnsureInitialized();
 			if (c == null) {
-				throw new ArgumentNullException(nameof(c));
+				ThrowArgumentNullException(nameof(c));
+				return false;
 			}
 			else if (c.Length == 1) {
 				return _ID_Continue.Contains(c[0]);
@@ -84,7 +99,8 @@ namespace IonKiwi.Json {
 				return _ID_Continue.Contains(v);
 			}
 			else {
-				throw new InvalidOperationException();
+				ThrowInvalidOperationException();
+				return false;
 			}
 		}
 	}

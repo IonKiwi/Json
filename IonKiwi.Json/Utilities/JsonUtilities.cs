@@ -26,6 +26,18 @@ namespace IonKiwi.Json.Utilities {
 			return ("\"" + result + "\"");
 		}
 
+		private static void ThrowExpectedLowSurrogateForHighSurrogate() {
+			throw new InvalidOperationException("Expected low surrogate for high surrogate");
+		}
+
+		private static void ThrowExpecteLowSurrogateForHighSurrogate() {
+			throw new Exception("Expected low surrogate for high surrogate");
+		}
+
+		private static void ThrowLowSurrogateWithoutHighSurrogate() {
+			throw new Exception("Low surrogate without high surrogate");
+		}
+
 		private static string JavaScriptStringEncodeInternal(string value, JavaScriptEncodeMode encodeMode, bool validateIdentifier, out bool requiresQuotes) {
 			requiresQuotes = false;
 			if (string.IsNullOrEmpty(value)) {
@@ -85,9 +97,9 @@ namespace IonKiwi.Json.Utilities {
 				if (CharRequiresJavaScriptEncoding(c)) {
 					if (encodeMode == JavaScriptEncodeMode.CodePoint || (encodeMode == JavaScriptEncodeMode.SurrogatePairsAsCodePoint && char.IsHighSurrogate(c))) {
 						if (char.IsHighSurrogate(c)) {
-							if (i + 1 >= value.Length) { throw new InvalidOperationException("Expected low surrogate for high surrogate"); }
+							if (i + 1 >= value.Length) { ThrowExpectedLowSurrogateForHighSurrogate(); }
 							if (!char.IsLowSurrogate(value[i + 1])) {
-								throw new Exception("Expected low surrogate for high surrogate");
+								ThrowExpecteLowSurrogateForHighSurrogate();
 							}
 							int v1 = c;
 							int v2 = value[i + 1];
@@ -97,7 +109,7 @@ namespace IonKiwi.Json.Utilities {
 							builder.Append("}");
 						}
 						else if (char.IsLowSurrogate(c)) {
-							throw new Exception("Low surrogate without high surrogate");
+							ThrowLowSurrogateWithoutHighSurrogate();
 						}
 						else {
 							builder.Append("\\u{");
