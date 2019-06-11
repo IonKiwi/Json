@@ -21,7 +21,11 @@ namespace IonKiwi.Json {
 				_currentState.Push(new JsonParserRootState() { TypeInfo = typeInfo, TupleContext = wrapper });
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			public async ValueTask HandleToken(JsonReader reader) {
+#else
 			public async Task HandleToken(JsonReader reader) {
+#endif
 				var result = HandleTokenInternal(reader);
 				if (result == HandleStateResult.Skip) {
 					await reader.Skip().NoSync();
@@ -103,7 +107,11 @@ namespace IonKiwi.Json {
 				}
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			private async ValueTask HandleUntypedObject(JsonReader reader) {
+#else
 			private async Task HandleUntypedObject(JsonReader reader) {
+#endif
 				var token = await reader.Read().NoSync();
 				while (token == JsonToken.Comment) {
 					token = await reader.Read().NoSync();
@@ -139,7 +147,11 @@ namespace IonKiwi.Json {
 				HandleUntypedObjectInternal(reader.GetValue(), false);
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			private async ValueTask HandleUntypedArray(JsonReader reader) {
+#else
 			private async Task HandleUntypedArray(JsonReader reader) {
+#endif
 				var token = await reader.Read().NoSync();
 				while (token == JsonToken.Comment) {
 					token = await reader.Read().NoSync();
@@ -316,7 +328,11 @@ namespace IonKiwi.Json {
 				return t;
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			private async ValueTask HandleTypeAndVisitor(JsonReader reader, JsonParserInternalState state) {
+#else
 			private async Task HandleTypeAndVisitor(JsonReader reader, JsonParserInternalState state) {
+#endif
 				JsonTypeInfo typeInfo = null;
 				JsonToken token = JsonToken.None;
 				if (state is JsonParserDictionaryState dictionaryState) {
@@ -402,7 +418,11 @@ namespace IonKiwi.Json {
 				HandleTokenSync(reader);
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			private async ValueTask HandleNewTypeAndVisitor(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
+#else
 			private async Task HandleNewTypeAndVisitor(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
+#endif
 				if (_settings.Visitor != null) {
 					IJsonParserVisitor visitor = _settings.Visitor;
 

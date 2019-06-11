@@ -23,7 +23,11 @@ namespace IonKiwi.Json {
 				_currentState.Push(new JsonWriterRootState() { TypeInfo = typeInfo, TupleContext = wrapper, Value = value, ValueType = objectType });
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			internal async ValueTask Serialize(IOutputWriter writer) {
+#else
 			internal async Task Serialize(IOutputWriter writer) {
+#endif
 				do {
 					byte[] data = SerializeInternal(_currentState.Peek());
 					if (data != null) {

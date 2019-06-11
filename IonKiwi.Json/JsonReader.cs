@@ -109,7 +109,11 @@ namespace IonKiwi.Json {
 			return sb.ToString();
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public async ValueTask<JsonToken> Read() {
+#else
 		public async Task<JsonToken> Read() {
+#endif
 			if (_rewindState != null) { return ReplayState(); }
 			return _token = await ReadInternal().NoSync();
 		}
@@ -139,7 +143,11 @@ namespace IonKiwi.Json {
 			_rewindState = null;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public async ValueTask Skip() {
+#else
 		public async Task Skip() {
+#endif
 			var token = _token;
 			if (IsValueToken(token) || token == JsonToken.Comment) {
 				return;
@@ -226,7 +234,11 @@ namespace IonKiwi.Json {
 			public bool IsProperty = false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public async ValueTask<string> ReadRaw() {
+#else
 		public async Task<string> ReadRaw() {
+#endif
 			var currentToken = Token;
 			if (currentToken == JsonToken.ObjectProperty) {
 				await Read().NoSync();
@@ -650,7 +662,11 @@ namespace IonKiwi.Json {
 			}
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private async ValueTask<JsonToken> ReadInternal() {
+#else
 		private async Task<JsonToken> ReadInternal() {
+#endif
 			JsonToken token = JsonToken.None;
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer, _offset, _length - _offset, out token)) {
 				if (_length - _offset == 0 && !await ReadData().NoSync()) {

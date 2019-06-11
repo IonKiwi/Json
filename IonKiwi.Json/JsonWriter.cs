@@ -23,7 +23,11 @@ namespace IonKiwi.Json {
 			}
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public static async ValueTask Serialize<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+#else
 		public static async Task Serialize<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+#endif
 			if (objectType == null) {
 				objectType = typeof(T);
 			}

@@ -24,7 +24,11 @@ namespace IonKiwi.Json {
 			}
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+#else
 		public static async Task<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+#endif
 
 			if (objectType == null) {
 				objectType = typeof(T);

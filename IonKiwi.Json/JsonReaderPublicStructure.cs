@@ -50,7 +50,11 @@ namespace IonKiwi.Json {
 		}
 
 		public interface IInputReader {
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			ValueTask<int> ReadBlock(byte[] buffer);
+#else
 			Task<int> ReadBlock(byte[] buffer);
+#endif
 			int ReadBlockSync(byte[] buffer);
 		}
 
@@ -62,11 +66,19 @@ namespace IonKiwi.Json {
 				_buffer = data;
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			ValueTask<int> IInputReader.ReadBlock(byte[] buffer) {
+#else
 			Task<int> IInputReader.ReadBlock(byte[] buffer) {
+#endif
 				var bs = Math.Min(_buffer.Length - _offset, buffer.Length);
 				Buffer.BlockCopy(_buffer, _offset, buffer, 0, bs);
 				_offset += bs;
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+				return new ValueTask<int>(bs);
+#else
 				return Task.FromResult(bs);
+#endif
 			}
 
 			int IInputReader.ReadBlockSync(byte[] buffer) {
@@ -84,9 +96,15 @@ namespace IonKiwi.Json {
 				_stream = stream;
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			ValueTask<int> IInputReader.ReadBlock(byte[] buffer) {
+				return new ValueTask<int>(_stream.ReadAsync(buffer, 0, buffer.Length));
+			}
+#else
 			Task<int> IInputReader.ReadBlock(byte[] buffer) {
 				return _stream.ReadAsync(buffer, 0, buffer.Length);
 			}
+#endif
 
 			int IInputReader.ReadBlockSync(byte[] buffer) {
 				return _stream.Read(buffer, 0, buffer.Length);

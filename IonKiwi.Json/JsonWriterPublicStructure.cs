@@ -11,7 +11,11 @@ using System.Threading.Tasks;
 namespace IonKiwi.Json {
 	public partial class JsonWriter {
 		public interface IOutputWriter {
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			ValueTask WriteBlock(byte[] buffer);
+#else
 			Task WriteBlock(byte[] buffer);
+#endif
 			void WriteBlockSync(byte[] buffer);
 		}
 
@@ -23,10 +27,18 @@ namespace IonKiwi.Json {
 				_sb = new StringBuilder();
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			public ValueTask WriteBlock(byte[] buffer) {
+#else
 			public Task WriteBlock(byte[] buffer) {
+#endif
 				var chars = Encoding.UTF8.GetString(buffer);
 				_sb.Append(chars);
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+				return new ValueTask();
+#else
 				return Task.CompletedTask;
+#endif
 			}
 
 			public void WriteBlockSync(byte[] buffer) {
@@ -49,7 +61,11 @@ namespace IonKiwi.Json {
 				_textWriter = textWriter;
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			public async ValueTask WriteBlock(byte[] buffer) {
+#else
 			public async Task WriteBlock(byte[] buffer) {
+#endif
 				var chars = Encoding.UTF8.GetString(buffer);
 				await _textWriter.WriteAsync(chars).NoSync();
 			}
@@ -68,9 +84,15 @@ namespace IonKiwi.Json {
 				_stream = stream;
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			public ValueTask WriteBlock(byte[] buffer) {
+				return new ValueTask(_stream.WriteAsync(buffer, 0, buffer.Length));
+			}
+#else
 			public Task WriteBlock(byte[] buffer) {
 				return _stream.WriteAsync(buffer, 0, buffer.Length);
 			}
+#endif
 
 			public void WriteBlockSync(byte[] buffer) {
 				_stream.Write(buffer, 0, buffer.Length);
