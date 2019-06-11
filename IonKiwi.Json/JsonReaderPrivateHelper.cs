@@ -122,7 +122,7 @@ namespace IonKiwi.Json {
 				if (b == '\t' || b == '\r' || b == '\n') {
 					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
-				else if (b >= 0 && b <= 0x1f) {
+				else if (b <= 0x1f) {
 					// C0 control block
 					ThrowUnexpectedDataException();
 					return 0;
@@ -155,8 +155,8 @@ namespace IonKiwi.Json {
 					// BOM
 					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
-				else if (b >= 0x00 && b <= 0x7F) {
-					// reamaining normal single byte => accept
+				else if (b <= 0x7F) {
+					// remaining normal single byte => accept
 					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else {
@@ -586,7 +586,7 @@ namespace IonKiwi.Json {
 		}
 
 		private static int GetByte(byte x, out bool valid) {
-			int z = (int)x;
+			int z = x;
 			if (z >= 0x30 && z <= 0x39) {
 				valid = true;
 				return (byte)(z - 0x30);

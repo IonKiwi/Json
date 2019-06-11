@@ -14,9 +14,7 @@ namespace IonKiwi.Json {
 
 		}
 
-		internal IReadOnlyDictionary<string, string> DefaultAssemblyNames {
-			get { return _defaultAssemblyNames; }
-		}
+		internal IReadOnlyDictionary<string, string> DefaultAssemblyNames => _defaultAssemblyNames;
 
 		internal string DefaultAssemblyName {
 			get;
@@ -30,7 +28,7 @@ namespace IonKiwi.Json {
 
 		private bool _logMissingNonRequiredProperties = true;
 		public bool LogMissingNonRequiredProperties {
-			get { return _logMissingNonRequiredProperties; }
+			get => _logMissingNonRequiredProperties;
 			set {
 				EnsureUnlocked();
 				_logMissingNonRequiredProperties = value;
@@ -39,7 +37,7 @@ namespace IonKiwi.Json {
 
 		private Func<Type, bool> _typeAllowedCallback;
 		public Func<Type, bool> TypeAllowedCallback {
-			get { return _typeAllowedCallback; }
+			get => _typeAllowedCallback;
 			set {
 				EnsureUnlocked();
 				_typeAllowedCallback = value;
@@ -48,7 +46,7 @@ namespace IonKiwi.Json {
 
 		private JsonParserVisitor _visitor;
 		public JsonParserVisitor Visitor {
-			get { return _visitor; }
+			get => _visitor;
 			set {
 				EnsureUnlocked();
 				_visitor = value;
@@ -58,8 +56,8 @@ namespace IonKiwi.Json {
 		public JsonParserSettings AddDefaultAssemblyName(AssemblyName name) {
 			EnsureUnlocked();
 
-			string key = name.Name;
-			string value = ", Version=" + name.Version + ", Culture=neutral, PublicKeyToken=" + GetPublicKeyToken(name);
+			var key = name.Name;
+			var value = ", Version=" + name.Version + ", Culture=neutral, PublicKeyToken=" + GetPublicKeyToken(name);
 
 			if (_defaultAssemblyNames.ContainsKey(key)) {
 				throw new Exception("Duplicate key: " + key);
@@ -87,7 +85,7 @@ namespace IonKiwi.Json {
 
 		private DateTimeHandling _dateTimeHandling;
 		public DateTimeHandling DateTimeHandling {
-			get { return _dateTimeHandling; }
+			get => _dateTimeHandling;
 			set {
 				EnsureUnlocked();
 				_dateTimeHandling = value;
@@ -96,7 +94,7 @@ namespace IonKiwi.Json {
 
 		private UnspecifiedDateTimeHandling _unspecifiedDateTimeHandling;
 		public UnspecifiedDateTimeHandling UnspecifiedDateTimeHandling {
-			get { return _unspecifiedDateTimeHandling; }
+			get => _unspecifiedDateTimeHandling;
 			set {
 				EnsureUnlocked();
 				_unspecifiedDateTimeHandling = value;
@@ -116,9 +114,7 @@ namespace IonKiwi.Json {
 			_locked = true;
 		}
 
-		public bool IsSealed {
-			get { return _locked; }
-		}
+		public bool IsSealed => _locked;
 
 		public JsonParserSettings Clone() {
 			JsonParserSettings clone = new JsonParserSettings();

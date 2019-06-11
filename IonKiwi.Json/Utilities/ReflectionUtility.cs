@@ -10,7 +10,7 @@ using System.Threading;
 namespace IonKiwi.Json.Utilities {
 	public static class ReflectionUtility {
 
-		private readonly static object _globalLock = new object();
+		private static readonly object _globalLock = new object();
 
 		public static bool HasInterface(Type t, Type interfaceType) {
 			if (t == null) {
@@ -217,45 +217,47 @@ namespace IonKiwi.Json.Utilities {
 		private static Func<object, object, bool> _hasEnumFlag;
 		private static Dictionary<Type, object> _allEnumValues = new Dictionary<Type, object>();
 		public static bool HasEnumFlag(Type t, object enumValue) {
-			object allEnumValues;
-			if (_hasEnumFlag == null || !_allEnumValues.TryGetValue(t, out allEnumValues)) {
-				lock (_globalLock) {
-					if (_hasEnumFlag == null || !_allEnumValues.TryGetValue(t, out allEnumValues)) {
+			if (_hasEnumFlag != null && _allEnumValues.TryGetValue(t, out var allEnumValues)) {
+				return _hasEnumFlag(allEnumValues, enumValue);
+			}
 
-						if (_hasEnumFlag == null) {
-							var mi = typeof(Enum).GetMethod("HasFlag", BindingFlags.Public | BindingFlags.Instance);
+			lock (_globalLock) {
+				if (_hasEnumFlag == null || !_allEnumValues.TryGetValue(t, out allEnumValues)) {
 
-							var p1 = Expression.Parameter(typeof(object), "p1");
-							var p2 = Expression.Parameter(typeof(object), "p2");
-							//var e1 = Expression.Convert(p1, t);
-							//var e2 = Expression.Convert(p2, t);
-							var e1 = Expression.Convert(p1, typeof(Enum));
-							var e2 = Expression.Convert(p2, typeof(Enum));
-							var callExpr = Expression.Call(e1, mi, e2);
-							var lambda = Expression.Lambda<Func<object, object, bool>>(callExpr, p1, p2);
-							_hasEnumFlag = lambda.Compile();
-						}
+					if (_hasEnumFlag == null) {
+						var mi = typeof(Enum).GetMethod("HasFlag", BindingFlags.Public | BindingFlags.Instance);
 
-						ulong totalValue = 0;
-						var allValues = Enum.GetValues(t);
-						foreach (object ev in allValues) {
-							ulong nev = (ulong)Convert.ChangeType(ev, typeof(ulong));
-							totalValue |= nev;
-						}
-
-						allEnumValues = Enum.ToObject(t, totalValue);
-
-						var newDictionary = new Dictionary<Type, object>();
-						foreach (var kv in _allEnumValues) {
-							newDictionary.Add(kv.Key, kv.Value);
-						}
-						newDictionary.Add(t, allEnumValues);
-
-						Thread.MemoryBarrier();
-						_allEnumValues = newDictionary;
+						var p1 = Expression.Parameter(typeof(object), "p1");
+						var p2 = Expression.Parameter(typeof(object), "p2");
+						//var e1 = Expression.Convert(p1, t);
+						//var e2 = Expression.Convert(p2, t);
+						var e1 = Expression.Convert(p1, typeof(Enum));
+						var e2 = Expression.Convert(p2, typeof(Enum));
+						var callExpr = Expression.Call(e1, mi, e2);
+						var lambda = Expression.Lambda<Func<object, object, bool>>(callExpr, p1, p2);
+						_hasEnumFlag = lambda.Compile();
 					}
+
+					ulong totalValue = 0;
+					var allValues = Enum.GetValues(t);
+					foreach (object ev in allValues) {
+						ulong nev = (ulong)Convert.ChangeType(ev, typeof(ulong));
+						totalValue |= nev;
+					}
+
+					allEnumValues = Enum.ToObject(t, totalValue);
+
+					var newDictionary = new Dictionary<Type, object>();
+					foreach (var kv in _allEnumValues) {
+						newDictionary.Add(kv.Key, kv.Value);
+					}
+					newDictionary.Add(t, allEnumValues);
+
+					Thread.MemoryBarrier();
+					_allEnumValues = newDictionary;
 				}
 			}
+
 			return _hasEnumFlag(allEnumValues, enumValue);
 		}
 
@@ -354,12 +356,12 @@ namespace IonKiwi.Json.Utilities {
 			var p1 = Expression.Parameter(t, "p1");
 			var p2 = Expression.Parameter(v, "p2");
 
-			Expression instace;
+			Expression instance;
 			if (d != t) {
-				instace = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
+				instance = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
 			}
 			else {
-				instace = p1;
+				instance = p1;
 			}
 			Expression value;
 			if (property.PropertyType != v) {
@@ -368,7 +370,7 @@ namespace IonKiwi.Json.Utilities {
 			else {
 				value = p2;
 			}
-			var callExpr = Expression.Call(instace, property.GetSetMethod(true), value);
+			var callExpr = Expression.Call(instance, property.GetSetMethod(true), value);
 			var callLambda = Expression.Lambda<Action<TType, TValue>>(callExpr, p1, p2).Compile();
 			return callLambda;
 		}
@@ -382,13 +384,13 @@ namespace IonKiwi.Json.Utilities {
 			var p2 = Expression.Parameter(v, "p2");
 			var var = Expression.Variable(d, "v");
 
-			Expression instace;
+			Expression instance;
 			if (d != t) {
-				//instace = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
-				instace = Expression.Convert(p1, d);
+				//instance = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
+				instance = Expression.Convert(p1, d);
 			}
 			else {
-				instace = p1;
+				instance = p1;
 			}
 			Expression value;
 			if (property.PropertyType != v) {
@@ -398,7 +400,7 @@ namespace IonKiwi.Json.Utilities {
 				value = p2;
 			}
 
-			var varValue = Expression.Assign(var, instace);
+			var varValue = Expression.Assign(var, instance);
 			var callExpr = Expression.Call(var, property.GetSetMethod(true), value);
 			var resultExpr = d != t ? (Expression)Expression.Convert(var, t) : var;
 			var blockExpr = Expression.Block(new List<ParameterExpression>() { var }, varValue, callExpr, resultExpr);
@@ -414,12 +416,12 @@ namespace IonKiwi.Json.Utilities {
 			var p1 = Expression.Parameter(t, "p1");
 			var p2 = Expression.Parameter(v, "p2");
 
-			Expression instace;
+			Expression instance;
 			if (d != t) {
-				instace = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
+				instance = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
 			}
 			else {
-				instace = p1;
+				instance = p1;
 			}
 			Expression value;
 			if (field.FieldType != v) {
@@ -429,7 +431,7 @@ namespace IonKiwi.Json.Utilities {
 				value = p2;
 			}
 
-			var fieldExpr = Expression.Field(instace, field);
+			var fieldExpr = Expression.Field(instance, field);
 			var callExpr = Expression.Assign(fieldExpr, value);
 			var callLambda = Expression.Lambda<Action<TType, TValue>>(callExpr, p1, p2).Compile();
 			return callLambda;
@@ -444,13 +446,13 @@ namespace IonKiwi.Json.Utilities {
 			var p2 = Expression.Parameter(v, "p2");
 			var var = Expression.Variable(d, "v");
 
-			Expression instace;
+			Expression instance;
 			if (d != t) {
-				//instace = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
-				instace = Expression.Convert(p1, d);
+				//instance = d.IsValueType ? Expression.Unbox(p1, d) : Expression.Convert(p1, d);
+				instance = Expression.Convert(p1, d);
 			}
 			else {
-				instace = p1;
+				instance = p1;
 			}
 			Expression value;
 			if (field.FieldType != v) {
@@ -460,7 +462,7 @@ namespace IonKiwi.Json.Utilities {
 				value = p2;
 			}
 
-			var varValue = Expression.Assign(var, instace);
+			var varValue = Expression.Assign(var, instance);
 			var fieldExpr = Expression.Field(var, field);
 			var callExpr = Expression.Assign(fieldExpr, value);
 			var resultExpr = d != t ? (Expression)Expression.Convert(var, t) : var;
@@ -729,8 +731,7 @@ namespace IonKiwi.Json.Utilities {
 
 		private static bool IsInDefaultAssemblyName(Type t, JsonWriterSettings settings) {
 			var asmName = t.Assembly.GetName(false);
-			AssemblyName partialName;
-			if (settings.DefaultAssemblyNames.TryGetValue(asmName.Name, out partialName)) {
+			if (settings.DefaultAssemblyNames.TryGetValue(asmName.Name, out var partialName)) {
 				return (asmName.Version == partialName.Version && CommonUtility.AreByteArraysEqual(asmName.GetPublicKeyToken(), partialName.GetPublicKeyToken()));
 			}
 			return false;
@@ -766,8 +767,7 @@ namespace IonKiwi.Json.Utilities {
 				int x2 = partialGenericTypeName2.IndexOf(',', x1 + 1);
 				if (x2 < 0) {
 					string assemblyName = partialGenericTypeName2.Substring(x1 + 1).Trim();
-					string partialName;
-					if (settings.DefaultAssemblyNames.TryGetValue(assemblyName, out partialName)) {
+					if (settings.DefaultAssemblyNames.TryGetValue(assemblyName, out var partialName)) {
 						partialGenericTypeName2 += partialName;
 					}
 					else if (!settings.HasDefaultAssemblyName) {
@@ -832,8 +832,7 @@ namespace IonKiwi.Json.Utilities {
 				int i2 = typeName.IndexOf(',', i1 + 1);
 				if (i2 < 0) {
 					string assemblyName = typeName.Substring(i1 + 1).Trim();
-					string partialName;
-					if (settings.DefaultAssemblyNames.TryGetValue(assemblyName, out partialName)) {
+					if (settings.DefaultAssemblyNames.TryGetValue(assemblyName, out var partialName)) {
 						sb.Append(typeName);
 						sb.Append(partialName);
 						return;

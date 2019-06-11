@@ -29,15 +29,13 @@ namespace IonKiwi.Json {
 	}
 
 	public abstract class JsonParserVisitor : IJsonParserVisitor {
-		public JsonParserVisitor() {
+		protected JsonParserVisitor() {
 
 		}
 
 		private JsonParserSettings _parserSettings;
 
-		protected JsonParserSettings ParserSettings {
-			get { return _parserSettings; }
-		}
+		protected JsonParserSettings ParserSettings => _parserSettings;
 
 		protected T ParseSync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
 			return JsonParser.ParseSync<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);

@@ -101,6 +101,6 @@ namespace IonKiwi.Json.Utilities {
 			}
 			valid = false;
 			return 0;
-		}	
+		}
 	}
 }

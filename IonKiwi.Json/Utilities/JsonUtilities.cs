@@ -30,10 +30,6 @@ namespace IonKiwi.Json.Utilities {
 			throw new InvalidOperationException("Expected low surrogate for high surrogate");
 		}
 
-		private static void ThrowExpecteLowSurrogateForHighSurrogate() {
-			throw new Exception("Expected low surrogate for high surrogate");
-		}
-
 		private static void ThrowLowSurrogateWithoutHighSurrogate() {
 			throw new Exception("Low surrogate without high surrogate");
 		}
@@ -99,7 +95,7 @@ namespace IonKiwi.Json.Utilities {
 						if (char.IsHighSurrogate(c)) {
 							if (i + 1 >= value.Length) { ThrowExpectedLowSurrogateForHighSurrogate(); }
 							if (!char.IsLowSurrogate(value[i + 1])) {
-								ThrowExpecteLowSurrogateForHighSurrogate();
+								ThrowExpectedLowSurrogateForHighSurrogate();
 							}
 							int v1 = c;
 							int v2 = value[i + 1];

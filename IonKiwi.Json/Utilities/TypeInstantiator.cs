@@ -135,8 +135,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static TInstanceInterface Instantiate<TInstanceInterface>(Type actualType) {
-			Func<TInstanceInterface> instantiator;
-			if (!InternalInterfaceCache<TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						CheckInterface(actualType, typeof(TInstanceInterface));
@@ -157,8 +156,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static object Instantiate(Type actualType) {
-			Func<object> instantiator;
-			if (!InternalInterfaceCache<object>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<object>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<object>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						instantiator = CreateInstantiator(actualType);
@@ -193,8 +191,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static TInstanceInterface InstantiateWithParameters<TInstanceInterface, TParameter1>(Type actualType, TParameter1 p1) {
-			Func<TParameter1, TInstanceInterface> instantiator;
-			if (!InternalInterfaceCache<TParameter1, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<TParameter1, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<TParameter1, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						CheckInterface(actualType, typeof(TInstanceInterface));
@@ -230,8 +227,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static TInstanceInterface InstantiateWithParameters<TInstanceInterface, TParameter1, TParameter2>(Type actualType, TParameter1 p1, TParameter2 p2) {
-			Func<TParameter1, TParameter2, TInstanceInterface> instantiator;
-			if (!InternalInterfaceCache<TParameter1, TParameter2, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<TParameter1, TParameter2, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<TParameter1, TParameter2, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						CheckInterface(actualType, typeof(TInstanceInterface));
@@ -267,8 +263,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static TInstanceInterface InstantiateWithParameters<TInstanceInterface, TParameter1, TParameter2, TParameter3>(Type actualType, TParameter1 p1, TParameter2 p2, TParameter3 p3) {
-			Func<TParameter1, TParameter2, TParameter3, TInstanceInterface> instantiator;
-			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						CheckInterface(actualType, typeof(TInstanceInterface));
@@ -304,8 +299,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static TInstanceInterface InstantiateWithParameters<TInstanceInterface, TParameter1, TParameter2, TParameter3, TParameter4>(Type actualType, TParameter1 p1, TParameter2 p2, TParameter3 p3, TParameter4 p4) {
-			Func<TParameter1, TParameter2, TParameter3, TParameter4, TInstanceInterface> instantiator;
-			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						CheckInterface(actualType, typeof(TInstanceInterface));
@@ -341,8 +335,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static TInstanceInterface InstantiateWithParameters<TInstanceInterface, TParameter1, TParameter2, TParameter3, TParameter4, TParameter5>(Type actualType, TParameter1 p1, TParameter2 p2, TParameter3 p3, TParameter4 p4, TParameter5 p5) {
-			Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TInstanceInterface> instantiator;
-			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						CheckInterface(actualType, typeof(TInstanceInterface));
@@ -378,8 +371,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static TInstanceInterface InstantiateWithParameters<TInstanceInterface, TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6>(Type actualType, TParameter1 p1, TParameter2 p2, TParameter3 p3, TParameter4 p4, TParameter5 p5, TParameter6 p6) {
-			Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TInstanceInterface> instantiator;
-			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						CheckInterface(actualType, typeof(TInstanceInterface));
@@ -415,8 +407,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static TInstanceInterface InstantiateWithParameters<TInstanceInterface, TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7>(Type actualType, TParameter1 p1, TParameter2 p2, TParameter3 p3, TParameter4 p4, TParameter5 p5, TParameter6 p6, TParameter7 p7) {
-			Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TInstanceInterface> instantiator;
-			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						CheckInterface(actualType, typeof(TInstanceInterface));
@@ -452,8 +443,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static TInstanceInterface InstantiateWithParameters<TInstanceInterface, TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TParameter8>(Type actualType, TParameter1 p1, TParameter2 p2, TParameter3 p3, TParameter4 p4, TParameter5 p5, TParameter6 p6, TParameter7 p7, TParameter8 p8) {
-			Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TParameter8, TInstanceInterface> instantiator;
-			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TParameter8, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
+			if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TParameter8, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out var instantiator)) {
 				lock (_globalLock) {
 					if (!InternalInterfaceCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TParameter8, TInstanceInterface>._instantiatorCache.TryGetValue(actualType, out instantiator)) {
 						CheckInterface(actualType, typeof(TInstanceInterface));

@@ -36,7 +36,7 @@ namespace IonKiwi.Json {
 				public TupleContextInfoWrapper TupleContext;
 				//public int StartDepth;
 				public bool IsFirst = true;
-				public HashSet<string> Properties = new HashSet<string>(StringComparer.Ordinal);
+				public readonly HashSet<string> Properties = new HashSet<string>(StringComparer.Ordinal);
 			}
 
 			private sealed class JsonParserArrayState : JsonParserInternalState {

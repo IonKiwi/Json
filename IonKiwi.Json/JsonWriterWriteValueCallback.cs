@@ -15,7 +15,7 @@ namespace IonKiwi.Json {
 		private bool _replaceValue = false;
 
 		public Type ValueType {
-			get { return _inputType; }
+			get => _inputType;
 			set {
 				if (value == null) {
 					throw new InvalidOperationException();
@@ -25,7 +25,7 @@ namespace IonKiwi.Json {
 		}
 
 		public object Value {
-			get { return _value; }
+			get => _value;
 			set {
 				_value = value;
 				_replaceValue = true;

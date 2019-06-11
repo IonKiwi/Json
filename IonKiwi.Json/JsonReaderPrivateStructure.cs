@@ -89,7 +89,7 @@ namespace IonKiwi.Json {
 			public bool IsForwardSlash;
 			public bool ExpectUnicodeEscapeSequence;
 			public int PropertyCount;
-			public StringBuilder CurrentProperty = new StringBuilder();
+			public readonly StringBuilder CurrentProperty = new StringBuilder();
 			public List<JsonInternalCommentState> CommentsBeforeFirstProperty;
 			//public Dictionary<string, JsonInternalObjectPropertyState> Properties = new Dictionary<string, JsonInternalObjectPropertyState>(StringComparer.Ordinal);
 		}
@@ -108,7 +108,7 @@ namespace IonKiwi.Json {
 		}
 
 		private abstract class JsonInternalStringState : JsonInternalState {
-			public StringBuilder Data = new StringBuilder();
+			public readonly StringBuilder Data = new StringBuilder();
 		}
 
 		private abstract class JsonInternalCommentState : JsonInternalStringState {

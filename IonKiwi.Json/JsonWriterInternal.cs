@@ -348,168 +348,157 @@ namespace IonKiwi.Json {
 					return new byte[] { (byte)'n', (byte)'u', (byte)'l', (byte)'l' };
 				}
 
-				if (typeInfo.ObjectType == JsonObjectType.Raw) {
-					return Encoding.UTF8.GetBytes(((RawJson)value).Json);
-				}
-				else if (typeInfo.ObjectType == JsonObjectType.Object) {
-					var objectState = new JsonWriterObjectState();
-					objectState.Parent = state;
-					objectState.Value = value;
-					objectState.Properties = typeInfo.Properties.Values.OrderBy(z => z.Order1).ThenBy(z => z.Order2).GetEnumerator();
-					objectState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-					objectState.TypeInfo = typeInfo;
-					objectState.TupleContext = tupleContext;
-					_currentState.Push(objectState);
+				switch (typeInfo.ObjectType) {
+					case JsonObjectType.Raw:
+						return Encoding.UTF8.GetBytes(((RawJson)value).Json);
+					case JsonObjectType.Object: {
+							var objectState = new JsonWriterObjectState();
+							objectState.Parent = state;
+							objectState.Value = value;
+							objectState.Properties = typeInfo.Properties.Values.OrderBy(z => z.Order1).ThenBy(z => z.Order2).GetEnumerator();
+							objectState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+							objectState.TypeInfo = typeInfo;
+							objectState.TupleContext = tupleContext;
+							_currentState.Push(objectState);
 
-					foreach (var cb in objectState.TypeInfo.OnSerializing) {
-						cb(value);
-					}
+							foreach (var cb in objectState.TypeInfo.OnSerializing) {
+								cb(value);
+							}
 
-					bool emitType = false;
-					if (typeInfo.OriginalType != objectType) {
-						emitType = true;
-						if (typeInfo.OriginalType.IsValueType && typeInfo.IsNullable && typeInfo.ItemType == objectType) {
-							emitType = false;
+							bool emitType = false;
+							if (typeInfo.OriginalType != objectType) {
+								emitType = true;
+								if (typeInfo.OriginalType.IsValueType && typeInfo.IsNullable && typeInfo.ItemType == objectType) {
+									emitType = false;
+								}
+							}
+							if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+								if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
+									emitType = true;
+								}
+								else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
+									emitType = false;
+								}
+							}
+							if (emitType) {
+								objectState.IsFirst = false;
+								return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
+							}
+							return new byte[] { (byte)'{' };
 						}
-					}
-					if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
-						if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
-							emitType = true;
+					case JsonObjectType.Array when typeInfo.ItemType == typeof(JsonWriterProperty): {
+							var customState = new JsonWriterCustomObjectState();
+							customState.Parent = state;
+							customState.Value = value;
+							customState.Items = typeInfo.EnumerateMethod(value);
+							customState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+							_currentState.Push(customState);
+							return new byte[] { (byte)'{' };
 						}
-						else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
-							emitType = false;
+					case JsonObjectType.Array: {
+							var propertyState = state as JsonWriterObjectPropertyState;
+							var singleOrArrayValue = typeInfo.IsSingleOrArrayValue || (propertyState != null && propertyState.PropertyInfo != null && propertyState.PropertyInfo.IsSingleOrArrayValue);
+
+							var arrayState = new JsonWriterArrayState();
+							arrayState.Parent = state;
+							arrayState.Value = value;
+							arrayState.Items = typeInfo.EnumerateMethod(value);
+							arrayState.IsSingleOrArrayValue = singleOrArrayValue;
+							arrayState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+							arrayState.TypeInfo = typeInfo;
+							arrayState.TupleContext = tupleContext;
+							_currentState.Push(arrayState);
+
+							foreach (var cb in arrayState.TypeInfo.OnSerializing) {
+								cb(value);
+							}
+
+							if (singleOrArrayValue) {
+								// no $type support
+								return null;
+							}
+
+							bool emitType = typeInfo.OriginalType != objectType;
+							if (propertyState != null && propertyState.PropertyInfo != null) {
+								if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
+									emitType = true;
+								}
+								else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
+									emitType = false;
+								}
+							}
+							if (emitType) {
+								arrayState.IsFirst = false;
+								return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
+							}
+							return new byte[] { (byte)'[' };
 						}
-					}
-					if (emitType) {
-						objectState.IsFirst = false;
-						return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
-					}
-					return new byte[] { (byte)'{' };
-				}
-				else if (typeInfo.ObjectType == JsonObjectType.Array) {
-					if (typeInfo.ItemType == typeof(JsonWriterProperty)) {
-						var customState = new JsonWriterCustomObjectState();
-						customState.Parent = state;
-						customState.Value = value;
-						customState.Items = typeInfo.EnumerateMethod(value);
-						customState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-						_currentState.Push(customState);
-						return new byte[] { (byte)'{' };
-					}
+					case JsonObjectType.Dictionary: {
+							bool isStringDictionary = typeInfo.KeyType == typeof(string) || (typeInfo.IsEnumDictionary && _settings.EnumValuesAsString);
+							if (isStringDictionary) {
+								var objectState = new JsonWriterStringDictionaryState();
+								objectState.Parent = state;
+								objectState.Value = value;
+								objectState.Items = typeInfo.EnumerateMethod(value);
+								objectState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+								objectState.TypeInfo = typeInfo;
+								objectState.TupleContext = tupleContext;
+								_currentState.Push(objectState);
 
-					var propertyState = state as JsonWriterObjectPropertyState;
-					var singleOrArrayValue = typeInfo.IsSingleOrArrayValue || (propertyState != null && propertyState.PropertyInfo != null && propertyState.PropertyInfo.IsSingleOrArrayValue);
+								foreach (var cb in objectState.TypeInfo.OnSerializing) {
+									cb(value);
+								}
 
-					var arrayState = new JsonWriterArrayState();
-					arrayState.Parent = state;
-					arrayState.Value = value;
-					arrayState.Items = typeInfo.EnumerateMethod(value);
-					arrayState.IsSingleOrArrayValue = singleOrArrayValue;
-					arrayState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-					arrayState.TypeInfo = typeInfo;
-					arrayState.TupleContext = tupleContext;
-					_currentState.Push(arrayState);
+								bool emitType = typeInfo.OriginalType != objectType;
+								if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+									if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
+										emitType = true;
+									}
+									else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
+										emitType = false;
+									}
+								}
+								if (emitType) {
+									objectState.IsFirst = false;
+									return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
+								}
+								return new byte[] { (byte)'{' };
+							}
+							else {
+								var arrayState = new JsonWriterDictionaryState();
+								arrayState.Parent = state;
+								arrayState.Value = value;
+								arrayState.Items = typeInfo.EnumerateMethod(value);
+								arrayState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+								arrayState.TypeInfo = typeInfo;
+								arrayState.TupleContext = tupleContext;
+								_currentState.Push(arrayState);
 
-					foreach (var cb in arrayState.TypeInfo.OnSerializing) {
-						cb(value);
-					}
+								foreach (var cb in arrayState.TypeInfo.OnSerializing) {
+									cb(value);
+								}
 
-					if (singleOrArrayValue) {
-						// no $type support
+								bool emitType = typeInfo.OriginalType != objectType;
+								if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+									if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
+										emitType = true;
+									}
+									else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
+										emitType = false;
+									}
+								}
+								if (emitType) {
+									arrayState.IsFirst = false;
+									return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
+								}
+								return new byte[] { (byte)'[' };
+							}
+						}
+					case JsonObjectType.SimpleValue:
+						return WriteSimpleValue(value, typeInfo);
+					default:
+						ThrowNotImplementedException();
 						return null;
-					}
-
-					bool emitType = false;
-					if (typeInfo.OriginalType != objectType) {
-						emitType = true;
-					}
-					if (propertyState != null && propertyState.PropertyInfo != null) {
-						if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
-							emitType = true;
-						}
-						else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
-							emitType = false;
-						}
-					}
-					if (emitType) {
-						arrayState.IsFirst = false;
-						return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
-					}
-					return new byte[] { (byte)'[' };
-				}
-				else if (typeInfo.ObjectType == JsonObjectType.Dictionary) {
-					bool isStringDictionary = typeInfo.KeyType == typeof(string) || (typeInfo.IsEnumDictionary && _settings.EnumValuesAsString);
-					if (isStringDictionary) {
-						var objectState = new JsonWriterStringDictionaryState();
-						objectState.Parent = state;
-						objectState.Value = value;
-						objectState.Items = typeInfo.EnumerateMethod(value);
-						objectState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-						objectState.TypeInfo = typeInfo;
-						objectState.TupleContext = tupleContext;
-						_currentState.Push(objectState);
-
-						foreach (var cb in objectState.TypeInfo.OnSerializing) {
-							cb(value);
-						}
-
-						bool emitType = false;
-						if (typeInfo.OriginalType != objectType) {
-							emitType = true;
-						}
-						if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
-							if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
-								emitType = true;
-							}
-							else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
-								emitType = false;
-							}
-						}
-						if (emitType) {
-							objectState.IsFirst = false;
-							return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
-						}
-						return new byte[] { (byte)'{' };
-					}
-					else {
-						var arrayState = new JsonWriterDictionaryState();
-						arrayState.Parent = state;
-						arrayState.Value = value;
-						arrayState.Items = typeInfo.EnumerateMethod(value);
-						arrayState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-						arrayState.TypeInfo = typeInfo;
-						arrayState.TupleContext = tupleContext;
-						_currentState.Push(arrayState);
-
-						foreach (var cb in arrayState.TypeInfo.OnSerializing) {
-							cb(value);
-						}
-
-						bool emitType = false;
-						if (typeInfo.OriginalType != objectType) {
-							emitType = true;
-						}
-						if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
-							if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
-								emitType = true;
-							}
-							else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
-								emitType = false;
-							}
-						}
-						if (emitType) {
-							arrayState.IsFirst = false;
-							return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
-						}
-						return new byte[] { (byte)'[' };
-					}
-				}
-				else if (typeInfo.ObjectType == JsonObjectType.SimpleValue) {
-					return WriteSimpleValue(value, typeInfo);
-				}
-				else {
-					ThrowNotImplementedException();
-					return null;
 				}
 			}
 

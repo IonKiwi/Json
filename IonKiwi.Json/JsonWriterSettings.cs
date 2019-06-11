@@ -26,7 +26,7 @@ namespace IonKiwi.Json {
 
 	public class JsonWriterSettings : ISealable {
 		private bool _locked;
-		private Dictionary<string, AssemblyName> _defaultAssemblyNames = new Dictionary<string, AssemblyName>(StringComparer.OrdinalIgnoreCase);
+		private readonly Dictionary<string, AssemblyName> _defaultAssemblyNames = new Dictionary<string, AssemblyName>(StringComparer.OrdinalIgnoreCase);
 
 		public JsonWriterSettings() {
 
@@ -34,16 +34,14 @@ namespace IonKiwi.Json {
 
 		private Action<JsonWriterWriteValueCallbackArgs> _writeValueCallback;
 		public Action<JsonWriterWriteValueCallbackArgs> WriteValueCallback {
-			get { return _writeValueCallback; }
+			get => _writeValueCallback;
 			set {
 				EnsureUnlocked();
 				_writeValueCallback = value;
 			}
 		}
 
-		internal IReadOnlyDictionary<string, AssemblyName> DefaultAssemblyNames {
-			get { return _defaultAssemblyNames; }
-		}
+		internal IReadOnlyDictionary<string, AssemblyName> DefaultAssemblyNames => _defaultAssemblyNames;
 
 		public JsonWriterSettings AddDefaultAssemblyName(AssemblyName name) {
 			EnsureUnlocked();
@@ -59,7 +57,7 @@ namespace IonKiwi.Json {
 
 		private JsonDefaultAssemblyVersion _defaultAssemblyName;
 		public JsonDefaultAssemblyVersion DefaultAssemblyName {
-			get { return _defaultAssemblyName; }
+			get => _defaultAssemblyName;
 			set {
 				EnsureUnlocked();
 				_defaultAssemblyName = value;
@@ -68,7 +66,7 @@ namespace IonKiwi.Json {
 
 		private bool _enumValuesAsString = true;
 		public bool EnumValuesAsString {
-			get { return _enumValuesAsString; }
+			get => _enumValuesAsString;
 			set {
 				EnsureUnlocked();
 				_enumValuesAsString = value;
@@ -77,7 +75,7 @@ namespace IonKiwi.Json {
 
 		private DateTimeHandling _dateTimeHandling;
 		public DateTimeHandling DateTimeHandling {
-			get { return _dateTimeHandling; }
+			get => _dateTimeHandling;
 			set {
 				EnsureUnlocked();
 				_dateTimeHandling = value;
@@ -86,7 +84,7 @@ namespace IonKiwi.Json {
 
 		private UnspecifiedDateTimeHandling _unspecifiedDateTimeHandling;
 		public UnspecifiedDateTimeHandling UnspecifiedDateTimeHandling {
-			get { return _unspecifiedDateTimeHandling; }
+			get => _unspecifiedDateTimeHandling;
 			set {
 				EnsureUnlocked();
 				_unspecifiedDateTimeHandling = value;
@@ -95,7 +93,7 @@ namespace IonKiwi.Json {
 
 		private JsonWriteMode _writeMode;
 		public JsonWriteMode JsonWriteMode {
-			get { return _writeMode; }
+			get => _writeMode;
 			set {
 				EnsureUnlocked();
 				_writeMode = value;
@@ -115,9 +113,7 @@ namespace IonKiwi.Json {
 			_locked = true;
 		}
 
-		public bool IsSealed {
-			get { return _locked; }
-		}
+		public bool IsSealed => _locked;
 
 		public JsonWriterSettings Clone() {
 			var clone = new JsonWriterSettings();

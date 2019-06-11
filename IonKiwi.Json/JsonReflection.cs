@@ -185,7 +185,7 @@ namespace IonKiwi.Json {
 
 				var properties = placeHolderType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
 				foreach (PropertyInfo p in properties) {
-					JsonPropertyInfo pi = new JsonPropertyInfo();
+					var pi = new JsonPropertyInfo();
 					pi.Name = p.Name;
 					pi.OriginalName = p.Name;
 					pi.PropertyType = p.PropertyType;
@@ -203,7 +203,7 @@ namespace IonKiwi.Json {
 
 				var fields = placeHolderType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
 				foreach (FieldInfo f in fields) {
-					JsonPropertyInfo pi = new JsonPropertyInfo();
+					var pi = new JsonPropertyInfo();
 					pi.Name = f.Name;
 					pi.OriginalName = f.Name;
 					pi.PropertyType = f.FieldType;
@@ -279,7 +279,7 @@ namespace IonKiwi.Json {
 				else {
 					var dictInterfaces = t.GetInterfaces().Where(z => z.IsGenericType && z.GetGenericTypeDefinition() == typeof(IDictionary<,>)).ToArray();
 					if (dictInterfaces.Length != 1) {
-						throw new NotSupportedException($"Dictionary interface not explicity specified, and type '{ReflectionUtility.GetTypeName(t)}' implements multiple dictionary interfaces.");
+						throw new NotSupportedException($"Dictionary interface not explicitly specified, and type '{ReflectionUtility.GetTypeName(t)}' implements multiple dictionary interfaces.");
 					}
 					dictionaryInterface = dictInterfaces[0];
 				}
@@ -317,7 +317,7 @@ namespace IonKiwi.Json {
 				else {
 					var collInterfaces = t.GetInterfaces().Where(z => z.IsGenericType && z.GetGenericTypeDefinition() == typeof(IEnumerable<>)).ToArray();
 					if (collInterfaces.Length != 1) {
-						throw new NotSupportedException($"Collection interface not explicity specified, and type '{ReflectionUtility.GetTypeName(t)}' implements multiple collection interfaces.");
+						throw new NotSupportedException($"Collection interface not explicitly specified, and type '{ReflectionUtility.GetTypeName(t)}' implements multiple collection interfaces.");
 					}
 					collectionInterface = collInterfaces[0];
 				}
@@ -389,7 +389,7 @@ namespace IonKiwi.Json {
 								}
 								pi.Getter = ReflectionUtility.CreateFieldGetter<object, object>(f);
 								if (ti.Properties.ContainsKey(name)) {
-									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
+									throw new NotSupportedException($"Type hierarchy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
 								}
 
 								var propertyKnownTypes = f.GetCustomAttributes<JsonKnownTypeAttribute>();
@@ -434,7 +434,7 @@ namespace IonKiwi.Json {
 									pi.Getter = ReflectionUtility.CreatePropertyGetter<object, object>(p);
 								}
 								if (ti.Properties.ContainsKey(name)) {
-									throw new NotSupportedException($"Type hierachy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
+									throw new NotSupportedException($"Type hierarchy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
 								}
 
 								var propertyKnownTypes = p.GetCustomAttributes<JsonKnownTypeAttribute>();

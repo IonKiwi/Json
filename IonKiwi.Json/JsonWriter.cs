@@ -9,19 +9,12 @@ using System.Threading.Tasks;
 
 namespace IonKiwi.Json {
 	public static partial class JsonWriter {
-
-		private static readonly JsonWriterSettings _defaultSettings = new JsonWriterSettings() {
+		public static JsonWriterSettings DefaultSettings { get; } = new JsonWriterSettings() {
 			DateTimeHandling = DateTimeHandling.Utc,
 			UnspecifiedDateTimeHandling = UnspecifiedDateTimeHandling.AssumeLocal
 		}
-		.AddDefaultAssemblyName(typeof(string).Assembly.GetName(false))
-		.Seal();
-
-		public static JsonWriterSettings DefaultSettings {
-			get {
-				return _defaultSettings;
-			}
-		}
+			.AddDefaultAssemblyName(typeof(string).Assembly.GetName(false))
+			.Seal();
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
 		public static async ValueTask Serialize<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {

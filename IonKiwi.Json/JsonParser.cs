@@ -10,19 +10,12 @@ using static IonKiwi.Json.JsonReflection;
 
 namespace IonKiwi.Json {
 	public static partial class JsonParser {
-
-		private static readonly JsonParserSettings _defaultSettings = new JsonParserSettings() {
+		public static JsonParserSettings DefaultSettings { get; } = new JsonParserSettings() {
 			DateTimeHandling = DateTimeHandling.Utc,
 			UnspecifiedDateTimeHandling = UnspecifiedDateTimeHandling.AssumeLocal
 		}
-		.AddDefaultAssemblyName(typeof(string).Assembly.GetName(false))
-		.Seal();
-
-		public static JsonParserSettings DefaultSettings {
-			get {
-				return _defaultSettings;
-			}
-		}
+			.AddDefaultAssemblyName(typeof(string).Assembly.GetName(false))
+			.Seal();
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
 		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
@@ -34,12 +27,10 @@ namespace IonKiwi.Json {
 				objectType = typeof(T);
 			}
 
-			JsonInternalParser parser = new JsonInternalParser(parserSettings ?? _defaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			var parser = new JsonInternalParser(parserSettings ?? DefaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
 
 			IJsonParserVisitor visitor = parserSettings?.Visitor;
-			if (visitor != null) {
-				visitor.Initialize(parserSettings);
-			}
+			visitor?.Initialize(parserSettings);
 
 			var currentToken = reader.Token;
 			if (currentToken == JsonToken.ObjectProperty) {
@@ -109,12 +100,10 @@ namespace IonKiwi.Json {
 				objectType = typeof(T);
 			}
 
-			JsonInternalParser parser = new JsonInternalParser(parserSettings ?? _defaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			var parser = new JsonInternalParser(parserSettings ?? DefaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
 
 			IJsonParserVisitor visitor = parserSettings?.Visitor;
-			if (visitor != null) {
-				visitor.Initialize(parserSettings);
-			}
+			visitor?.Initialize(parserSettings);
 
 			var currentToken = reader.Token;
 			if (currentToken == JsonToken.ObjectProperty) {
