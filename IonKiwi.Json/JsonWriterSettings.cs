@@ -24,7 +24,7 @@ namespace IonKiwi.Json {
 		ECMAScript
 	}
 
-	public class JsonWriterSettings : ISealable {
+	public sealed class JsonWriterSettings : ISealable {
 		private bool _locked;
 		private readonly Dictionary<string, AssemblyName> _defaultAssemblyNames = new Dictionary<string, AssemblyName>(StringComparer.OrdinalIgnoreCase);
 

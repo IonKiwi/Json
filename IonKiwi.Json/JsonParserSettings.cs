@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Text;
 
 namespace IonKiwi.Json {
-	public class JsonParserSettings : ISealable {
+	public sealed class JsonParserSettings : ISealable {
 		private bool _locked;
 		private Dictionary<string, string> _defaultAssemblyNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
