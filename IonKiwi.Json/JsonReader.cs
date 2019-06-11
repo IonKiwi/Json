@@ -668,7 +668,11 @@ namespace IonKiwi.Json {
 		private async Task<JsonToken> ReadInternal() {
 #endif
 			JsonToken token = JsonToken.None;
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
+#else
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer, _offset, _length - _offset, out token)) {
+#endif
 				if (_length - _offset == 0 && !await ReadData().NoSync()) {
 					HandleEndOfFile(ref token);
 					return token;
@@ -679,7 +683,11 @@ namespace IonKiwi.Json {
 
 		private JsonToken ReadInternalSync() {
 			JsonToken token = JsonToken.None;
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
+#else
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer, _offset, _length - _offset, out token)) {
+#endif
 				if (_length - _offset == 0 && !ReadDataSync()) {
 					HandleEndOfFile(ref token);
 					return token;
@@ -733,7 +741,11 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleDataBlock(Span<byte> block, out JsonToken token) {
+#else
 		private bool HandleDataBlock(byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			var state = _currentState.Peek();
 			if (state.IsComplete) {
 				_currentState.Pop();
@@ -763,6 +775,44 @@ namespace IonKiwi.Json {
 				}
 			}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+			if (state is JsonInternalRootState rootState) {
+				return HandleRootState(rootState, block, out token);
+			}
+			else if (state is JsonInternalObjectState objectState) {
+				return HandleObjectState(objectState, block, out token);
+			}
+			else if (state is JsonInternalObjectPropertyState propertyState) {
+				return HandleObjectPropertyState(propertyState, block, out token);
+			}
+			else if (state is JsonInternalArrayItemState itemState) {
+				return HandleArrayItemState(itemState, block, out token);
+			}
+			else if (state is JsonInternalSingleQuotedStringState stringState1) {
+				return HandleSingleQuotedStringState(stringState1, block, out token);
+			}
+			else if (state is JsonInternalDoubleQuotedStringState stringState2) {
+				return HandleDoubleQuotedStringState(stringState2, block, out token);
+			}
+			else if (state is JsonInternalNumberState numberState) {
+				return HandleNumberState(numberState, block, out token);
+			}
+			else if (state is JsonInternalNullState nullState) {
+				return HandleNullState(nullState, block, out token);
+			}
+			else if (state is JsonInternalTrueState trueState) {
+				return HandleTrueState(trueState, block, out token);
+			}
+			else if (state is JsonInternalFalseState falseState) {
+				return HandleFalseState(falseState, block, out token);
+			}
+			else if (state is JsonInternalSingleLineCommentState commentState1) {
+				return HandleSingleLineCommentState(commentState1, block, out token);
+			}
+			else if (state is JsonInternalMultiLineCommentState commentState2) {
+				return HandleMultiLineCommentState(commentState2, block, out token);
+			}
+#else
 			if (state is JsonInternalRootState rootState) {
 				return HandleRootState(rootState, block, offset, length, out token);
 			}
@@ -799,6 +849,7 @@ namespace IonKiwi.Json {
 			else if (state is JsonInternalMultiLineCommentState commentState2) {
 				return HandleMultiLineCommentState(commentState2, block, offset, length, out token);
 			}
+#endif
 			else {
 				ThrowUnhandledStateType(state.GetType());
 				token = JsonToken.None;
@@ -806,12 +857,22 @@ namespace IonKiwi.Json {
 			}
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleRootState(JsonInternalRootState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleRootState(JsonInternalRootState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 
 			if (state.Token == JsonInternalRootToken.Value) {
 				// trailing white-space
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+				HandleTrailingWhiteSpace(state, block);
+#else
 				HandleTrailingWhiteSpace(state, block, offset, length);
+#endif
 				return false;
 			}
 
@@ -1045,7 +1106,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private void HandleTrailingWhiteSpace(JsonInternalRootState state, Span<byte> block) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private void HandleTrailingWhiteSpace(JsonInternalRootState state, byte[] block, int offset, int length) {
+#endif
 			var currentToken = state.Token;
 			var isMultiByteSequence = state.IsMultiByteSequence;
 			var cc = new char[2];
@@ -1121,7 +1188,13 @@ namespace IonKiwi.Json {
 			return;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleObjectState(JsonInternalObjectState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleObjectState(JsonInternalObjectState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
@@ -1458,7 +1531,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleObjectPropertyState(JsonInternalObjectPropertyState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleObjectPropertyState(JsonInternalObjectPropertyState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
@@ -1584,7 +1663,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleArrayItemState(JsonInternalArrayItemState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleArrayItemState(JsonInternalArrayItemState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			bool isCarriageReturn = state.IsCarriageReturn;
@@ -1737,7 +1822,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleSingleQuotedStringState(JsonInternalSingleQuotedStringState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleSingleQuotedStringState(JsonInternalSingleQuotedStringState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
@@ -1853,7 +1944,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleDoubleQuotedStringState(JsonInternalDoubleQuotedStringState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleDoubleQuotedStringState(JsonInternalDoubleQuotedStringState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			bool isCarriageReturn = state.IsCarriageReturn;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
@@ -1984,7 +2081,13 @@ namespace IonKiwi.Json {
 			}
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleNumberState(JsonInternalNumberState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleNumberState(JsonInternalNumberState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
@@ -2267,7 +2370,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleNullState(JsonInternalNullState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleNullState(JsonInternalNullState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool isForwardSlash = state.IsForwardSlash;
@@ -2339,7 +2448,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleTrueState(JsonInternalTrueState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleTrueState(JsonInternalTrueState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool isForwardSlash = state.IsForwardSlash;
@@ -2411,7 +2526,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleFalseState(JsonInternalFalseState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleFalseState(JsonInternalFalseState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool isForwardSlash = state.IsForwardSlash;
@@ -2487,7 +2608,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleSingleLineCommentState(JsonInternalSingleLineCommentState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleSingleLineCommentState(JsonInternalSingleLineCommentState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			var cc = new char[2];
@@ -2523,7 +2650,13 @@ namespace IonKiwi.Json {
 			return false;
 		}
 
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private bool HandleMultiLineCommentState(JsonInternalMultiLineCommentState state, Span<byte> block, out JsonToken token) {
+			int offset = 0;
+			int length = block.Length;
+#else
 		private bool HandleMultiLineCommentState(JsonInternalMultiLineCommentState state, byte[] block, int offset, int length, out JsonToken token) {
+#endif
 			token = JsonToken.None;
 			bool isMultiByteSequence = state.IsMultiByteSequence;
 			bool isAsterisk = state.IsAsterisk;
