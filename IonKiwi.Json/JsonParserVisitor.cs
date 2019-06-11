@@ -1,4 +1,9 @@
-﻿using System;
+﻿#region License
+// Copyright (c) 2019 Ewout van der Linden
+// https://github.com/IonKiwi/Json/blob/master/LICENSE
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;

@@ -1,4 +1,9 @@
-﻿using IonKiwi.Extenions;
+﻿#region License
+// Copyright (c) 2019 Ewout van der Linden
+// https://github.com/IonKiwi/Json/blob/master/LICENSE
+#endregion
+
+using IonKiwi.Extenions;
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
