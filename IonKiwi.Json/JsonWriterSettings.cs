@@ -115,6 +115,15 @@ namespace IonKiwi.Json {
 
 		public bool IsSealed => _locked;
 
+		public JsonWriterSettings With(Action<JsonWriterSettings> settings) {
+			var v = this;
+			if (_locked) {
+				v = Clone();
+			}
+			settings(v);
+			return v;
+		}
+
 		public JsonWriterSettings Clone() {
 			var clone = new JsonWriterSettings();
 			clone.JsonWriteMode = this.JsonWriteMode;

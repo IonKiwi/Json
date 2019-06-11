@@ -116,6 +116,15 @@ namespace IonKiwi.Json {
 
 		public bool IsSealed => _locked;
 
+		public JsonParserSettings With(Action<JsonParserSettings> settings) {
+			var v = this;
+			if (_locked) {
+				v = Clone();
+			}
+			settings(v);
+			return v;
+		}
+
 		public JsonParserSettings Clone() {
 			JsonParserSettings clone = new JsonParserSettings();
 			clone.DateTimeHandling = this.DateTimeHandling;
