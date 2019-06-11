@@ -1,8 +1,11 @@
-﻿using IonKiwi.Json.MetaData;
+﻿using IonKiwi.Extenions;
+using IonKiwi.Json.MetaData;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Threading.Tasks;
+using static IonKiwi.Json.JsonReader;
 
 namespace IonKiwi.Json.Utilities {
 	public static class JsonUtilities {
@@ -187,6 +190,400 @@ namespace IonKiwi.Json.Utilities {
 					return value.ToUniversalTime();
 			}
 			return value;
+		}
+
+		private static void ThrowMoreDataExpected() {
+			throw new JsonReader.MoreDataExpectedException();
+		}
+
+		private static void ThrowInvalidPath(string path) {
+			throw new NotSupportedException("Invalid path: " + path);
+		}
+
+		public static object[] GetValuesByJsonPathSync(JsonReader reader, (string path, Type type)[] query) {
+			var parts = ParsePath(query);
+			var result = new object[query.Length];
+			HandleJsonPathSync(reader, parts, result);
+			return result;
+		}
+
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public static async ValueTask<object[]> GetValuesByJsonPath(JsonReader reader, (string path, Type type)[] query) {
+#else
+		public static async Task<object[]> GetValuesByJsonPath(JsonReader reader, (string path, Type type)[] query) {
+#endif
+			var parts = ParsePath(query);
+			var result = new object[query.Length];
+
+			Stack<JsonPathPosition> stack = new Stack<JsonPathPosition>();
+			stack.Push(new JsonPathPosition() { Parts = parts });
+
+			JsonToken token = await reader.Read().NoSync();
+			do {
+				if (token == JsonToken.Comment) {
+					while (await reader.Read().NoSync() == JsonToken.Comment) ;
+					token = reader.Token;
+				}
+				if (token != JsonToken.None) {
+					var r = GetValuesByJsonPathInternal(reader, token, stack, result);
+					if (r == HandleJsonPathTokenResult.Skip) {
+						await reader.Skip().NoSync();
+					}
+					else if (r == HandleJsonPathTokenResult.ReadValue) {
+						bool isProperty = false;
+						bool isComplexValue = false;
+						if (token == JsonToken.ObjectProperty) {
+							isProperty = true;
+							token = await reader.Read().NoSync();
+							if (token == JsonToken.Comment) {
+								while (await reader.Read().NoSync() == JsonToken.Comment) ;
+								token = reader.Token;
+							}
+						}
+						if (token == JsonToken.None) { ThrowMoreDataExpected(); }
+						var position = stack.Peek();
+						string subJson = null;
+						if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
+							isComplexValue = true;
+							if (position.Path.RequestedType == null || position.Path.SubPath.Count > 0) {
+								subJson = await reader.ReadRaw().NoSync();
+							}
+						}
+						if (!HanleValue(reader, token, subJson, position, stack, result) && subJson == null) {
+							await reader.Skip().NoSync();
+						}
+						if (subJson != null) {
+							HandleSubJsonSync(subJson, position.Path.SubPath, result);
+						}
+						if (isProperty) {
+							stack.Pop();
+						}
+						else if (isComplexValue) {
+							stack.Pop();
+							stack.Pop();
+						}
+					}
+					token = await reader.Read().NoSync();
+				}
+			}
+			while (token != JsonToken.None);
+
+			return result;
+		}
+
+		private enum HandleJsonPathTokenResult {
+			Continue,
+			Skip,
+			ReadValue,
+		}
+
+		private sealed class JsonPathPosition {
+			public bool IsArray;
+			public bool IsObject;
+			public bool IsItem;
+			public string Property;
+			public int Index;
+			public JsonPath Path;
+			public Dictionary<string, JsonPath> Parts;
+		}
+
+		private static void HandleJsonPathSync(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result) {
+			Stack<JsonPathPosition> stack = new Stack<JsonPathPosition>();
+			stack.Push(new JsonPathPosition() { Parts = parts });
+
+			JsonToken token = reader.ReadSync();
+			do {
+				if (token == JsonToken.Comment) {
+					while (reader.ReadSync() == JsonToken.Comment) ;
+					token = reader.Token;
+				}
+				if (token != JsonToken.None) {
+					var r = GetValuesByJsonPathInternal(reader, token, stack, result);
+					if (r == HandleJsonPathTokenResult.Skip) {
+						reader.SkipSync();
+					}
+					else if (r == HandleJsonPathTokenResult.ReadValue) {
+						bool isProperty = false;
+						bool isComplexValue = false;
+						if (token == JsonToken.ObjectProperty) {
+							isProperty = true;
+							token = reader.ReadSync();
+							if (token == JsonToken.Comment) {
+								while (reader.ReadSync() == JsonToken.Comment) ;
+								token = reader.Token;
+							}
+						}
+						if (token == JsonToken.None) { ThrowMoreDataExpected(); }
+						var position = stack.Peek();
+						string subJson = null;
+						if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
+							isComplexValue = true;
+							if (position.Path.RequestedType == null || position.Path.SubPath.Count > 0) {
+								subJson = reader.ReadRawSync();
+							}
+						}
+						if (!HanleValue(reader, token, subJson, position, stack, result) && subJson == null) {
+							reader.SkipSync();
+						}
+						if (subJson != null) {
+							HandleSubJsonSync(subJson, position.Path.SubPath, result);
+						}
+						if (isProperty) {
+							stack.Pop();
+						}
+						else if (isComplexValue) {
+							stack.Pop();
+							stack.Pop();
+						}
+					}
+					token = reader.ReadSync();
+				}
+			}
+			while (token != JsonToken.None);
+		}
+
+		private static void HandleSubJsonSync(string subJson, Dictionary<string, JsonPath> parts, object[] result) {
+			var reader = new JsonReader(Encoding.UTF8.GetBytes(subJson));
+			HandleJsonPathSync(reader, parts, result);
+		}
+
+		private static bool ValidateObjectType(Type requestType, JsonToken token) {
+			var typeInfo = JsonReflection.GetTypeInfo(requestType);
+			if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
+				return typeInfo.ObjectType != JsonReflection.JsonObjectType.SimpleValue;
+			}
+			return typeInfo.ObjectType == JsonReflection.JsonObjectType.SimpleValue;
+		}
+
+		private static bool HanleValue(JsonReader reader, JsonToken token, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result) {
+			if (position.Path.RequestedType == null) {
+				string value;
+				if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
+					value = subJson;
+					result[position.Path.QueryIndex.Value] = value;
+				}
+				else {
+					value = reader.GetValue();
+					result[position.Path.QueryIndex.Value] = value;
+				}
+				return true;
+			}
+			else {
+				if (ValidateObjectType(position.Path.RequestedType, token)) {
+					if (subJson != null) {
+						var typedValue = JsonParser.ParseSync<object>(new JsonReader(Encoding.UTF8.GetBytes(subJson)), position.Path.RequestedType);
+						result[position.Path.QueryIndex.Value] = typedValue;
+					}
+					else {
+						var typedValue = JsonParser.ParseSync<object>(reader, position.Path.RequestedType);
+						result[position.Path.QueryIndex.Value] = typedValue;
+					}
+					return true;
+				}
+			}
+			return false;
+		}
+
+		private static HandleJsonPathTokenResult GetValuesByJsonPathInternal(JsonReader reader, JsonToken token, Stack<JsonPathPosition> stack, object[] result) {
+			if (token == JsonToken.ObjectStart) {
+				var position = stack.Peek();
+				if (position.IsItem) {
+					stack.Push(new JsonPathPosition() { IsObject = true, Parts = position.Parts, Path = position.Path });
+					return HandleJsonPathTokenResult.Continue;
+				}
+				else if (position.IsArray) {
+					string index = '[' + position.Index.ToString(CultureInfo.InvariantCulture) + ']';
+					position.Index++;
+					if (!position.Parts.TryGetValue(index, out var part)) {
+						return HandleJsonPathTokenResult.Skip;
+					}
+					stack.Push(new JsonPathPosition() { IsArray = true, IsItem = true, Index = position.Index, Path = part, Parts = part.SubPath });
+					stack.Push(new JsonPathPosition() { IsObject = true, Path = part, Parts = part.SubPath });
+					if (part.QueryIndex.HasValue) {
+						return HandleJsonPathTokenResult.ReadValue;
+					}
+					return HandleJsonPathTokenResult.Continue;
+				}
+				else {
+					// root level
+					stack.Push(new JsonPathPosition() { IsObject = true, Parts = position.Parts });
+					return HandleJsonPathTokenResult.Continue;
+				}
+			}
+			else if (token == JsonToken.ArrayStart) {
+				var position = stack.Peek();
+				if (position.IsItem) {
+					stack.Push(new JsonPathPosition() { IsArray = true, Parts = position.Parts, Path = position.Path });
+					return HandleJsonPathTokenResult.Continue;
+				}
+				else if (position.IsArray) {
+					string index = '[' + position.Index.ToString(CultureInfo.InvariantCulture) + ']';
+					position.Index++;
+					if (!position.Parts.TryGetValue(index, out var part)) {
+						return HandleJsonPathTokenResult.Skip;
+					}
+					stack.Push(new JsonPathPosition() { IsArray = true, IsItem = true, Index = position.Index, Path = part, Parts = part.SubPath });
+					stack.Push(new JsonPathPosition() { IsArray = true, Path = part, Parts = part.SubPath });
+					if (part.QueryIndex.HasValue) {
+						return HandleJsonPathTokenResult.ReadValue;
+					}
+					return HandleJsonPathTokenResult.Continue;
+				}
+				else {
+					// root level
+					stack.Push(new JsonPathPosition() { IsArray = true, Parts = position.Parts });
+					return HandleJsonPathTokenResult.Continue;
+				}
+			}
+			else if (token == JsonToken.ObjectEnd) {
+				stack.Pop();
+				stack.Pop();
+				return HandleJsonPathTokenResult.Continue;
+			}
+			else if (token == JsonToken.ArrayEnd) {
+				stack.Pop();
+				stack.Pop();
+				return HandleJsonPathTokenResult.Continue;
+			}
+			else if (token == JsonToken.ObjectProperty) {
+				var property = reader.GetValue();
+				var position = stack.Peek();
+				if (!position.Parts.TryGetValue(property, out var part)) {
+					return HandleJsonPathTokenResult.Skip;
+				}
+				stack.Push(new JsonPathPosition() { IsObject = true, IsItem = true, Property = property, Path = part, Parts = part.SubPath });
+				if (part.QueryIndex.HasValue) {
+					return HandleJsonPathTokenResult.ReadValue;
+				}
+				return HandleJsonPathTokenResult.Continue;
+			}
+			else {
+				var position = stack.Peek();
+				if (position.IsArray) {
+					string index = '[' + position.Index.ToString(CultureInfo.InvariantCulture) + ']';
+					position.Index++;
+					if (!position.Parts.TryGetValue(index, out var part)) {
+						return HandleJsonPathTokenResult.Skip;
+					}
+					else if (part.QueryIndex.HasValue) {
+						if (part.RequestedType == null) {
+							result[part.QueryIndex.Value] = reader.GetValue();
+						}
+						else {
+							result[part.QueryIndex.Value] = JsonParser.Parse<object>(reader, position.Path.RequestedType);
+						}
+					}
+					return HandleJsonPathTokenResult.Continue;
+				}
+				else {
+					if (position.Path != null && position.Path.QueryIndex.HasValue) {
+						if (position.Path.RequestedType == null) {
+							result[position.Path.QueryIndex.Value] = reader.GetValue();
+						}
+						else {
+							result[position.Path.QueryIndex.Value] = JsonParser.Parse<object>(reader, position.Path.RequestedType);
+						}
+					}
+					return HandleJsonPathTokenResult.Continue;
+				}
+			}
+		}
+
+		private static Dictionary<string, JsonPath> ParsePath((string path, Type type)[] query) {
+			Dictionary<string, JsonPath> root = new Dictionary<string, JsonPath>(StringComparer.Ordinal);
+			for (int i = 0; i < query.Length; i++) {
+				ParsePathInternal(root, query[i].path, i, query[i]);
+			}
+			return root;
+		}
+
+		private static void ParsePathInternal(Dictionary<string, JsonPath> currentParts, string path, int queryIndex, (string path, Type type) query) {
+			if (string.IsNullOrEmpty(path)) {
+				ThrowInvalidPath(path);
+			}
+			else if (path[0] == '.') {
+				int next1 = path.IndexOf('.', 1);
+				int next2 = path.IndexOf('[', 1);
+				string property;
+				int end = -1;
+				if (next1 < 0 && next2 < 0) {
+					property = path.Substring(1);
+				}
+				else if (next1 < 0) {
+					end = next2;
+					property = path.Substring(1, next2 - 1);
+				}
+				else if (next2 < 0) {
+					end = next1;
+					property = path.Substring(1, next1 - 1);
+				}
+				else {
+					end = Math.Min(next1, next2);
+					property = path.Substring(1, end - 1);
+				}
+
+				if (!currentParts.TryGetValue(property, out var part)) {
+					part = new JsonPath() {
+						PathType = JsonPathType.Object,
+						Property = property,
+					};
+					currentParts.Add(property, part);
+				}
+
+				if (end < 0) {
+					part.QueryIndex = queryIndex;
+					part.RequestedType = query.type;
+				}
+				else {
+					// remaining path
+					ParsePathInternal(part.SubPath, path.Substring(end), queryIndex, query);
+				}
+			}
+			else if (path[0] == '[') {
+				int next = path.IndexOf(']', 1);
+				if (next < 0) {
+					ThrowInvalidPath(path);
+				}
+				string index = path.Substring(1, next - 1);
+				if (!int.TryParse(index, NumberStyles.None, CultureInfo.InvariantCulture, out var intIndex)) {
+					ThrowInvalidPath(path);
+				}
+
+				index = '[' + index + ']';
+				if (!currentParts.TryGetValue(index, out var part)) {
+					part = new JsonPath() {
+						PathType = JsonPathType.Array,
+						Index = intIndex,
+					};
+					currentParts.Add(index, part);
+				}
+
+				if (next == path.Length - 1) {
+					part.QueryIndex = queryIndex;
+					part.RequestedType = query.type;
+				}
+				else {
+					// remaining path
+					ParsePathInternal(part.SubPath, path.Substring(next + 1), queryIndex, query);
+				}
+			}
+			else {
+				ThrowInvalidPath(path);
+			}
+		}
+
+		private enum JsonPathType {
+			Object,
+			Array
+		}
+
+		private sealed class JsonPath {
+			public string Property { get; set; }
+			public int Index { get; set; }
+			public JsonPathType PathType { get; set; }
+			public int? QueryIndex { get; set; }
+			public Type RequestedType { get; set; }
+			public Dictionary<string, JsonPath> SubPath { get; } = new Dictionary<string, JsonPath>(StringComparer.Ordinal);
 		}
 	}
 }
