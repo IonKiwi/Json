@@ -31,8 +31,6 @@ namespace IonKiwi.Json {
 			return bs != 0;
 		}
 
-		private delegate int GetCharacterFromUtf8Delegate(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter);
-
 		private int HandleMultiByteSequence(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
 			var mbChar = HandleMultiByteSequence(state, b, ref isMultiByteSequence);
 			if (mbChar != null) {
@@ -115,18 +113,13 @@ namespace IonKiwi.Json {
 			return 0;
 		}
 
-		private Dictionary<byte, GetCharacterFromUtf8Delegate> _utf8Lookup = new Dictionary<byte, GetCharacterFromUtf8Delegate>();
 		private int GetCharacterFromUtf8(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
 			isMultiByteCharacter = false;
 			if (isMultiByteSequence) {
 				return HandleMultiByteSequence(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 			}
-			else if (_utf8Lookup.TryGetValue(b, out var action)) {
-				return action(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
-			}
 			else {
 				if (b == '\t' || b == '\r' || b == '\n') {
-					_utf8Lookup.Add(b, HandleRegularCharacter);
 					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if (b >= 0 && b <= 0x1f) {
@@ -136,7 +129,6 @@ namespace IonKiwi.Json {
 				}
 				else if (b == 0x85) {
 					// NEL (newline)
-					_utf8Lookup.Add(b, HandleRegularCharacter);
 					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if (b >= 0x80 && b <= 0x9F) {
@@ -145,33 +137,26 @@ namespace IonKiwi.Json {
 					return 0;
 				}
 				else if ((b & 0xE0) == 0xC0) {
-					_utf8Lookup.Add(b, HandleStartMultiByteSequence2);
 					return HandleStartMultiByteSequence2(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if ((b & 0xF0) == 0xE0) {
-					_utf8Lookup.Add(b, HandleStartMultiByteSequence3);
 					return HandleStartMultiByteSequence3(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if ((b & 0xF8) == 0xF0) {
-					_utf8Lookup.Add(b, HandleStartMultiByteSequence4);
 					return HandleStartMultiByteSequence4(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if ((b & 0xFC) == 0xF8) {
-					_utf8Lookup.Add(b, HandleStartMultiByteSequence5);
 					return HandleStartMultiByteSequence5(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if ((b & 0xFE) == 0xFC) {
-					_utf8Lookup.Add(b, HandleStartMultiByteSequence6);
 					return HandleStartMultiByteSequence6(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if (b == 0xFE || b == 0xFF || b == 0xEF || b == 0xBB || b == 0xBF) {
 					// BOM
-					_utf8Lookup.Add(b, HandleRegularCharacter);
 					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if (b >= 0x00 && b <= 0x7F) {
 					// reamaining normal single byte => accept
-					_utf8Lookup.Add(b, HandleRegularCharacter);
 					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else {
