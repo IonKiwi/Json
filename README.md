@@ -16,9 +16,11 @@
 	* Explicit plus sign for numbers
 
 * Support for C#/.NET Tuples (using Tuple Element Names)
-	* Automatic for tuples included in a object
 
-```
+_Automatic for tuples included in a object_
+
+```csharp
+
 [JsonObject]
 private sealed class TupleHolder {
 	[JsonProperty]
@@ -26,15 +28,18 @@ private sealed class TupleHolder {
 }
 
 json => { Value1: { a: true, b: 42 } }
-```
-
-	* Manual for top level tuples or when using generics
 
 ```
+
+_Manual for top level tuples or when using generics_
+
+```csharp
+
 JsonWriter.SerializeSync(
-	output,
+    output,
     (true, 42),
     JsonWriter.DefaultSettings.With(s => s.JsonWriteMode = JsonWriteMode.ECMAScript),
     tupleNames: new string[] { "a", "b" });
 => { a: true, b: 42 }
+
 ```
