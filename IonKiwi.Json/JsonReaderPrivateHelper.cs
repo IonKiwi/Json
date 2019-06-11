@@ -31,30 +31,103 @@ namespace IonKiwi.Json {
 			return bs != 0;
 		}
 
+		private delegate int GetCharacterFromUtf8Delegate(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter);
+
+		private int HandleMultiByteSequence(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+			var mbChar = HandleMultiByteSequence(state, b, ref isMultiByteSequence);
+			if (mbChar != null) {
+				_lineOffset--;
+				isMultiByteCharacter = true;
+				for (int i = 0; i < mbChar.Length; i++) {
+					result[i] = mbChar[i];
+				}
+				return mbChar.Length;
+			}
+			else if (!isMultiByteSequence) {
+				ThrowInternalStateCorruption();
+				isMultiByteCharacter = false;
+				return 0;
+			}
+			else {
+				isMultiByteCharacter = false;
+				return 0;
+			}
+		}
+
+		private int HandleRegularCharacter(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+			result[0] = (char)b;
+			isMultiByteCharacter = false;
+			return 1;
+		}
+
+		private int HandleStartMultiByteSequence2(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+			isMultiByteCharacter = false;
+			state.IsMultiByteSequence = isMultiByteSequence = true;
+			state.MultiByteSequence = new byte[2];
+			state.MultiByteSequence[0] = b;
+			state.MultiByteSequenceLength = 2;
+			state.MultiByteIndex = 1;
+			_lineOffset++;
+			return 0;
+		}
+
+		private int HandleStartMultiByteSequence3(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+			isMultiByteCharacter = false;
+			state.IsMultiByteSequence = isMultiByteSequence = true;
+			state.MultiByteSequence = new byte[3];
+			state.MultiByteSequence[0] = b;
+			state.MultiByteSequenceLength = 3;
+			state.MultiByteIndex = 1;
+			_lineOffset++;
+			return 0;
+		}
+
+		private int HandleStartMultiByteSequence4(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+			isMultiByteCharacter = false;
+			state.IsMultiByteSequence = isMultiByteSequence = true;
+			state.MultiByteSequence = new byte[4];
+			state.MultiByteSequence[0] = b;
+			state.MultiByteSequenceLength = 4;
+			state.MultiByteIndex = 1;
+			_lineOffset++;
+			return 0;
+		}
+
+		private int HandleStartMultiByteSequence5(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+			isMultiByteCharacter = false;
+			state.IsMultiByteSequence = isMultiByteSequence = true;
+			state.MultiByteSequence = new byte[5];
+			state.MultiByteSequence[0] = b;
+			state.MultiByteSequenceLength = 5;
+			state.MultiByteIndex = 1;
+			_lineOffset++;
+			return 0;
+		}
+
+		private int HandleStartMultiByteSequence6(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
+			isMultiByteCharacter = false;
+			state.IsMultiByteSequence = isMultiByteSequence = true;
+			state.MultiByteSequence = new byte[6];
+			state.MultiByteSequence[0] = b;
+			state.MultiByteSequenceLength = 6;
+			state.MultiByteIndex = 1;
+			_lineOffset++;
+			return 0;
+		}
+
+		private Dictionary<byte, GetCharacterFromUtf8Delegate> _utf8Lookup = new Dictionary<byte, GetCharacterFromUtf8Delegate>();
 		private int GetCharacterFromUtf8(JsonInternalState state, byte b, ref char[] result, ref bool isMultiByteSequence, out bool isMultiByteCharacter) {
 			isMultiByteCharacter = false;
 			if (isMultiByteSequence) {
-				var mbChar = HandleMultiByteSequence(state, b, ref isMultiByteSequence);
-				if (mbChar != null) {
-					_lineOffset--;
-					isMultiByteCharacter = true;
-					for (int i = 0; i < mbChar.Length; i++) {
-						result[i] = mbChar[i];
-					}
-					return mbChar.Length;
-				}
-				else if (!isMultiByteSequence) {
-					ThrowInternalStateCorruption();
-					return 0;
-				}
-				else {
-					return 0;
-				}
+				return HandleMultiByteSequence(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
+			}
+			else if (_utf8Lookup.TryGetValue(b, out var action)) {
+				return action(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 			}
 			else {
 				if (b == '\t' || b == '\r' || b == '\n') {
-					result[0] = (char)b;
-					return 1;
+					_utf8Lookup.Add(b, HandleRegularCharacter);
+					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if (b >= 0 && b <= 0x1f) {
 					// C0 control block
@@ -63,8 +136,8 @@ namespace IonKiwi.Json {
 				}
 				else if (b == 0x85) {
 					// NEL (newline)
-					result[0] = (char)b;
-					return 1;
+					_utf8Lookup.Add(b, HandleRegularCharacter);
+					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if (b >= 0x80 && b <= 0x9F) {
 					// C1 control block
@@ -72,59 +145,34 @@ namespace IonKiwi.Json {
 					return 0;
 				}
 				else if ((b & 0xE0) == 0xC0) {
-					state.IsMultiByteSequence = isMultiByteSequence = true;
-					state.MultiByteSequence = new byte[2];
-					state.MultiByteSequence[0] = b;
-					state.MultiByteSequenceLength = 2;
-					state.MultiByteIndex = 1;
-					_lineOffset++;
-					return 0;
+					_utf8Lookup.Add(b, HandleStartMultiByteSequence2);
+					return HandleStartMultiByteSequence2(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if ((b & 0xF0) == 0xE0) {
-					state.IsMultiByteSequence = isMultiByteSequence = true;
-					state.MultiByteSequence = new byte[3];
-					state.MultiByteSequence[0] = b;
-					state.MultiByteSequenceLength = 3;
-					state.MultiByteIndex = 1;
-					_lineOffset++;
-					return 0;
+					_utf8Lookup.Add(b, HandleStartMultiByteSequence3);
+					return HandleStartMultiByteSequence3(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if ((b & 0xF8) == 0xF0) {
-					state.IsMultiByteSequence = isMultiByteSequence = true;
-					state.MultiByteSequence = new byte[4];
-					state.MultiByteSequence[0] = b;
-					state.MultiByteSequenceLength = 4;
-					state.MultiByteIndex = 1;
-					_lineOffset++;
-					return 0;
+					_utf8Lookup.Add(b, HandleStartMultiByteSequence4);
+					return HandleStartMultiByteSequence4(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if ((b & 0xFC) == 0xF8) {
-					state.IsMultiByteSequence = isMultiByteSequence = true;
-					state.MultiByteSequence = new byte[5];
-					state.MultiByteSequence[0] = b;
-					state.MultiByteSequenceLength = 5;
-					state.MultiByteIndex = 1;
-					_lineOffset++;
-					return 0;
+					_utf8Lookup.Add(b, HandleStartMultiByteSequence5);
+					return HandleStartMultiByteSequence5(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if ((b & 0xFE) == 0xFC) {
-					state.IsMultiByteSequence = isMultiByteSequence = true;
-					state.MultiByteSequence = new byte[6];
-					state.MultiByteSequence[0] = b;
-					state.MultiByteSequenceLength = 6;
-					state.MultiByteIndex = 1;
-					_lineOffset++;
-					return 0;
+					_utf8Lookup.Add(b, HandleStartMultiByteSequence6);
+					return HandleStartMultiByteSequence6(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if (b == 0xFE || b == 0xFF || b == 0xEF || b == 0xBB || b == 0xBF) {
 					// BOM
-					result[0] = (char)b;
-					return 1;
+					_utf8Lookup.Add(b, HandleRegularCharacter);
+					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else if (b >= 0x00 && b <= 0x7F) {
 					// reamaining normal single byte => accept
-					result[0] = (char)b;
-					return 1;
+					_utf8Lookup.Add(b, HandleRegularCharacter);
+					return HandleRegularCharacter(state, b, ref result, ref isMultiByteSequence, out isMultiByteCharacter);
 				}
 				else {
 					ThrowUnexpectedDataException();
