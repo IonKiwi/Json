@@ -341,3 +341,7 @@ healthchecksdb
 
 # Performance Profiler session
 *.diagsession
+
+# Exclude Release
+/export
+/Keys
