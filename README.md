@@ -44,6 +44,25 @@ JsonWriter.SerializeSync(
 
 ```
 
+_Manual using TupleElementNamesAttribute_
+
+```csharp
+
+public class ClassContaingTupleMethod {
+  public (string value1, bool value2) MethodReturningTuple() {
+    return ("test", true);
+  }
+}
+
+string json = JsonUtility.SerializeSync(
+  new ClassContaingTupleMethod().MethodReturningTuple(),
+  tupleNames: 
+    typeof(ClassContaingTupleMethod).GetMethod("MethodReturningTuple", BindingFlags.Instance | BindingFlags.Public)
+    .ReturnParameter.GetCustomAttribute<TupleElementNamesAttribute>().TransformNames.ToArray());
+// json => {"value1":"test","value2":true}
+
+```
+
 ## Usage
 
 **Parsing json**
