@@ -35,11 +35,11 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public static async ValueTask<T> Parse<T>(Stream json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static async ValueTask<T> Parse<T>(Stream stream, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #else
-		public static async Task<T> Parse<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static async Task<T> Parse<T>(Stream stream, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #endif
-			using (var r = new StreamReader(json, Encoding.UTF8, true, 0x400, true)) {
+			using (var r = new StreamReader(stream, Encoding.UTF8, true, 0x400, true)) {
 				return await JsonParser.Parse<T>(new JsonReader(r), objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings).NoSync();
 			}
 		}
@@ -53,7 +53,7 @@ namespace IonKiwi.Json.Utilities {
 #if NETCOREAPP2_1 || NETCOREAPP2_2
 		public static async ValueTask Serialize<T>(Stream stream, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 #else
-		public static async Task Serialize<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static async Task Serialize<T>(Stream stream, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 #endif
 			using (var w = new StreamWriter(stream, _utf8Encoding, 0x400, true)) {
 				await JsonWriter.Serialize<T>(w, value, objectType: objectType, tupleNames: tupleNames, writerSettings: writerSettings).NoSync();
