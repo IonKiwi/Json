@@ -15,6 +15,77 @@ using static IonKiwi.Json.JsonReader;
 
 namespace IonKiwi.Json.Utilities {
 	public static class JsonUtilities {
+
+		private static readonly UTF8Encoding _utf8Encoding = new UTF8Encoding(false);
+
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public static async ValueTask<T> Parse<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+#else
+		public static async Task<T> Parse<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+#endif
+			using (var r = new StringReader(json)) {
+				return await JsonParser.Parse<T>(new JsonReader(r), objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings).NoSync();
+			}
+		}
+
+		public static T ParseSync<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+			using (var r = new StringReader(json)) {
+				return JsonParser.ParseSync<T>(new JsonReader(r), objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings);
+			}
+		}
+
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public static async ValueTask<T> Parse<T>(Stream json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+#else
+		public static async Task<T> Parse<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+#endif
+			using (var r = new StreamReader(json, Encoding.UTF8, true, 0x400, true)) {
+				return await JsonParser.Parse<T>(new JsonReader(r), objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings).NoSync();
+			}
+		}
+
+		public static T ParseSync<T>(Stream json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+			using (var r = new StreamReader(json, Encoding.UTF8, true, 0x400, true)) {
+				return JsonParser.ParseSync<T>(new JsonReader(r), objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings);
+			}
+		}
+
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public static async ValueTask Serialize<T>(Stream stream, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+#else
+		public static async Task Serialize<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+#endif
+			using (var w = new StreamWriter(stream, _utf8Encoding, 0x400, true)) {
+				await JsonWriter.Serialize<T>(w, value, objectType: objectType, tupleNames: tupleNames, writerSettings: writerSettings).NoSync();
+			}
+		}
+
+		public static void SerializeSync<T>(Stream stream, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+			using (var w = new StreamWriter(stream, _utf8Encoding, 0x400, true)) {
+				JsonWriter.SerializeSync<T>(w, value, objectType: objectType, tupleNames: tupleNames, writerSettings: writerSettings);
+			}
+		}
+
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public static async ValueTask<string> Serialize<T>(T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+#else
+		public static async Task<string> Serialize<T>(T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+#endif
+			var sb = new StringBuilder();
+			using (var w = new StringWriter(sb)) {
+				await JsonWriter.Serialize<T>(w, value, objectType: objectType, tupleNames: tupleNames, writerSettings: writerSettings).NoSync();
+			}
+			return sb.ToString();
+		}
+
+		public static string SerializeSync<T>(T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+			var sb = new StringBuilder();
+			using (var w = new StringWriter(sb)) {
+				JsonWriter.SerializeSync<T>(w, value, objectType: objectType, tupleNames: tupleNames, writerSettings: writerSettings);
+			}
+			return sb.ToString();
+		}
+
 		public enum JavaScriptQuoteMode {
 			None,
 			Always,
