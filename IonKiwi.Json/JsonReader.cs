@@ -450,7 +450,7 @@ namespace IonKiwi.Json {
 					break;
 				case JsonToken.ObjectProperty: {
 						if (!isFirst) { sb.Append(','); }
-						sb.Append(JsonUtilities.JavaScriptStringEncode(GetValue(), JsonUtilities.JavaScriptEncodeMode.Hex, JsonUtilities.JavaScriptQuoteMode.Always));
+						sb.Append(JsonUtility.JavaScriptStringEncode(GetValue(), JsonUtility.JavaScriptEncodeMode.Hex, JsonUtility.JavaScriptQuoteMode.Always));
 						sb.Append(":");
 						break;
 					}
@@ -463,7 +463,7 @@ namespace IonKiwi.Json {
 					}
 				case JsonToken.String: {
 						if (!isFirst) { sb.Append(','); }
-						sb.Append(JsonUtilities.JavaScriptStringEncode(GetValue(), JsonUtilities.JavaScriptEncodeMode.Hex, JsonUtilities.JavaScriptQuoteMode.Always));
+						sb.Append(JsonUtility.JavaScriptStringEncode(GetValue(), JsonUtility.JavaScriptEncodeMode.Hex, JsonUtility.JavaScriptQuoteMode.Always));
 						break;
 					}
 				default:

@@ -129,9 +129,9 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return prefix + JsonUtilities.JavaScriptStringEncode(propertyName,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':';
+				return prefix + JsonUtility.JavaScriptStringEncode(propertyName,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptQuoteMode.Always : JsonUtility.JavaScriptQuoteMode.WhenRequired) + ':';
 			}
 
 			private string HandleObjectProperty(JsonWriterObjectPropertyState state) {
@@ -255,9 +255,9 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return prefix + JsonUtilities.JavaScriptStringEncode(propertyName,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':';
+				return prefix + JsonUtility.JavaScriptStringEncode(propertyName,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptQuoteMode.Always : JsonUtility.JavaScriptQuoteMode.WhenRequired) + ':';
 			}
 
 			private string HandleArrayDictionary(JsonWriterDictionaryState state) {
@@ -323,9 +323,9 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return prefix + JsonUtilities.JavaScriptStringEncode(currentProperty.Name,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':';
+				return prefix + JsonUtility.JavaScriptStringEncode(currentProperty.Name,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptQuoteMode.Always : JsonUtility.JavaScriptQuoteMode.WhenRequired) + ':';
 			}
 
 			private string HandleValue(JsonWriterInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
@@ -518,17 +518,17 @@ namespace IonKiwi.Json {
 					if (_settings.EnumValuesAsString) {
 						if (!typeInfo.IsFlagsEnum) {
 							string name = Enum.GetName(typeInfo.RootType, value);
-							return JsonUtilities.JavaScriptStringEncode(
+							return JsonUtility.JavaScriptStringEncode(
 								name,
-								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-								JsonUtilities.JavaScriptQuoteMode.Always);
+								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+								JsonUtility.JavaScriptQuoteMode.Always);
 						}
 						else {
 							string name = string.Join(", ", ReflectionUtility.GetUniqueFlags((Enum)value).Select(x => Enum.GetName(typeInfo.RootType, x)));
-							return JsonUtilities.JavaScriptStringEncode(
+							return JsonUtility.JavaScriptStringEncode(
 								name,
-								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-								JsonUtilities.JavaScriptQuoteMode.Always);
+								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+								JsonUtility.JavaScriptQuoteMode.Always);
 						}
 					}
 					else {
@@ -536,9 +536,9 @@ namespace IonKiwi.Json {
 					}
 				}
 				else if (typeInfo.RootType == typeof(string)) {
-					return JsonUtilities.JavaScriptStringEncode((string)value,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						JsonUtilities.JavaScriptQuoteMode.Always);
+					return JsonUtility.JavaScriptStringEncode((string)value,
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						JsonUtility.JavaScriptQuoteMode.Always);
 				}
 				else if (typeInfo.RootType == typeof(bool)) {
 					if ((bool)value) {
@@ -633,7 +633,7 @@ namespace IonKiwi.Json {
 					return v;
 				}
 				else if (typeInfo.RootType == typeof(DateTime)) {
-					var v = JsonUtilities.EnsureDateTime((DateTime)value, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
+					var v = JsonUtility.EnsureDateTime((DateTime)value, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
 					char[] chars = new char[64];
 					int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, v, null, v.Kind);
 					//int pos = JsonDateTimeUtility.WriteMicrosoftDateTimeString(chars, 0, value, null, value.Kind);
@@ -643,10 +643,10 @@ namespace IonKiwi.Json {
 					return ((TimeSpan)value).Ticks.ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(Uri)) {
-					return JsonUtilities.JavaScriptStringEncode(
+					return JsonUtility.JavaScriptStringEncode(
 						((Uri)value).OriginalString,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						JsonUtilities.JavaScriptQuoteMode.Always);
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						JsonUtility.JavaScriptQuoteMode.Always);
 				}
 				else if (typeInfo.RootType == typeof(Guid)) {
 					return '"' + ((Guid)value).ToString("D") + '"';

@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using static IonKiwi.Json.JsonReader;
 
 namespace IonKiwi.Json.Utilities {
-	public static class JsonUtilities {
+	public static class JsonUtility {
 
 		private static readonly UTF8Encoding _utf8Encoding = new UTF8Encoding(false);
 

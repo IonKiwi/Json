@@ -103,7 +103,7 @@ namespace IonKiwi.Json.Utilities {
 				}
 				else if (s.Length >= 19 && s.Length <= 40 && char.IsDigit(s[0]) && s[10] == 'T') {
 					if (DateTime.TryParseExact(s, IsoDateFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dt)) {
-						dt = JsonUtilities.EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
+						dt = JsonUtility.EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
 						return true;
 					}
 				}
@@ -137,7 +137,7 @@ namespace IonKiwi.Json.Utilities {
 					break;
 			}
 
-			dt = JsonUtilities.EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
+			dt = JsonUtility.EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
 			return true;
 		}
 
