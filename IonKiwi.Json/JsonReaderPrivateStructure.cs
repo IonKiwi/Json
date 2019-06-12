@@ -12,7 +12,6 @@ namespace IonKiwi.Json {
 
 		private enum JsonInternalRootToken {
 			None,
-			ByteOrderMark,
 			CarriageReturn,
 			ForwardSlash,
 			Value,
@@ -61,19 +60,10 @@ namespace IonKiwi.Json {
 			EscapeSequenceHex,
 		}
 
-		private enum Charset {
-			Utf8,
-			Utf16BE,
-			Utf16LE,
-			Utf32BE,
-			Utf32LE,
-		}
-
 		private abstract class JsonInternalState {
 			public JsonInternalState Parent;
 			public bool IsComplete;
 
-			public bool IsMultiByteSequence;
 			public JsonInternalEscapeToken EscapeToken;
 
 			public byte[] MultiByteSequence;
@@ -83,10 +73,6 @@ namespace IonKiwi.Json {
 
 		private sealed class JsonInternalRootState : JsonInternalState {
 			public JsonInternalRootToken Token = JsonInternalRootToken.None;
-			public Charset Charset = Charset.Utf8;
-			public byte[] ByteOrderMark;
-			public int ByteOrderMarkIndex;
-
 			public bool IsCarriageReturn;
 			public bool IsForwardSlash;
 		}

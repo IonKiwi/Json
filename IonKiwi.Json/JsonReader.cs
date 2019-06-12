@@ -8,32 +8,32 @@ using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace IonKiwi.Json {
 	public partial class JsonReader {
-		private readonly IInputReader _dataReader;
+		private readonly TextReader _dataReader;
 
 		private readonly Stack<JsonInternalState> _currentState = new Stack<JsonInternalState>();
 		private JsonToken _token;
 
-		private readonly byte[] _buffer = new byte[4096];
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private readonly Memory<char> _buffer;
+#else
+		private readonly char[] _buffer;
+#endif
 		private int _offset = 0;
 		private int _length = 0;
 		private long _lineIndex = 0;
 		private long _lineOffset = 0;
-		private bool _isAbsoluteStart = true;
 		private Stack<(JsonToken token, Action action)> _rewindState = null;
 
-		public JsonReader(IInputReader dataReader) {
+		public JsonReader(TextReader dataReader) {
+			_buffer = new char[4096];
 			_dataReader = dataReader;
-			_currentState.Push(new JsonInternalRootState());
-		}
-
-		public JsonReader(byte[] input) {
-			_dataReader = new Utf8ByteArrayInputReader(input);
 			_currentState.Push(new JsonInternalRootState());
 		}
 
@@ -762,7 +762,7 @@ namespace IonKiwi.Json {
 #endif
 			JsonToken token = JsonToken.None;
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
+			while (_length - _offset == 0 || !HandleDataBlock(_buffer.Span.Slice(_offset, _length - _offset), out token)) {
 #else
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer, _offset, _length - _offset, out token)) {
 #endif
@@ -777,7 +777,7 @@ namespace IonKiwi.Json {
 		private JsonToken ReadInternalSync() {
 			JsonToken token = JsonToken.None;
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			while (_length - _offset == 0 || !HandleDataBlock(_buffer.AsSpan(_offset, _length - _offset), out token)) {
+			while (_length - _offset == 0 || !HandleDataBlock(_buffer.Span.Slice(_offset, _length - _offset), out token)) {
 #else
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer, _offset, _length - _offset, out token)) {
 #endif
@@ -841,9 +841,9 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleDataBlock(Span<byte> block, out JsonToken token) {
+		private bool HandleDataBlock(Span<char> block, out JsonToken token) {
 #else
-		private bool HandleDataBlock(byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleDataBlock(char[] block, int offset, int length, out JsonToken token) {
 #endif
 			var state = _currentState.Peek();
 			if (state.IsComplete) {
@@ -957,11 +957,11 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleRootState(JsonInternalRootState state, Span<byte> block, out JsonToken token) {
+		private bool HandleRootState(JsonInternalRootState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleRootState(JsonInternalRootState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleRootState(JsonInternalRootState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
 
@@ -976,150 +976,12 @@ namespace IonKiwi.Json {
 			}
 
 			var currentToken = state.Token;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
+				var c = block[offset + i];
 				var remaining = l - i - 1;
-
-				// byte order handling first
-
-				if (bb == 0xFF || bb == 0xFE || bb == 0xEF) {
-					if (_isAbsoluteStart) {
-						state.ByteOrderMark = new byte[3];
-						state.ByteOrderMark[0] = bb;
-						state.ByteOrderMarkIndex = 1;
-						state.Token = currentToken = JsonInternalRootToken.ByteOrderMark;
-
-						if (remaining == 0) {
-							// need more data
-							_offset += length;
-							return false;
-						}
-
-						continue;
-					}
-					else {
-						ThrowUnexpectedDataException();
-						token = JsonToken.None;
-						return false;
-					}
-				}
-				else if (currentToken == JsonInternalRootToken.ByteOrderMark) {
-					if (state.ByteOrderMarkIndex == 0 || state.ByteOrderMarkIndex > 3) {
-						ThrowInvalidOperationException();
-						token = JsonToken.None;
-						return false;
-					}
-
-					switch (state.ByteOrderMarkIndex) {
-						case 1: {
-								if (state.ByteOrderMark[0] == 0xFF) {
-									if (bb == 0xFE) {
-										state.ByteOrderMark[1] = bb;
-										state.ByteOrderMarkIndex = 2;
-									}
-									else {
-										ThrowUnexpectedDataException();
-										token = JsonToken.None;
-										return false;
-									}
-								}
-								else if (state.ByteOrderMark[0] == 0xFE) {
-									if (bb == 0xFF) {
-										state.ByteOrderMark[1] = bb;
-										state.ByteOrderMarkIndex = 2;
-									}
-									else {
-										ThrowUnexpectedDataException();
-										token = JsonToken.None;
-										return false;
-									}
-								}
-								else if (state.ByteOrderMark[0] == 0xEF) {
-									if (bb == 0xBB) {
-										state.ByteOrderMark[1] = bb;
-										state.ByteOrderMarkIndex = 2;
-									}
-									else {
-										ThrowUnexpectedDataException();
-										token = JsonToken.None;
-										return false;
-									}
-								}
-								else {
-									ThrowInvalidOperationException();
-									token = JsonToken.None;
-									return false;
-								}
-
-								if (remaining == 0) {
-									// need more data
-									_offset += length;
-									return false;
-								}
-
-								continue;
-							}
-						case 2 when state.ByteOrderMark[0] == 0xFF || state.ByteOrderMark[0] == 0xFE: {
-								if (bb == 0x00) {
-									state.ByteOrderMark[1] = bb;
-									state.ByteOrderMarkIndex = 3;
-									state.Charset = state.ByteOrderMark[0] == 0xFF ? Charset.Utf32LE : Charset.Utf32BE;
-									state.Token = currentToken = JsonInternalRootToken.None;
-									ThrowUnsupportedCharset(state.Charset);
-									token = JsonToken.None;
-									return false;
-									//continue;
-								}
-								else {
-									i--;
-									state.Charset = state.ByteOrderMark[0] == 0xFF ? Charset.Utf16LE : Charset.Utf16BE;
-									ThrowUnsupportedCharset(state.Charset);
-									token = JsonToken.None;
-									return false;
-									//continue;
-								}
-							}
-						case 2 when state.ByteOrderMark[0] == 0xEF: {
-								if (bb == 0xBF) {
-									state.ByteOrderMark[1] = bb;
-									state.ByteOrderMarkIndex = 3;
-									state.Charset = Charset.Utf8;
-									state.Token = currentToken = JsonInternalRootToken.None;
-									continue;
-								}
-								else {
-									ThrowUnexpectedDataException();
-									token = JsonToken.None;
-									return false;
-								}
-							}
-						default:
-							ThrowInvalidOperationException();
-							token = JsonToken.None;
-							return false;
-					}
-				}
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-				else if (cl > 1) {
-					if (currentToken == JsonInternalRootToken.CarriageReturn) {
-						_lineIndex++;
-						_lineOffset = cl;
-						state.Token = currentToken = JsonInternalRootToken.None;
-					}
-					ThrowUnexpectedDataException();
-					token = JsonToken.None;
-					return false;
-				}
-
-				_lineOffset += cl;
-				var c = cc[0];
+				_lineOffset++;
 
 				switch (currentToken) {
 					// assert i == 0
@@ -1204,36 +1066,19 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private void HandleTrailingWhiteSpace(JsonInternalRootState state, Span<byte> block) {
+		private void HandleTrailingWhiteSpace(JsonInternalRootState state, Span<char> block) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private void HandleTrailingWhiteSpace(JsonInternalRootState state, byte[] block, int offset, int length) {
+		private void HandleTrailingWhiteSpace(JsonInternalRootState state, char[] block, int offset, int length) {
 #endif
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var isForwardSlash = state.IsForwardSlash;
 			var isCarriageReturn = state.IsCarriageReturn;
-			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
+				var c = block[offset + i];
 				var remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-				else if (cl > 1) {
-					if (isCarriageReturn) {
-						_lineIndex++;
-						_lineOffset = cl;
-						state.IsCarriageReturn = isCarriageReturn = false;
-					}
-					ThrowUnexpectedDataException();
-				}
-
-				_lineOffset += cl;
-				var c = cc[0];
+				_lineOffset++;
 
 				if (isCarriageReturn) {
 					// assert i == 0
@@ -1308,59 +1153,24 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleObjectState(JsonInternalObjectState state, Span<byte> block, out JsonToken token) {
+		private bool HandleObjectState(JsonInternalObjectState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleObjectState(JsonInternalObjectState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleObjectState(JsonInternalObjectState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			var isCarriageReturn = state.IsCarriageReturn;
 			var isForwardSlash = state.IsForwardSlash;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var expectUnicodeEscapeSequence = state.ExpectUnicodeEscapeSequence;
 			var escapeToken = state.EscapeToken;
 			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
+				var c = block[offset + i];
 				var remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					if (isCarriageReturn) {
-						_lineIndex++;
-						_lineOffset = cl;
-						state.IsCarriageReturn = isCarriageReturn = false;
-					}
-
-					switch (currentToken) {
-						case JsonInternalObjectToken.SingleQuotedIdentifier:
-						case JsonInternalObjectToken.DoubleQuotedIdentifier: {
-								for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
-								continue;
-							}
-						case JsonInternalObjectToken.PlainIdentifier when UnicodeExtension.ID_Continue(cc): {
-								for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
-								continue;
-							}
-						case JsonInternalObjectToken.BeforeProperty when UnicodeExtension.ID_Start(cc): {
-								state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
-								for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
-								continue;
-							}
-					}
-					ThrowUnexpectedDataException();
-					token = JsonToken.None;
-					return false;
-				}
-				var c = cc[0];
+				_lineOffset++;
 
 				if (isCarriageReturn) {
 					// assert i == 0
@@ -1453,7 +1263,7 @@ namespace IonKiwi.Json {
 					continue;
 				}
 				else if (expectUnicodeEscapeSequence) {
-					if (c != 'u' || isMultiByteCharacter) {
+					if (c != 'u') {
 						ThrowUnexpectedDataException();
 						token = JsonToken.None;
 						return false;
@@ -1465,12 +1275,21 @@ namespace IonKiwi.Json {
 
 				bool isEscapeSequence = false;
 				if (escapeToken != JsonInternalEscapeToken.None) {
-					cl = GetCharacterFromEscapeSequence(state, c, ref cc, isMultiByteCharacter, ref escapeToken);
+					var cl = GetCharacterFromEscapeSequence(state, c, ref cc, ref escapeToken);
 					if (cl == 0) {
 						continue;
 					}
 					if (cl > 1) {
-						if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier || currentToken == JsonInternalObjectToken.PlainIdentifier) {
+						if (currentToken == JsonInternalObjectToken.SingleQuotedIdentifier || currentToken == JsonInternalObjectToken.DoubleQuotedIdentifier) {
+							for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
+							continue;
+						}
+						else if (currentToken == JsonInternalObjectToken.PlainIdentifier) {
+							if ((state.CurrentProperty.Length == 0 && !UnicodeExtension.ID_Start(cc)) || (state.CurrentProperty.Length > 0 && !(UnicodeExtension.ID_Continue(cc) || UnicodeExtension.ID_Start(cc)))) {
+								ThrowUnexpectedDataException();
+								token = JsonToken.None;
+								return false;
+							}
 							for (int ii = 0; ii < cl; ii++) { state.CurrentProperty.Append(cc[ii]); }
 							continue;
 						}
@@ -1569,11 +1388,11 @@ namespace IonKiwi.Json {
 						//state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
 						state.ExpectUnicodeEscapeSequence = expectUnicodeEscapeSequence = true;
 						continue;
-					case JsonInternalObjectToken.PlainIdentifier when c == '$' || c == '_' || isEscapeSequence:
+					case JsonInternalObjectToken.PlainIdentifier when c == '$' || c == '_':
 						//state.Token = currentToken = JsonInternalObjectToken.PlainIdentifier;
 						state.CurrentProperty.Append(c);
 						continue;
-					case JsonInternalObjectToken.PlainIdentifier when c == ':': {
+					case JsonInternalObjectToken.PlainIdentifier when c == ':' && !isEscapeSequence: {
 							// does not necessarily have AfterIdentifier state
 
 							state.Token = currentToken = JsonInternalObjectToken.AfterColon;
@@ -1606,7 +1425,7 @@ namespace IonKiwi.Json {
 								state.CurrentProperty.Append(c);
 								continue;
 							}
-							else if (UnicodeExtension.ID_Continue(c)) {
+							else if (UnicodeExtension.ID_Continue(c) || UnicodeExtension.ID_Start(c)) {
 								state.CurrentProperty.Append(c);
 								continue;
 							}
@@ -1623,40 +1442,21 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleObjectPropertyState(JsonInternalObjectPropertyState state, Span<byte> block, out JsonToken token) {
+		private bool HandleObjectPropertyState(JsonInternalObjectPropertyState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleObjectPropertyState(JsonInternalObjectPropertyState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleObjectPropertyState(JsonInternalObjectPropertyState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			var isCarriageReturn = state.IsCarriageReturn;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var isForwardSlash = state.IsForwardSlash;
-			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
+				var c = block[offset + i];
 				var remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					if (isCarriageReturn) {
-						_lineIndex++;
-						_lineOffset = cl;
-						state.IsCarriageReturn = isCarriageReturn = false;
-					}
-					ThrowUnexpectedDataException();
-					token = JsonToken.None;
-					return false;
-				}
-				var c = cc[0];
+				_lineOffset++;
 
 				if (isCarriageReturn) {
 					// assert i == 0
@@ -1755,35 +1555,21 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleArrayItemState(JsonInternalArrayItemState state, Span<byte> block, out JsonToken token) {
+		private bool HandleArrayItemState(JsonInternalArrayItemState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleArrayItemState(JsonInternalArrayItemState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleArrayItemState(JsonInternalArrayItemState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
 			var currentToken = state.Token;
 			var isCarriageReturn = state.IsCarriageReturn;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var isForwardSlash = state.IsForwardSlash;
-			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
+				var c = block[offset + i];
 				var remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					ThrowUnexpectedDataException();
-					token = JsonToken.None;
-					return false;
-				}
-				var c = cc[0];
+				_lineOffset++;
 
 				if (isCarriageReturn) {
 					// assert i == 0
@@ -1914,38 +1700,21 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleSingleQuotedStringState(JsonInternalSingleQuotedStringState state, Span<byte> block, out JsonToken token) {
+		private bool HandleSingleQuotedStringState(JsonInternalSingleQuotedStringState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleSingleQuotedStringState(JsonInternalSingleQuotedStringState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleSingleQuotedStringState(JsonInternalSingleQuotedStringState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
 			var isCarriageReturn = state.IsCarriageReturn;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var escapeToken = state.EscapeToken;
 			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
+				var c = block[offset + i];
 				var remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					if (isCarriageReturn) {
-						_lineIndex++;
-						_lineOffset = cl;
-						state.IsCarriageReturn = isCarriageReturn = false;
-					}
-					for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
-					continue;
-				}
-				var c = cc[0];
+				_lineOffset++;
 
 				if (isCarriageReturn) {
 					// assert i == 0
@@ -2007,7 +1776,7 @@ namespace IonKiwi.Json {
 
 				bool isEscapeSequence = false;
 				if (escapeToken != JsonInternalEscapeToken.None) {
-					cl = GetCharacterFromEscapeSequence(state, c, ref cc, isMultiByteCharacter, ref escapeToken);
+					var cl = GetCharacterFromEscapeSequence(state, c, ref cc, ref escapeToken);
 					if (cl == 0) {
 						continue;
 					}
@@ -2036,38 +1805,21 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleDoubleQuotedStringState(JsonInternalDoubleQuotedStringState state, Span<byte> block, out JsonToken token) {
+		private bool HandleDoubleQuotedStringState(JsonInternalDoubleQuotedStringState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleDoubleQuotedStringState(JsonInternalDoubleQuotedStringState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleDoubleQuotedStringState(JsonInternalDoubleQuotedStringState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
 			var isCarriageReturn = state.IsCarriageReturn;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var escapeToken = state.EscapeToken;
 			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
+				var c = block[offset + i];
 				var remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					if (isCarriageReturn) {
-						_lineIndex++;
-						_lineOffset = cl;
-						state.IsCarriageReturn = isCarriageReturn = false;
-					}
-					for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
-					continue;
-				}
-				var c = cc[0];
+				_lineOffset++;
 
 				if (isCarriageReturn) {
 					// assert i == 0
@@ -2129,7 +1881,7 @@ namespace IonKiwi.Json {
 
 				bool isEscapeSequence = false;
 				if (escapeToken != JsonInternalEscapeToken.None) {
-					cl = GetCharacterFromEscapeSequence(state, c, ref cc, isMultiByteCharacter, ref escapeToken);
+					var cl = GetCharacterFromEscapeSequence(state, c, ref cc, ref escapeToken);
 					if (cl == 0) {
 						continue;
 					}
@@ -2171,34 +1923,20 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleNumberState(JsonInternalNumberState state, Span<byte> block, out JsonToken token) {
+		private bool HandleNumberState(JsonInternalNumberState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleNumberState(JsonInternalNumberState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleNumberState(JsonInternalNumberState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
 			var currentToken = state.Token;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var isForwardSlash = state.IsForwardSlash;
-			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
-				var remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					ThrowUnexpectedDataException();
-					token = JsonToken.None;
-					return false;
-				}
-				var c = cc[0];
+				var c = block[offset + i];
+				//var remaining = l - i - 1;
+				_lineOffset++;
 
 				// white-space
 				if (isForwardSlash) {
@@ -2460,33 +2198,19 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleNullState(JsonInternalNullState state, Span<byte> block, out JsonToken token) {
+		private bool HandleNullState(JsonInternalNullState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleNullState(JsonInternalNullState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleNullState(JsonInternalNullState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var isForwardSlash = state.IsForwardSlash;
-			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
-				var remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					ThrowUnexpectedDataException();
-					token = JsonToken.None;
-					return false;
-				}
-				var c = cc[0];
+				var c = block[offset + i];
+				//var remaining = l - i - 1;
+				_lineOffset++;
 
 				if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
@@ -2538,33 +2262,19 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleTrueState(JsonInternalTrueState state, Span<byte> block, out JsonToken token) {
+		private bool HandleTrueState(JsonInternalTrueState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleTrueState(JsonInternalTrueState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleTrueState(JsonInternalTrueState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var isForwardSlash = state.IsForwardSlash;
-			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				byte bb = block[offset + i];
-				int remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					ThrowUnexpectedDataException();
-					token = JsonToken.None;
-					return false;
-				}
-				var c = cc[0];
+				var c = block[offset + i];
+				//int remaining = l - i - 1;
+				_lineOffset++;
 
 				if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
@@ -2616,33 +2326,19 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleFalseState(JsonInternalFalseState state, Span<byte> block, out JsonToken token) {
+		private bool HandleFalseState(JsonInternalFalseState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleFalseState(JsonInternalFalseState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleFalseState(JsonInternalFalseState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var isForwardSlash = state.IsForwardSlash;
-			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
-				var remaining = l - i - 1;
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					ThrowUnexpectedDataException();
-					token = JsonToken.None;
-					return false;
-				}
-				Char c = cc[0];
+				var c = block[offset + i];
+				//var remaining = l - i - 1;
+				_lineOffset++;
 
 				if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
@@ -2698,30 +2394,17 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleSingleLineCommentState(JsonInternalSingleLineCommentState state, Span<byte> block, out JsonToken token) {
+		private bool HandleSingleLineCommentState(JsonInternalSingleLineCommentState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleSingleLineCommentState(JsonInternalSingleLineCommentState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleSingleLineCommentState(JsonInternalSingleLineCommentState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
-			var isMultiByteSequence = state.IsMultiByteSequence;
-			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
-					continue;
-				}
-				Char c = cc[0];
+				var c = block[offset + i];
+				_lineOffset++;
 
 				if (c == '\r' || c == '\n' || c == '\u2028' || c == '\u2029') {
 					state.IsComplete = true;
@@ -2740,31 +2423,18 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private bool HandleMultiLineCommentState(JsonInternalMultiLineCommentState state, Span<byte> block, out JsonToken token) {
+		private bool HandleMultiLineCommentState(JsonInternalMultiLineCommentState state, Span<char> block, out JsonToken token) {
 			int offset = 0;
 			int length = block.Length;
 #else
-		private bool HandleMultiLineCommentState(JsonInternalMultiLineCommentState state, byte[] block, int offset, int length, out JsonToken token) {
+		private bool HandleMultiLineCommentState(JsonInternalMultiLineCommentState state, char[] block, int offset, int length, out JsonToken token) {
 #endif
 			token = JsonToken.None;
-			var isMultiByteSequence = state.IsMultiByteSequence;
 			var isAsterisk = state.IsAsterisk;
-			var cc = new char[2];
 
 			for (int i = 0, l = length; i < l; i++) {
-				var bb = block[offset + i];
-
-				var cl = GetCharacterFromUtf8(state, bb, ref cc, ref isMultiByteSequence, out var isMultiByteCharacter);
-				if (cl == 0) {
-					continue;
-				}
-
-				_lineOffset += cl;
-				if (cl > 1) {
-					for (int ii = 0; ii < cl; ii++) { state.Data.Append(cc[ii]); }
-					continue;
-				}
-				var c = cc[0];
+				var c = block[offset + i];
+				_lineOffset++;
 
 				if (isAsterisk) {
 					if (c == '/') {

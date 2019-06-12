@@ -9,6 +9,7 @@ using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -22,9 +23,9 @@ namespace IonKiwi.Json {
 			.Seal();
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public static async ValueTask Serialize<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static async ValueTask Serialize<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 #else
-		public static async Task Serialize<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static async Task Serialize<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 #endif
 			if (objectType == null) {
 				objectType = typeof(T);
@@ -34,7 +35,7 @@ namespace IonKiwi.Json {
 			await jsonWriter.Serialize(writer).NoSync();
 		}
 
-		public static void SerializeSync<T>(IOutputWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static void SerializeSync<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
@@ -136,6 +137,66 @@ namespace IonKiwi.Json {
 			return true;
 		}
 
+		private static bool IsValidIdentifierStart(char[] start) {
+			if (Char.IsLowSurrogate(start[0])) {
+				if (!Char.IsHighSurrogate(start[1])) {
+					ThrowExpectedLowSurrogatePair();
+					return false;
+				}
+				else if (!UnicodeExtension.ID_Start(start)) {
+					return false;
+				}
+				return true;
+			}
+			else {
+				if (Char.IsHighSurrogate(start[0])) {
+					ThrowLowSurrogateWithoutHighSurrogate();
+					return false;
+				}
+				var validStart = start[0] == '$' || start[0] == '_';
+				if (!validStart) {
+					var ccat = Char.GetUnicodeCategory(start[0]);
+					validStart = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber;
+					if (!validStart) {
+						validStart = UnicodeExtension.ID_Start(start[0]);
+					}
+				}
+				return validStart;
+			}
+		}
+
+		private static bool IsValidIdentifierContinue(char[] part) {
+			if (Char.IsLowSurrogate(part[0])) {
+				if (!Char.IsHighSurrogate(part[1])) {
+					ThrowExpectedLowSurrogatePair();
+					return false;
+				}
+				else if (!(UnicodeExtension.ID_Continue(part) || UnicodeExtension.ID_Start(part))) {
+					return false;
+				}
+				return true;
+			}
+			else {
+				if (Char.IsHighSurrogate(part[0])) {
+					ThrowLowSurrogateWithoutHighSurrogate();
+					return false;
+				}
+				var valid = part[0] == '$' || part[0] == '_';
+				if (!valid) {
+					var ccat = Char.GetUnicodeCategory(part[0]);
+					valid = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber ||
+						ccat == UnicodeCategory.NonSpacingMark || ccat == UnicodeCategory.SpacingCombiningMark ||
+						ccat == UnicodeCategory.DecimalDigitNumber ||
+						ccat == UnicodeCategory.ConnectorPunctuation ||
+						part[0] == '\u200C' || part[0] == '\u200D';
+					if (!valid) {
+						valid = UnicodeExtension.ID_Continue(part[0]) || UnicodeExtension.ID_Start(part[0]);
+					}
+				}
+				return valid;
+			}
+		}
+
 		public static bool ValidateIdentifier(string identifier) {
 
 			if (string.IsNullOrEmpty(identifier)) {
@@ -146,37 +207,26 @@ namespace IonKiwi.Json {
 				return false;
 			}
 
-			var start = identifier[0];
 			int i = 1, escapeSequenceLength;
-			if (start == '\\') {
+			if (identifier[0] == '\\') {
 				if (!IsUnicodeEscapeSequence(identifier, 1, out escapeSequenceLength, out var chars)) { return false; }
 				i += escapeSequenceLength;
-				if (!UnicodeExtension.ID_Start(chars)) {
+				if (!IsValidIdentifierStart(chars)) {
 					return false;
 				}
 			}
 			else {
-				bool validStart = false;
-				if (Char.IsLowSurrogate(start)) {
-					if (!Char.IsHighSurrogate(identifier[1])) {
+				if (Char.IsLowSurrogate(identifier[0])) {
+					i++;
+					if (identifier.Length == 1) {
+						ThrowExpectedLowSurrogateForHighSurrogate();
 						return false;
 					}
-					validStart = UnicodeExtension.ID_Start(new char[] { start, identifier[1] });
-				}
-				else {
-					if (Char.IsHighSurrogate(start)) {
+					else if (!IsValidIdentifierStart(new char[] { identifier[0], identifier[1] })) {
 						return false;
 					}
-					validStart = start == '$' || start == '_';
-					if (!validStart) {
-						var ccat = Char.GetUnicodeCategory(start);
-						validStart = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber;
-						if (!validStart) {
-							validStart = UnicodeExtension.ID_Start(start);
-						}
-					}
 				}
-				if (!validStart) {
+				else if (!IsValidIdentifierStart(new char[] { identifier[0] })) {
 					return false;
 				}
 			}
@@ -188,29 +238,24 @@ namespace IonKiwi.Json {
 					if (c == '\\') {
 						if (!IsUnicodeEscapeSequence(identifier, i + 1, out escapeSequenceLength, out var chars)) { return false; }
 						i += escapeSequenceLength;
-						if (!UnicodeExtension.ID_Continue(chars)) {
+						if (!IsValidIdentifierContinue(chars)) {
 							return false;
 						}
-					}
-					else if (Char.IsLowSurrogate(c)) {
-						if (l <= i + 1 || !Char.IsHighSurrogate(identifier[i + 1])) { return false; }
-						valid = UnicodeExtension.ID_Continue(new char[] { c, identifier[i + 1] });
-						if (!valid) { return false; }
 					}
 					else {
-						if (Char.IsHighSurrogate(c)) {
+						if (Char.IsLowSurrogate(c)) {
+							i++;
+							if (i == l) {
+								ThrowExpectedLowSurrogateForHighSurrogate();
+								return false;
+							}
+							else if (!IsValidIdentifierStart(new char[] { c, identifier[i] })) {
+								return false;
+							}
+						}
+						else if (!IsValidIdentifierStart(new char[] { c })) {
 							return false;
 						}
-						var ccat = Char.GetUnicodeCategory(c);
-						valid = ccat == UnicodeCategory.UppercaseLetter || ccat == UnicodeCategory.LowercaseLetter || ccat == UnicodeCategory.TitlecaseLetter || ccat == UnicodeCategory.ModifierLetter || ccat == UnicodeCategory.OtherLetter || ccat == UnicodeCategory.LetterNumber ||
-							ccat == UnicodeCategory.NonSpacingMark || ccat == UnicodeCategory.SpacingCombiningMark ||
-							ccat == UnicodeCategory.DecimalDigitNumber ||
-							ccat == UnicodeCategory.ConnectorPunctuation ||
-							c == '\u200C' || c == '\u200D';
-						if (!valid) {
-							valid = UnicodeExtension.ID_Continue(c);
-						}
-						if (!valid) { return false; }
 					}
 				}
 			}

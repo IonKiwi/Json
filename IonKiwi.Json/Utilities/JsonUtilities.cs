@@ -8,6 +8,7 @@ using IonKiwi.Json.MetaData;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using static IonKiwi.Json.JsonReader;
@@ -348,8 +349,10 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static void HandleSubJsonSync(string subJson, Dictionary<string, JsonPath> parts, object[] result) {
-			var reader = new JsonReader(Encoding.UTF8.GetBytes(subJson));
-			HandleJsonPathSync(reader, parts, result);
+			using (StringReader r = new StringReader(subJson)) {
+				var reader = new JsonReader(r);
+				HandleJsonPathSync(reader, parts, result);
+			}
 		}
 
 		private static bool ValidateObjectType(Type requestType, JsonToken token) {
@@ -376,8 +379,10 @@ namespace IonKiwi.Json.Utilities {
 			else {
 				if (ValidateObjectType(position.Path.RequestedType, token)) {
 					if (subJson != null) {
-						var typedValue = JsonParser.ParseSync<object>(new JsonReader(Encoding.UTF8.GetBytes(subJson)), position.Path.RequestedType);
-						result[position.Path.QueryIndex.Value] = typedValue;
+						using (var r = new StringReader(subJson)) {
+							var typedValue = JsonParser.ParseSync<object>(new JsonReader(r), position.Path.RequestedType);
+							result[position.Path.QueryIndex.Value] = typedValue;
+						}
 					}
 					else {
 						var typedValue = JsonParser.ParseSync<object>(reader, position.Path.RequestedType);

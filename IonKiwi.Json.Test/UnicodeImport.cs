@@ -48,41 +48,42 @@ namespace IonKiwi.Json.Test {
 		}
 
 		private void ParseImport(byte[] json, HashSet<int> target) {
-			var reader = new JsonReader(new Utf8ByteArrayInputReader(json));
-			JsonToken token;
+			using (var ms = new MemoryStream(json))
+			using (var r = new StreamReader(ms)) {
+				var reader = new JsonReader(r);
+				JsonToken token;
 
-			while (true) {
-				token = reader.ReadSync();
-				if (token == JsonToken.ArrayStart) {
+				while (true) {
+					token = reader.ReadSync();
+					if (token == JsonToken.ArrayStart) {
 
-				}
-				else if (token == JsonToken.String) {
-					string v = reader.GetValue();
-					if (v.Length == 1) {
-						int vv = (int)v[0];
-						target.Add(vv);
 					}
-					else if (v.Length == 2) {
-						int vv = char.ConvertToUtf32(v[0], v[1]);
-						target.Add(vv);
+					else if (token == JsonToken.String) {
+						string v = reader.GetValue();
+						if (v.Length == 1) {
+							int vv = (int)v[0];
+							target.Add(vv);
+						}
+						else if (v.Length == 2) {
+							int vv = char.ConvertToUtf32(v[0], v[1]);
+							target.Add(vv);
+						}
+						else {
+							throw new InvalidOperationException();
+						}
+					}
+					else if (token == JsonToken.ArrayEnd) {
+						token = reader.ReadSync();
+						if (token == JsonToken.None) {
+							break;
+						}
+						throw new Exception();
 					}
 					else {
-						throw new InvalidOperationException();
+						throw new Exception();
 					}
-				}
-				else if (token == JsonToken.ArrayEnd) {
-					token = reader.ReadSync();
-					if (token == JsonToken.None) {
-						break;
-					}
-					throw new Exception();
-				}
-				else {
-					throw new Exception();
 				}
 			}
-
-			return;
 		}
 	}
 }

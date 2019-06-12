@@ -9,6 +9,7 @@ using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -29,30 +30,30 @@ namespace IonKiwi.Json {
 			}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			internal async ValueTask Serialize(IOutputWriter writer) {
+			internal async ValueTask Serialize(TextWriter writer) {
 #else
-			internal async Task Serialize(IOutputWriter writer) {
+			internal async Task Serialize(TextWriter writer) {
 #endif
 				do {
-					byte[] data = SerializeInternal(_currentState.Peek());
+					var data = SerializeInternal(_currentState.Peek());
 					if (data != null) {
-						await writer.WriteBlock(data).NoSync();
+						await writer.WriteAsync(data);
 					}
 				}
 				while (_currentState.Count > 1);
 			}
 
-			internal void SerializeSync(IOutputWriter writer) {
+			internal void SerializeSync(TextWriter writer) {
 				do {
-					byte[] data = SerializeInternal(_currentState.Peek());
+					var data = SerializeInternal(_currentState.Peek());
 					if (data != null) {
-						writer.WriteBlockSync(data);
+						writer.Write(data);
 					}
 				}
 				while (_currentState.Count > 1);
 			}
 
-			private byte[] SerializeInternal(JsonWriterInternalState state) {
+			private string SerializeInternal(JsonWriterInternalState state) {
 				if (state is JsonWriterRootState rootState) {
 					return HandleValue(rootState, rootState.Value, rootState.ValueType, rootState.TypeInfo, rootState.TupleContext);
 				}
@@ -83,7 +84,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private byte[] HandleObject(JsonWriterObjectState state) {
+			private string HandleObject(JsonWriterObjectState state) {
 
 				if (!state.Properties.MoveNext()) {
 					state.Properties.Dispose();
@@ -93,7 +94,7 @@ namespace IonKiwi.Json {
 						cb(state.Value);
 					}
 
-					return new byte[] { (byte)'}' };
+					return "}";
 				}
 
 				var currentProperty = state.Properties.Current;
@@ -128,12 +129,12 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return Encoding.UTF8.GetBytes(prefix + JsonUtilities.JavaScriptStringEncode(propertyName,
+				return prefix + JsonUtilities.JavaScriptStringEncode(propertyName,
 						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':');
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':';
 			}
 
-			private byte[] HandleObjectProperty(JsonWriterObjectPropertyState state) {
+			private string HandleObjectProperty(JsonWriterObjectPropertyState state) {
 				if (state.Processed) {
 					_currentState.Pop();
 					return null;
@@ -143,7 +144,7 @@ namespace IonKiwi.Json {
 				return data;
 			}
 
-			private byte[] HandleArray(JsonWriterArrayState state) {
+			private string HandleArray(JsonWriterArrayState state) {
 
 				if (!state.Items.MoveNext()) {
 					if (state.Items is IDisposable disposable) {
@@ -157,11 +158,11 @@ namespace IonKiwi.Json {
 
 					if (state.IsSingleOrArrayValue) {
 						if (state.IsFirst) {
-							return new byte[] { (byte)'[', (byte)']' };
+							return "[]";
 						}
 						return null;
 					}
-					return new byte[] { (byte)']' };
+					return "]";
 				}
 
 				var currentItem = state.Items.Current;
@@ -170,7 +171,7 @@ namespace IonKiwi.Json {
 						// multiple items
 						state.IsSingleOrArrayValue = false;
 						state.Items.Reset();
-						return new byte[] { (byte)'[' };
+						return "[";
 					}
 				}
 
@@ -192,10 +193,10 @@ namespace IonKiwi.Json {
 					state.IsFirst = false;
 					return null;
 				}
-				return new byte[] { (byte)',' };
+				return ",";
 			}
 
-			private byte[] HandleArrayItem(JsonWriterArrayItemState state) {
+			private string HandleArrayItem(JsonWriterArrayItemState state) {
 				if (state.Processed) {
 					_currentState.Pop();
 					return null;
@@ -205,7 +206,7 @@ namespace IonKiwi.Json {
 				return data;
 			}
 
-			private byte[] HandleStringDictionary(JsonWriterStringDictionaryState state) {
+			private string HandleStringDictionary(JsonWriterStringDictionaryState state) {
 
 				if (!state.Items.MoveNext()) {
 					if (state.Items is IDisposable disposable) {
@@ -217,7 +218,7 @@ namespace IonKiwi.Json {
 						cb(state.Value);
 					}
 
-					return new byte[] { (byte)'}' };
+					return "}";
 				}
 
 				var currentProperty = state.Items.Current;
@@ -254,12 +255,12 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return Encoding.UTF8.GetBytes(prefix + JsonUtilities.JavaScriptStringEncode(propertyName,
+				return prefix + JsonUtilities.JavaScriptStringEncode(propertyName,
 						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':');
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':';
 			}
 
-			private byte[] HandleArrayDictionary(JsonWriterDictionaryState state) {
+			private string HandleArrayDictionary(JsonWriterDictionaryState state) {
 
 				if (!state.Items.MoveNext()) {
 					if (state.Items is IDisposable disposable) {
@@ -271,7 +272,7 @@ namespace IonKiwi.Json {
 						cb(state.Value);
 					}
 
-					return new byte[] { (byte)']' };
+					return "]";
 				}
 
 				var currentProperty = state.Items.Current;
@@ -289,17 +290,17 @@ namespace IonKiwi.Json {
 					state.IsFirst = false;
 					return null;
 				}
-				return new byte[] { (byte)',' };
+				return ",";
 			}
 
-			private byte[] HandleCustomObject(JsonWriterCustomObjectState state) {
+			private string HandleCustomObject(JsonWriterCustomObjectState state) {
 
 				if (!state.Items.MoveNext()) {
 					if (state.Items is IDisposable disposable) {
 						disposable.Dispose();
 					}
 					_currentState.Pop();
-					return new byte[] { (byte)'}' };
+					return "}";
 				}
 
 				var currentProperty = (JsonWriterProperty)state.Items.Current;
@@ -322,12 +323,12 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return Encoding.UTF8.GetBytes(prefix + JsonUtilities.JavaScriptStringEncode(currentProperty.Name,
+				return prefix + JsonUtilities.JavaScriptStringEncode(currentProperty.Name,
 						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':');
+						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptQuoteMode.Always : JsonUtilities.JavaScriptQuoteMode.WhenRequired) + ':';
 			}
 
-			private byte[] HandleValue(JsonWriterInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
+			private string HandleValue(JsonWriterInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
 
 				if (!state.WriteValueCallbackCalled && _settings.WriteValueCallback != null) {
 					JsonWriterWriteValueCallbackArgs e = new JsonWriterWriteValueCallbackArgs();
@@ -350,12 +351,12 @@ namespace IonKiwi.Json {
 				}
 
 				if (object.ReferenceEquals(null, value)) {
-					return new byte[] { (byte)'n', (byte)'u', (byte)'l', (byte)'l' };
+					return "null";
 				}
 
 				switch (typeInfo.ObjectType) {
 					case JsonObjectType.Raw:
-						return Encoding.UTF8.GetBytes(((RawJson)value).Json);
+						return ((RawJson)value).Json;
 					case JsonObjectType.Object: {
 							var objectState = new JsonWriterObjectState();
 							objectState.Parent = state;
@@ -387,9 +388,9 @@ namespace IonKiwi.Json {
 							}
 							if (emitType) {
 								objectState.IsFirst = false;
-								return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
+								return "{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"";
 							}
-							return new byte[] { (byte)'{' };
+							return "{";
 						}
 					case JsonObjectType.Array when typeInfo.ItemType == typeof(JsonWriterProperty): {
 							var customState = new JsonWriterCustomObjectState();
@@ -398,7 +399,7 @@ namespace IonKiwi.Json {
 							customState.Items = typeInfo.EnumerateMethod(value);
 							customState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 							_currentState.Push(customState);
-							return new byte[] { (byte)'{' };
+							return "{";
 						}
 					case JsonObjectType.Array: {
 							var propertyState = state as JsonWriterObjectPropertyState;
@@ -434,9 +435,9 @@ namespace IonKiwi.Json {
 							}
 							if (emitType) {
 								arrayState.IsFirst = false;
-								return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
+								return "[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"";
 							}
-							return new byte[] { (byte)'[' };
+							return "[";
 						}
 					case JsonObjectType.Dictionary: {
 							bool isStringDictionary = typeInfo.KeyType == typeof(string) || (typeInfo.IsEnumDictionary && _settings.EnumValuesAsString);
@@ -465,9 +466,9 @@ namespace IonKiwi.Json {
 								}
 								if (emitType) {
 									objectState.IsFirst = false;
-									return Encoding.UTF8.GetBytes("{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
+									return "{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"";
 								}
-								return new byte[] { (byte)'{' };
+								return "{";
 							}
 							else {
 								var arrayState = new JsonWriterDictionaryState();
@@ -494,9 +495,9 @@ namespace IonKiwi.Json {
 								}
 								if (emitType) {
 									arrayState.IsFirst = false;
-									return Encoding.UTF8.GetBytes("[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"");
+									return "[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"";
 								}
-								return new byte[] { (byte)'[' };
+								return "[";
 							}
 						}
 					case JsonObjectType.SimpleValue:
@@ -507,27 +508,27 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private byte[] WriteSimpleValue(object value, JsonTypeInfo typeInfo) {
+			private string WriteSimpleValue(object value, JsonTypeInfo typeInfo) {
 
 				if (object.ReferenceEquals(null, value)) {
-					return new byte[] { (byte)'n', (byte)'u', (byte)'l', (byte)'l' };
+					return "null";
 				}
 
 				if (typeInfo.RootType.IsEnum) {
 					if (_settings.EnumValuesAsString) {
 						if (!typeInfo.IsFlagsEnum) {
 							string name = Enum.GetName(typeInfo.RootType, value);
-							return Encoding.UTF8.GetBytes(JsonUtilities.JavaScriptStringEncode(
+							return JsonUtilities.JavaScriptStringEncode(
 								name,
 								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-								JsonUtilities.JavaScriptQuoteMode.Always));
+								JsonUtilities.JavaScriptQuoteMode.Always);
 						}
 						else {
 							string name = string.Join(", ", ReflectionUtility.GetUniqueFlags((Enum)value).Select(x => Enum.GetName(typeInfo.RootType, x)));
-							return Encoding.UTF8.GetBytes(JsonUtilities.JavaScriptStringEncode(
+							return JsonUtilities.JavaScriptStringEncode(
 								name,
 								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-								JsonUtilities.JavaScriptQuoteMode.Always));
+								JsonUtilities.JavaScriptQuoteMode.Always);
 						}
 					}
 					else {
@@ -535,61 +536,61 @@ namespace IonKiwi.Json {
 					}
 				}
 				else if (typeInfo.RootType == typeof(string)) {
-					return Encoding.UTF8.GetBytes(JsonUtilities.JavaScriptStringEncode((string)value,
+					return JsonUtilities.JavaScriptStringEncode((string)value,
 						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						JsonUtilities.JavaScriptQuoteMode.Always));
+						JsonUtilities.JavaScriptQuoteMode.Always);
 				}
 				else if (typeInfo.RootType == typeof(bool)) {
 					if ((bool)value) {
-						return new byte[] { (byte)'t', (byte)'r', (byte)'u', (byte)'e' };
+						return "true";
 					}
-					return new byte[] { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e' };
+					return "false";
 				}
 				else if (typeInfo.RootType == typeof(Char)) {
-					return Encoding.UTF8.GetBytes(new char[] { (char)value });
+					return string.Empty + (char)value;
 				}
 				else if (typeInfo.RootType == typeof(byte)) {
 					if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-						return Encoding.UTF8.GetBytes("0x" + ((byte)value).ToString("x", CultureInfo.InvariantCulture));
+						return "0x" + ((byte)value).ToString("x", CultureInfo.InvariantCulture);
 					}
-					return Encoding.UTF8.GetBytes(((byte)value).ToString(CultureInfo.InvariantCulture));
+					return ((byte)value).ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(sbyte)) {
 					if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-						return Encoding.UTF8.GetBytes("0x" + ((sbyte)value).ToString("x", CultureInfo.InvariantCulture));
+						return "0x" + ((sbyte)value).ToString("x", CultureInfo.InvariantCulture);
 					}
-					return Encoding.UTF8.GetBytes(((sbyte)value).ToString(CultureInfo.InvariantCulture));
+					return ((sbyte)value).ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(Int16)) {
-					return Encoding.UTF8.GetBytes(((Int16)value).ToString(CultureInfo.InvariantCulture));
+					return ((Int16)value).ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(UInt16)) {
-					return Encoding.UTF8.GetBytes(((UInt16)value).ToString(CultureInfo.InvariantCulture));
+					return ((UInt16)value).ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(Int32)) {
-					return Encoding.UTF8.GetBytes(((Int32)value).ToString(CultureInfo.InvariantCulture));
+					return ((Int32)value).ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(UInt32)) {
-					return Encoding.UTF8.GetBytes(((UInt32)value).ToString(CultureInfo.InvariantCulture));
+					return ((UInt32)value).ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(Int64)) {
-					return Encoding.UTF8.GetBytes(((Int64)value).ToString(CultureInfo.InvariantCulture));
+					return ((Int64)value).ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(UInt64)) {
-					return Encoding.UTF8.GetBytes(((UInt64)value).ToString(CultureInfo.InvariantCulture));
+					return ((UInt64)value).ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(IntPtr)) {
 					if (IntPtr.Size == 4) {
 						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-							return Encoding.UTF8.GetBytes("0x" + ((IntPtr)value).ToInt32().ToString("x4", CultureInfo.InvariantCulture));
+							return "0x" + ((IntPtr)value).ToInt32().ToString("x4", CultureInfo.InvariantCulture);
 						}
-						return Encoding.UTF8.GetBytes(((IntPtr)value).ToInt32().ToString(CultureInfo.InvariantCulture));
+						return ((IntPtr)value).ToInt32().ToString(CultureInfo.InvariantCulture);
 					}
 					else if (IntPtr.Size == 8) {
 						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-							return Encoding.UTF8.GetBytes("0x" + ((IntPtr)value).ToInt64().ToString("x8", CultureInfo.InvariantCulture));
+							return "0x" + ((IntPtr)value).ToInt64().ToString("x8", CultureInfo.InvariantCulture);
 						}
-						return Encoding.UTF8.GetBytes(((IntPtr)value).ToInt64().ToString(CultureInfo.InvariantCulture));
+						return ((IntPtr)value).ToInt64().ToString(CultureInfo.InvariantCulture);
 					}
 					else {
 						ThowNotSupportedIntPtrSize();
@@ -599,15 +600,15 @@ namespace IonKiwi.Json {
 				else if (typeInfo.RootType == typeof(UIntPtr)) {
 					if (UIntPtr.Size == 4) {
 						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-							return Encoding.UTF8.GetBytes("0x" + ((UIntPtr)value).ToUInt32().ToString("x4", CultureInfo.InvariantCulture));
+							return "0x" + ((UIntPtr)value).ToUInt32().ToString("x4", CultureInfo.InvariantCulture);
 						}
-						return Encoding.UTF8.GetBytes(((UIntPtr)value).ToUInt32().ToString(CultureInfo.InvariantCulture));
+						return ((UIntPtr)value).ToUInt32().ToString(CultureInfo.InvariantCulture);
 					}
 					else if (UIntPtr.Size == 8) {
 						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-							return Encoding.UTF8.GetBytes("0x" + ((UIntPtr)value).ToUInt64().ToString("x8", CultureInfo.InvariantCulture));
+							return "0x" + ((UIntPtr)value).ToUInt64().ToString("x8", CultureInfo.InvariantCulture);
 						}
-						return Encoding.UTF8.GetBytes(((UIntPtr)value).ToUInt64().ToString(CultureInfo.InvariantCulture));
+						return ((UIntPtr)value).ToUInt64().ToString(CultureInfo.InvariantCulture);
 					}
 					else {
 						ThowNotSupportedUIntPtrSize();
@@ -616,42 +617,42 @@ namespace IonKiwi.Json {
 				}
 				else if (typeInfo.RootType == typeof(double)) {
 					string v = ((double)value).ToString("R", CultureInfo.InvariantCulture);
-					return Encoding.UTF8.GetBytes(EnsureDecimal(v));
+					return EnsureDecimal(v);
 				}
 				else if (typeInfo.RootType == typeof(Single)) {
 					// float
 					string v = ((Single)value).ToString("R", CultureInfo.InvariantCulture);
-					return Encoding.UTF8.GetBytes(EnsureDecimal(v));
+					return EnsureDecimal(v);
 				}
 				else if (typeInfo.RootType == typeof(decimal)) {
 					string v = ((decimal)value).ToString("R", CultureInfo.InvariantCulture);
-					return Encoding.UTF8.GetBytes(EnsureDecimal(v));
+					return EnsureDecimal(v);
 				}
 				else if (typeInfo.RootType == typeof(BigInteger)) {
 					string v = ((BigInteger)value).ToString("R", CultureInfo.InvariantCulture);
-					return Encoding.UTF8.GetBytes(v);
+					return v;
 				}
 				else if (typeInfo.RootType == typeof(DateTime)) {
 					var v = JsonUtilities.EnsureDateTime((DateTime)value, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
 					char[] chars = new char[64];
 					int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, v, null, v.Kind);
 					//int pos = JsonDateTimeUtility.WriteMicrosoftDateTimeString(chars, 0, value, null, value.Kind);
-					return Encoding.UTF8.GetBytes('"' + new string(chars.Take(pos).ToArray()) + '"');
+					return '"' + new string(chars.Take(pos).ToArray()) + '"';
 				}
 				else if (typeInfo.RootType == typeof(TimeSpan)) {
-					return Encoding.UTF8.GetBytes(((TimeSpan)value).Ticks.ToString(CultureInfo.InvariantCulture));
+					return ((TimeSpan)value).Ticks.ToString(CultureInfo.InvariantCulture);
 				}
 				else if (typeInfo.RootType == typeof(Uri)) {
-					return Encoding.UTF8.GetBytes(JsonUtilities.JavaScriptStringEncode(
+					return JsonUtilities.JavaScriptStringEncode(
 						((Uri)value).OriginalString,
 						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtilities.JavaScriptEncodeMode.Hex : JsonUtilities.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						JsonUtilities.JavaScriptQuoteMode.Always));
+						JsonUtilities.JavaScriptQuoteMode.Always);
 				}
 				else if (typeInfo.RootType == typeof(Guid)) {
-					return Encoding.UTF8.GetBytes('"' + ((Guid)value).ToString("D") + '"');
+					return '"' + ((Guid)value).ToString("D") + '"';
 				}
 				else if (typeInfo.RootType == typeof(byte[])) {
-					return Encoding.UTF8.GetBytes('"' + Convert.ToBase64String((byte[])value) + '"');
+					return '"' + Convert.ToBase64String((byte[])value) + '"';
 				}
 				else {
 					ThrowNotSupported(typeInfo.OriginalType);

@@ -1,6 +1,7 @@
 ﻿using IonKiwi.Json.MetaData;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using Xunit;
@@ -40,29 +41,33 @@ namespace IonKiwi.Json.Test {
 			var jws = JsonWriter.DefaultSettings.Clone();
 			jws.DefaultAssemblyName = new JsonDefaultAssemblyVersion(typeof(InterfaceTest).Assembly.GetName(false));
 
-			var output = new JsonWriter.StringDataWriter();
-			JsonWriter.SerializeSync(output, v, writerSettings: jws);
-			var json = output.GetString();
+			StringBuilder sb = new StringBuilder();
+			using (var w = new StringWriter(sb)) {
+				JsonWriter.SerializeSync(w, v, writerSettings: jws);
+			}
+			var json = sb.ToString();
 
 			Assert.Equal("{\"Value\":{\"$type\":\"IonKiwi.Json.Test.InterfaceTest+Object2, IonKiwi.Json.Test\"}}", json);
 
 			v = new Object1();
 			v.Value = new Object3() { Value = 42 };
-			output = new JsonWriter.StringDataWriter();
-			JsonWriter.SerializeSync(output, v, writerSettings: jws);
-			json = output.GetString();
+			sb = new StringBuilder();
+			using (var w = new StringWriter(sb)) {
+				JsonWriter.SerializeSync(w, v, writerSettings: jws);
+			}
+			json = sb.ToString();
 			Assert.Equal("{\"Value\":{\"$type\":\"IonKiwi.Json.Test.InterfaceTest+Object3, IonKiwi.Json.Test\",\"Value\":42}}", json);
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.SetDefaultAssemblyName(typeof(InterfaceTest).Assembly.GetName(false));
 
-			v = JsonParser.ParseSync<Object1>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.NotNull(v);
-			Assert.NotNull(v.Value);
-			Assert.Equal(typeof(Object3), v.Value.GetType());
-			Assert.Equal(42, ((Object3)v.Value).Value);
-
-			return;
+			using (var r = new StringReader(json)) {
+				v = JsonParser.ParseSync<Object1>(new JsonReader(r), parserSettings: jps);
+				Assert.NotNull(v);
+				Assert.NotNull(v.Value);
+				Assert.Equal(typeof(Object3), v.Value.GetType());
+				Assert.Equal(42, ((Object3)v.Value).Value);
+			}
 		}
 
 		[JsonKnownType(typeof(Object4))]
@@ -84,20 +89,22 @@ namespace IonKiwi.Json.Test {
 			var jws = JsonWriter.DefaultSettings.Clone();
 			jws.DefaultAssemblyName = new JsonDefaultAssemblyVersion(typeof(InterfaceTest).Assembly.GetName(false));
 
-			var output = new JsonWriter.StringDataWriter();
-			JsonWriter.SerializeSync<IInterface2>(output, v, writerSettings: jws);
-			var json = output.GetString();
+			StringBuilder sb = new StringBuilder();
+			using (var w = new StringWriter(sb)) {
+				JsonWriter.SerializeSync<IInterface2>(w, v, writerSettings: jws);
+			}
+			var json = sb.ToString();
 			Assert.Equal("{\"$type\":\"IonKiwi.Json.Test.InterfaceTest+Object4, IonKiwi.Json.Test\",\"Value\":42}", json);
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.SetDefaultAssemblyName(typeof(InterfaceTest).Assembly.GetName(false));
 
-			var v2 = JsonParser.ParseSync<IInterface2>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.NotNull(v2);
-			Assert.Equal(typeof(Object4), v2.GetType());
-			Assert.Equal(42, ((Object4)v2).Value);
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v2 = JsonParser.ParseSync<IInterface2>(new JsonReader(r), parserSettings: jps);
+				Assert.NotNull(v2);
+				Assert.Equal(typeof(Object4), v2.GetType());
+				Assert.Equal(42, ((Object4)v2).Value);
+			}
 		}
 	}
 }

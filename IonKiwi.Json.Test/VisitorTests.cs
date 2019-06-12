@@ -1,6 +1,7 @@
 ﻿using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
@@ -62,20 +63,22 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject1), v.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject1), v.GetType());
+			}
 
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject1), v.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject1), v.GetType());
+			}
 		}
 
 		[Fact]
@@ -90,20 +93,21 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject2), v.GetType());
-
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject2), v.GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject2), v.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject2), v.GetType());
+			}
 		}
 
 		[CollectionDataContract]
@@ -128,20 +132,21 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection1), v.GetType());
-
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection1), v.GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection1), v.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection1), v.GetType());
+			}
 		}
 
 		[Fact]
@@ -156,20 +161,21 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection2), v.GetType());
-
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection2), v.GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection2), v.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection2), v.GetType());
+			}
 		}
 
 		[DataContract]
@@ -236,32 +242,36 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject3), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorObject1), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject3), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorObject1), v.P1.GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject3), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorObject1), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject3), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorObject1), v.P1.GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject3), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorObject1), v.P1.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject3), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorObject1), v.P1.GetType());
+			}
 		}
 
 		[Fact]
@@ -277,32 +287,36 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject3), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject3), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject3), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject3), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject3), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject3), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			}
 		}
 
 		[Fact]
@@ -318,32 +332,36 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject4), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject4), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject4), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject4), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject4), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject4), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorObject2), v.P1.GetType());
+			}
 		}
 
 		[DataContract]
@@ -370,32 +388,36 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject5), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorCollection1), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject5), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorCollection1), v.P1.GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject5), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorCollection1), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject5), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorCollection1), v.P1.GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject5), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorCollection1), v.P1.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject5), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorCollection1), v.P1.GetType());
+			}
 		}
 
 		[Fact]
@@ -411,32 +433,36 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject5), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject5), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject5), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject5), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject5), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject5), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			}
 		}
 
 		[Fact]
@@ -452,32 +478,36 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject6), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject6), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject6), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject6), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorObject6), v.GetType());
-			Assert.NotNull(v.P1);
-			Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorObject6), v.GetType());
+				Assert.NotNull(v.P1);
+				Assert.Equal(typeof(VisitorCollection2), v.P1.GetType());
+			}
 		}
 
 		[CollectionDataContract]
@@ -543,35 +573,39 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection3), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorObject1), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection3), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorObject1), v[0].GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection3), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorObject1), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection3), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorObject1), v[0].GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection3), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorObject1), v[0].GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection3), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorObject1), v[0].GetType());
+			}
 		}
 
 		[Fact]
@@ -587,35 +621,39 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection3), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection3), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection3), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection3), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection3), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorObject2), v[0].GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection3), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			}
 		}
 
 		[Fact]
@@ -631,35 +669,39 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection4), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection4), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection4), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection4), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection4), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorObject2), v[0].GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection4), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorObject2), v[0].GetType());
+			}
 		}
 
 		[CollectionDataContract]
@@ -685,35 +727,39 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection5), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorCollection1), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection5), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorCollection1), v[0].GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection5), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorCollection1), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection5), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorCollection1), v[0].GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection5), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorCollection1), v[0].GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection5), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorCollection1), v[0].GetType());
+			}
 		}
 
 		[Fact]
@@ -729,35 +775,39 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection5), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection5), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection5), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection5), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection5), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection5), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			}
 		}
 
 		[Fact]
@@ -773,35 +823,39 @@ namespace IonKiwi.Json.Test {
 
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
-			var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection6), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection6), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			}
 
 			visitor.Mode = 1;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(1, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection6), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(1, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection6), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			}
 
 			visitor.Mode = 2;
 			visitor.Count = 0;
-			v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(Encoding.UTF8.GetBytes(json)), parserSettings: jps);
-			Assert.Equal(2, visitor.Count);
-			Assert.NotNull(v);
-			Assert.Equal(typeof(VisitorCollection6), v.GetType());
-			Assert.Single(v);
-			Assert.NotNull(v[0]);
-			Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
-
-			return;
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				Assert.Equal(2, visitor.Count);
+				Assert.NotNull(v);
+				Assert.Equal(typeof(VisitorCollection6), v.GetType());
+				Assert.Single(v);
+				Assert.NotNull(v[0]);
+				Assert.Equal(typeof(VisitorCollection2), v[0].GetType());
+			}
 		}
 	}
 }

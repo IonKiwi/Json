@@ -20,10 +20,6 @@ namespace IonKiwi.Json {
 			throw new InvalidOperationException("Internal state corruption");
 		}
 
-		private static void ThrowUnsupportedCharset(Charset charset) {
-			throw new InvalidOperationException("Charset '" + charset + "' is not supported.");
-		}
-
 		private static void ThrowUnhandledStateType(Type t) {
 			throw new NotImplementedException(ReflectionUtility.GetTypeName(t));
 		}
