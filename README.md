@@ -3,7 +3,7 @@
 ## Features
 
 * parse/write JSON
-* parse/write ECMAScript like JSON
+* parse/write ECMAScript like content
 	* Unquoted property names
 	* Single / multi-line comments
 	* Trailing comma allowed for objects and arrays
@@ -43,3 +43,124 @@ JsonWriter.SerializeSync(
 => { a: true, b: 42 }
 
 ```
+
+## Usage
+
+**Parsing json**
+
+_parsing a json string synchronously_
+```csharp
+
+using (var reader = new StringReader(json)) {
+  var value = JsonParser.ParseSync<ObjectType>(new JsonReader(reader));
+}
+
+or
+
+var value = JsonUtility.ParseSync<ObjectType>(json);
+
+```
+
+_parsing a json string asynchronously_
+
+```csharp
+
+using (var reader = new StringReader(json)) {
+  var value = await JsonParser.Parsec<ObjectType>(new JsonReader(reader));
+}
+
+or
+
+var value = await JsonUtility.Parse<ObjectType>(json);
+
+```
+
+_parsing a json stream synchronously_
+
+```csharp
+
+using (var reader = new StreamReader(stream)) {
+  var value = JsonParser.ParseSync<ObjectType>(new JsonReader(reader));
+}
+
+or
+
+var value = JsonUtility.ParseSync<ObjectType>(stream);
+
+```
+
+_parsing a json stream asynchronously__
+
+```csharp
+
+using (var reader = new StreamReader(stream)) {
+  var value = await JsonParser.Parse<ObjectType>(new JsonReader(reader));
+}
+
+or
+
+var value = await JsonUtility.Parse<ObjectType>(stream);
+
+```
+
+**Writing json**
+
+_serializing a value as json string synchronously_
+```csharp
+
+var sb = new StringBuilder();
+using (var writer = new StringWriter(sb)) {
+  var value = JsonWriter.SerializeSync(writer, value);
+}
+var json = sb.ToString();
+
+or
+
+var json = JsonUtility.SerializeSync(value);
+
+```
+
+_serializing a value as json string asynchronously_
+
+```csharp
+
+var sb = new StringBuilder();
+using (var writer = new StringWriter(sb)) {
+  var value = await JsonWriter.Serialize(writer, value);
+}
+var json = sb.ToString();
+
+or
+
+var json = await JsonUtility.Serialize(value);
+
+```
+
+_serializing a value to a stream synchronously_
+
+```csharp
+
+using (var writer = new StreamWriter(stream)) {
+  JsonWriter.SerializeSync(writer, value);
+}
+
+or
+
+JsonUtility.SerializeSync(stream, value);
+
+```
+
+_serializing a value to a stream asynchronously_
+
+```csharp
+
+using (var writer = new StreamWriter(stream)) {
+  await JsonWriter.Serialize(writer, value);
+}
+
+or
+
+await JsonUtility.Serialize(stream, value);
+
+```
+
