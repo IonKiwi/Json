@@ -108,7 +108,7 @@ var value = JsonUtility.ParseSync<ObjectType>(stream);
 
 ```
 
-_parsing a json stream asynchronously__
+_parsing a json stream asynchronously_
 
 ```csharp
 
