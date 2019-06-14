@@ -44,7 +44,6 @@ namespace IonKiwi.Json {
 			public bool IsNullable = true;
 			public bool IsEnumDictionary = false;
 			public bool IsFlagsEnum = false;
-			public bool? LogMissingNonRequiredProperties = null;
 			public JsonObjectType ObjectType;
 			public readonly Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
 			public Func<object, System.Collections.IEnumerator> EnumerateMethod;
@@ -336,10 +335,6 @@ namespace IonKiwi.Json {
 				ti.EnumerateMethod = Expression.Lambda<Func<object, System.Collections.IEnumerator>>(getEnumeratorCall, p1).Compile();
 			}
 			else if (objectInfo != null) {
-
-				if (objectInfo.DisableLogMissingNonRequiredProperties) {
-					ti.LogMissingNonRequiredProperties = false;
-				}
 
 				if (md != null) {
 					foreach (var cp in md.Properties) {

@@ -31,15 +31,6 @@ namespace IonKiwi.Json {
 			private set;
 		}
 
-		private bool _logMissingNonRequiredProperties = true;
-		public bool LogMissingNonRequiredProperties {
-			get => _logMissingNonRequiredProperties;
-			set {
-				EnsureUnlocked();
-				_logMissingNonRequiredProperties = value;
-			}
-		}
-
 		private Func<Type, bool> _typeAllowedCallback;
 		public Func<Type, bool> TypeAllowedCallback {
 			get => _typeAllowedCallback;
@@ -134,7 +125,6 @@ namespace IonKiwi.Json {
 			JsonParserSettings clone = new JsonParserSettings();
 			clone.DateTimeHandling = this.DateTimeHandling;
 			clone.UnspecifiedDateTimeHandling = this.UnspecifiedDateTimeHandling;
-			clone.LogMissingNonRequiredProperties = this.LogMissingNonRequiredProperties;
 			clone.DefaultAssemblyName = this.DefaultAssemblyName;
 			clone.HasDefaultAssemblyName = this.HasDefaultAssemblyName;
 			foreach (var kv in this._defaultAssemblyNames) {

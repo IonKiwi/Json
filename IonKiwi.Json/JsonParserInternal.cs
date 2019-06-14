@@ -776,27 +776,19 @@ namespace IonKiwi.Json {
 
 				// validate required properties
 				var missingRequiredProperties = new HashSet<string>();
-				var missingOptionalProperties = new HashSet<string>();
 				foreach (var p in objectState.TypeInfo.Properties) {
 					if (!objectState.Properties.Contains(p.Key)) {
-
 						if (p.Value.Required) {
 							missingRequiredProperties.Add(p.Key);
 						}
-						else if (p.Value.EmitNullValue) {
-							missingOptionalProperties.Add(p.Key);
-						}
-
+						//else if (p.Value.EmitNullValue) {
+						//	missingOptionalProperties.Add(p.Key);
+						//}
 					}
 				}
 
 				if (missingRequiredProperties.Count > 0) {
 					ThrowMissingRequiredProperties(missingRequiredProperties);
-				}
-				if (missingOptionalProperties.Count > 0) {
-					if ((_settings.LogMissingNonRequiredProperties || objectState.TypeInfo.LogMissingNonRequiredProperties == true) && objectState.TypeInfo.LogMissingNonRequiredProperties != false) {
-						// TODO log missing properties
-					}
 				}
 
 				HandleStateCompletion(objectState.Parent, objectState);
