@@ -368,7 +368,7 @@ namespace IonKiwi.Json.Utilities {
 #if NETCOREAPP2_1 || NETCOREAPP2_2
 		private static async ValueTask HandleJsonPath(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed) {
 #else
-		private static async Task HandleJsonPath(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result) {
+		private static async Task HandleJsonPath(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed) {
 #endif
 			Stack<JsonPathPosition> stack = new Stack<JsonPathPosition>();
 			stack.Push(new JsonPathPosition() { Parts = parts });
