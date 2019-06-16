@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static IonKiwi.Json.JsonReader;
@@ -277,10 +278,49 @@ namespace IonKiwi.Json.Utilities {
 			throw new NotSupportedException("Invalid path: " + path);
 		}
 
+		private static void ThrowQueryFailed(List<(string path, Type type)> paths) {
+			if (paths.Count == 1) {
+				throw new Exception($"Failed to get the value for '{paths[0].path}'" + (paths[0].type == null ? "." : " with type '" + ReflectionUtility.GetTypeName(paths[0].type) + "'."));
+			}
+			else {
+				throw new Exception("Failed to get the values for: " + string.Join(", ", paths.Select(z => z.type == null ? z.path : z.path + " with type " + ReflectionUtility.GetTypeName(z.type))));
+			}
+		}
+
+		public static object[] TryGetValuesByJsonPathSync(JsonReader reader, (string path, Type type)[] query) {
+			var parts = ParsePath(query);
+			var result = new object[query.Length];
+			var completed = new bool[query.Length];
+			HandleJsonPathSync(reader, parts, result, completed);
+			return result;
+		}
+
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		public static async ValueTask<object[]> TryGetValuesByJsonPath(JsonReader reader, (string path, Type type)[] query) {
+#else
+		public static async Task<object[]> TryGetValuesByJsonPath(JsonReader reader, (string path, Type type)[] query) {
+#endif
+			var parts = ParsePath(query);
+			var result = new object[query.Length];
+			var completed = new bool[query.Length];
+			await HandleJsonPath(reader, parts, result, completed).NoSync();
+			return result;
+		}
+
 		public static object[] GetValuesByJsonPathSync(JsonReader reader, (string path, Type type)[] query) {
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
-			HandleJsonPathSync(reader, parts, result);
+			var completed = new bool[query.Length];
+			HandleJsonPathSync(reader, parts, result, completed);
+			var failedQueries = new List<(string path, Type type)>();
+			for (int i = 0; i < completed.Length; i++) {
+				if (!completed[i]) {
+					failedQueries.Add(query[i]);
+				}
+			}
+			if (failedQueries.Count > 0) {
+				ThrowQueryFailed(failedQueries);
+			}
 			return result;
 		}
 
@@ -291,7 +331,41 @@ namespace IonKiwi.Json.Utilities {
 #endif
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
+			var completed = new bool[query.Length];
+			await HandleJsonPath(reader, parts, result, completed).NoSync();
+			var failedQueries = new List<(string path, Type type)>();
+			for (int i = 0; i < completed.Length; i++) {
+				if (!completed[i]) {
+					failedQueries.Add(query[i]);
+				}
+			}
+			if (failedQueries.Count > 0) {
+				ThrowQueryFailed(failedQueries);
+			}
+			return result;
+		}
 
+		private enum HandleJsonPathTokenResult {
+			Continue,
+			Skip,
+			ReadValue,
+		}
+
+		private sealed class JsonPathPosition {
+			public bool IsArray;
+			public bool IsObject;
+			public bool IsItem;
+			public string Property;
+			public int Index;
+			public JsonPath Path;
+			public Dictionary<string, JsonPath> Parts;
+		}
+
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private static async ValueTask HandleJsonPath(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed) {
+#else
+		private static async Task HandleJsonPath(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result) {
+#endif
 			Stack<JsonPathPosition> stack = new Stack<JsonPathPosition>();
 			stack.Push(new JsonPathPosition() { Parts = parts });
 
@@ -302,7 +376,7 @@ namespace IonKiwi.Json.Utilities {
 					token = reader.Token;
 				}
 				if (token != JsonToken.None) {
-					var r = GetValuesByJsonPathInternal(reader, token, stack, result);
+					var r = GetValuesByJsonPathInternal(reader, token, stack, result, completed);
 					if (r == HandleJsonPathTokenResult.Skip) {
 						await reader.Skip().NoSync();
 					}
@@ -326,11 +400,11 @@ namespace IonKiwi.Json.Utilities {
 								subJson = await reader.ReadRaw().NoSync();
 							}
 						}
-						if (!HanleValue(reader, token, subJson, position, stack, result) && subJson == null) {
+						if (!HanleValue(reader, token, subJson, position, stack, result, completed) && subJson == null) {
 							await reader.Skip().NoSync();
 						}
 						if (subJson != null) {
-							HandleSubJsonSync(subJson, position.Path.SubPath, result);
+							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed);
 						}
 						if (isProperty) {
 							stack.Pop();
@@ -344,27 +418,9 @@ namespace IonKiwi.Json.Utilities {
 				}
 			}
 			while (token != JsonToken.None);
-
-			return result;
 		}
 
-		private enum HandleJsonPathTokenResult {
-			Continue,
-			Skip,
-			ReadValue,
-		}
-
-		private sealed class JsonPathPosition {
-			public bool IsArray;
-			public bool IsObject;
-			public bool IsItem;
-			public string Property;
-			public int Index;
-			public JsonPath Path;
-			public Dictionary<string, JsonPath> Parts;
-		}
-
-		private static void HandleJsonPathSync(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result) {
+		private static void HandleJsonPathSync(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed) {
 			Stack<JsonPathPosition> stack = new Stack<JsonPathPosition>();
 			stack.Push(new JsonPathPosition() { Parts = parts });
 
@@ -375,7 +431,7 @@ namespace IonKiwi.Json.Utilities {
 					token = reader.Token;
 				}
 				if (token != JsonToken.None) {
-					var r = GetValuesByJsonPathInternal(reader, token, stack, result);
+					var r = GetValuesByJsonPathInternal(reader, token, stack, result, completed);
 					if (r == HandleJsonPathTokenResult.Skip) {
 						reader.SkipSync();
 					}
@@ -399,11 +455,11 @@ namespace IonKiwi.Json.Utilities {
 								subJson = reader.ReadRawSync();
 							}
 						}
-						if (!HanleValue(reader, token, subJson, position, stack, result) && subJson == null) {
+						if (!HanleValue(reader, token, subJson, position, stack, result, completed) && subJson == null) {
 							reader.SkipSync();
 						}
 						if (subJson != null) {
-							HandleSubJsonSync(subJson, position.Path.SubPath, result);
+							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed);
 						}
 						if (isProperty) {
 							stack.Pop();
@@ -419,10 +475,10 @@ namespace IonKiwi.Json.Utilities {
 			while (token != JsonToken.None);
 		}
 
-		private static void HandleSubJsonSync(string subJson, Dictionary<string, JsonPath> parts, object[] result) {
+		private static void HandleSubJsonSync(string subJson, Dictionary<string, JsonPath> parts, object[] result, bool[] completed) {
 			using (StringReader r = new StringReader(subJson)) {
 				var reader = new JsonReader(r);
-				HandleJsonPathSync(reader, parts, result);
+				HandleJsonPathSync(reader, parts, result, completed);
 			}
 		}
 
@@ -434,16 +490,18 @@ namespace IonKiwi.Json.Utilities {
 			return typeInfo.ObjectType == JsonReflection.JsonObjectType.SimpleValue;
 		}
 
-		private static bool HanleValue(JsonReader reader, JsonToken token, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result) {
+		private static bool HanleValue(JsonReader reader, JsonToken token, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
 			if (position.Path.RequestedType == null) {
 				string value;
 				if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
 					value = subJson;
 					result[position.Path.QueryIndex.Value] = value;
+					completed[position.Path.QueryIndex.Value] = true;
 				}
 				else {
 					value = reader.GetValue();
 					result[position.Path.QueryIndex.Value] = value;
+					completed[position.Path.QueryIndex.Value] = true;
 				}
 				return true;
 			}
@@ -453,11 +511,13 @@ namespace IonKiwi.Json.Utilities {
 						using (var r = new StringReader(subJson)) {
 							var typedValue = JsonParser.ParseSync<object>(new JsonReader(r), position.Path.RequestedType);
 							result[position.Path.QueryIndex.Value] = typedValue;
+							completed[position.Path.QueryIndex.Value] = true;
 						}
 					}
 					else {
 						var typedValue = JsonParser.ParseSync<object>(reader, position.Path.RequestedType);
 						result[position.Path.QueryIndex.Value] = typedValue;
+						completed[position.Path.QueryIndex.Value] = true;
 					}
 					return true;
 				}
@@ -465,7 +525,7 @@ namespace IonKiwi.Json.Utilities {
 			return false;
 		}
 
-		private static HandleJsonPathTokenResult GetValuesByJsonPathInternal(JsonReader reader, JsonToken token, Stack<JsonPathPosition> stack, object[] result) {
+		private static HandleJsonPathTokenResult GetValuesByJsonPathInternal(JsonReader reader, JsonToken token, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
 			if (token == JsonToken.ObjectStart) {
 				var position = stack.Peek();
 				if (position.IsItem) {
@@ -549,9 +609,11 @@ namespace IonKiwi.Json.Utilities {
 					else if (part.QueryIndex.HasValue) {
 						if (part.RequestedType == null) {
 							result[part.QueryIndex.Value] = reader.GetValue();
+							completed[part.QueryIndex.Value] = true;
 						}
 						else {
 							result[part.QueryIndex.Value] = JsonParser.Parse<object>(reader, position.Path.RequestedType);
+							completed[part.QueryIndex.Value] = true;
 						}
 					}
 					return HandleJsonPathTokenResult.Continue;
@@ -560,9 +622,11 @@ namespace IonKiwi.Json.Utilities {
 					if (position.Path != null && position.Path.QueryIndex.HasValue) {
 						if (position.Path.RequestedType == null) {
 							result[position.Path.QueryIndex.Value] = reader.GetValue();
+							completed[position.Path.QueryIndex.Value] = true;
 						}
 						else {
 							result[position.Path.QueryIndex.Value] = JsonParser.Parse<object>(reader, position.Path.RequestedType);
+							completed[position.Path.QueryIndex.Value] = true;
 						}
 					}
 					return HandleJsonPathTokenResult.Continue;
