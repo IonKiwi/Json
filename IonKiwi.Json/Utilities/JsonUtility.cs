@@ -404,7 +404,7 @@ namespace IonKiwi.Json.Utilities {
 								subJson = await reader.ReadRaw().NoSync();
 							}
 						}
-						await HanleValue(reader, token, isComplexValue, subJson, position, stack, result, completed).NoSync();
+						await HandleValue(reader, token, isComplexValue, subJson, position, stack, result, completed).NoSync();
 						if (subJson != null) {
 							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed);
 						}
@@ -457,7 +457,7 @@ namespace IonKiwi.Json.Utilities {
 								subJson = reader.ReadRawSync();
 							}
 						}
-						HanleValueSync(reader, token, isComplexValue, subJson, position, stack, result, completed);
+						HandleValueSync(reader, token, isComplexValue, subJson, position, stack, result, completed);
 						if (subJson != null) {
 							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed);
 						}
@@ -491,9 +491,9 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private static async ValueTask HanleValue(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
+		private static async ValueTask HandleValue(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
 #else
-		private static async Task HanleValue(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
+		private static async Task HandleValue(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
 #endif
 			if (position.Path.RequestedType == null) {
 				string value;
@@ -529,7 +529,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-		private static void HanleValueSync(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
+		private static void HandleValueSync(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
 			if (position.Path.RequestedType == null) {
 				string value;
 				if (isComplexValue) {
