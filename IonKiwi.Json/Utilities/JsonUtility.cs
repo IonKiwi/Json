@@ -278,6 +278,10 @@ namespace IonKiwi.Json.Utilities {
 			throw new NotSupportedException("Invalid path: " + path);
 		}
 
+		private static void ThrowMultiplePaths() {
+			throw new NotSupportedException("Query contains duplicate paths.");
+		}
+
 		private static void ThrowQueryFailed(List<(string path, Type type)> paths) {
 			if (paths.Count == 1) {
 				throw new Exception($"Failed to get the value for '{paths[0].path}'" + (paths[0].type == null ? "." : " with type '" + ReflectionUtility.GetTypeName(paths[0].type) + "'."));
@@ -390,8 +394,8 @@ namespace IonKiwi.Json.Utilities {
 								while (await reader.Read().NoSync() == JsonToken.Comment) ;
 								token = reader.Token;
 							}
+							if (token == JsonToken.None) { ThrowMoreDataExpected(); }
 						}
-						if (token == JsonToken.None) { ThrowMoreDataExpected(); }
 						var position = stack.Peek();
 						string subJson = null;
 						if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
@@ -400,13 +404,11 @@ namespace IonKiwi.Json.Utilities {
 								subJson = await reader.ReadRaw().NoSync();
 							}
 						}
-						if (!HanleValue(reader, token, subJson, position, stack, result, completed) && subJson == null) {
-							await reader.Skip().NoSync();
-						}
+						await HanleValue(reader, token, isComplexValue, subJson, position, stack, result, completed).NoSync();
 						if (subJson != null) {
 							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed);
 						}
-						if (isProperty) {
+						if (isProperty || !isComplexValue) {
 							stack.Pop();
 						}
 						else if (isComplexValue) {
@@ -445,8 +447,8 @@ namespace IonKiwi.Json.Utilities {
 								while (reader.ReadSync() == JsonToken.Comment) ;
 								token = reader.Token;
 							}
+							if (token == JsonToken.None) { ThrowMoreDataExpected(); }
 						}
-						if (token == JsonToken.None) { ThrowMoreDataExpected(); }
 						var position = stack.Peek();
 						string subJson = null;
 						if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
@@ -455,13 +457,11 @@ namespace IonKiwi.Json.Utilities {
 								subJson = reader.ReadRawSync();
 							}
 						}
-						if (!HanleValue(reader, token, subJson, position, stack, result, completed) && subJson == null) {
-							reader.SkipSync();
-						}
+						HanleValueSync(reader, token, isComplexValue, subJson, position, stack, result, completed);
 						if (subJson != null) {
 							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed);
 						}
-						if (isProperty) {
+						if (isProperty || !isComplexValue) {
 							stack.Pop();
 						}
 						else if (isComplexValue) {
@@ -490,10 +490,14 @@ namespace IonKiwi.Json.Utilities {
 			return typeInfo.ObjectType == JsonReflection.JsonObjectType.SimpleValue;
 		}
 
-		private static bool HanleValue(JsonReader reader, JsonToken token, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
+#if NETCOREAPP2_1 || NETCOREAPP2_2
+		private static async ValueTask HanleValue(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
+#else
+		private static async Task HanleValue(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
+#endif
 			if (position.Path.RequestedType == null) {
 				string value;
-				if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
+				if (isComplexValue) {
 					value = subJson;
 					result[position.Path.QueryIndex.Value] = value;
 					completed[position.Path.QueryIndex.Value] = true;
@@ -503,7 +507,41 @@ namespace IonKiwi.Json.Utilities {
 					result[position.Path.QueryIndex.Value] = value;
 					completed[position.Path.QueryIndex.Value] = true;
 				}
-				return true;
+			}
+			else {
+				if (ValidateObjectType(position.Path.RequestedType, token)) {
+					if (subJson != null) {
+						using (var r = new StringReader(subJson)) {
+							var typedValue = JsonParser.ParseSync<object>(new JsonReader(r), position.Path.RequestedType);
+							result[position.Path.QueryIndex.Value] = typedValue;
+							completed[position.Path.QueryIndex.Value] = true;
+						}
+					}
+					else {
+						var typedValue = await JsonParser.Parse<object>(reader, position.Path.RequestedType).NoSync();
+						result[position.Path.QueryIndex.Value] = typedValue;
+						completed[position.Path.QueryIndex.Value] = true;
+					}
+				}
+				else if (isComplexValue && subJson == null) {
+					await reader.Skip().NoSync();
+				}
+			}
+		}
+
+		private static void HanleValueSync(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
+			if (position.Path.RequestedType == null) {
+				string value;
+				if (isComplexValue) {
+					value = subJson;
+					result[position.Path.QueryIndex.Value] = value;
+					completed[position.Path.QueryIndex.Value] = true;
+				}
+				else {
+					value = reader.GetValue();
+					result[position.Path.QueryIndex.Value] = value;
+					completed[position.Path.QueryIndex.Value] = true;
+				}
 			}
 			else {
 				if (ValidateObjectType(position.Path.RequestedType, token)) {
@@ -519,10 +557,11 @@ namespace IonKiwi.Json.Utilities {
 						result[position.Path.QueryIndex.Value] = typedValue;
 						completed[position.Path.QueryIndex.Value] = true;
 					}
-					return true;
+				}
+				else if (isComplexValue && subJson == null) {
+					reader.SkipSync();
 				}
 			}
-			return false;
 		}
 
 		private static HandleJsonPathTokenResult GetValuesByJsonPathInternal(JsonReader reader, JsonToken token, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
@@ -607,28 +646,16 @@ namespace IonKiwi.Json.Utilities {
 						return HandleJsonPathTokenResult.Skip;
 					}
 					else if (part.QueryIndex.HasValue) {
-						if (part.RequestedType == null) {
-							result[part.QueryIndex.Value] = reader.GetValue();
-							completed[part.QueryIndex.Value] = true;
-						}
-						else {
-							result[part.QueryIndex.Value] = JsonParser.Parse<object>(reader, position.Path.RequestedType);
-							completed[part.QueryIndex.Value] = true;
-						}
+						stack.Push(new JsonPathPosition() { IsArray = true, IsItem = true, Index = position.Index, Path = part, Parts = part.SubPath });
+						return HandleJsonPathTokenResult.ReadValue;
 					}
 					return HandleJsonPathTokenResult.Continue;
 				}
 				else {
 					if (position.Path != null && position.Path.QueryIndex.HasValue) {
-						if (position.Path.RequestedType == null) {
-							result[position.Path.QueryIndex.Value] = reader.GetValue();
-							completed[position.Path.QueryIndex.Value] = true;
-						}
-						else {
-							result[position.Path.QueryIndex.Value] = JsonParser.Parse<object>(reader, position.Path.RequestedType);
-							completed[position.Path.QueryIndex.Value] = true;
-						}
+						throw new NotImplementedException();
 					}
+					// root level
 					return HandleJsonPathTokenResult.Continue;
 				}
 			}
@@ -676,6 +703,9 @@ namespace IonKiwi.Json.Utilities {
 				}
 
 				if (end < 0) {
+					if (part.QueryIndex.HasValue) {
+						ThrowMultiplePaths();
+					}
 					part.QueryIndex = queryIndex;
 					part.RequestedType = query.type;
 				}
@@ -704,6 +734,9 @@ namespace IonKiwi.Json.Utilities {
 				}
 
 				if (next == path.Length - 1) {
+					if (part.QueryIndex.HasValue) {
+						ThrowMultiplePaths();
+					}
 					part.QueryIndex = queryIndex;
 					part.RequestedType = query.type;
 				}
