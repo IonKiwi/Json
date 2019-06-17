@@ -259,9 +259,9 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public async ValueTask<string> ReadRaw() {
+		public async ValueTask<string> ReadRaw(JsonWriteMode writeMode = JsonWriteMode.Json) {
 #else
-		public async Task<string> ReadRaw() {
+		public async Task<string> ReadRaw(JsonWriteMode writeMode = JsonWriteMode.Json) {
 #endif
 			var currentToken = Token;
 
@@ -285,7 +285,10 @@ namespace IonKiwi.Json {
 
 			if (JsonReader.IsValueToken(currentToken)) {
 				if (currentToken == JsonToken.String) {
-					return JsonUtility.JavaScriptStringEncode(GetValue(), JsonUtility.JavaScriptEncodeMode.Hex, JsonUtility.JavaScriptQuoteMode.Always);
+					return JsonUtility.JavaScriptStringEncode(
+						GetValue(),
+						writeMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						JsonUtility.JavaScriptQuoteMode.Always);
 				}
 				return GetValue();
 			}
@@ -295,7 +298,7 @@ namespace IonKiwi.Json {
 				stack.Push(new RawPosition());
 
 				var sb = new StringBuilder();
-				WriteToken(sb, currentToken, true);
+				WriteToken(sb, writeMode, currentToken, true);
 
 				var startDepth = Depth;
 
@@ -330,7 +333,7 @@ namespace IonKiwi.Json {
 								break;
 							}
 					}
-					WriteToken(sb, currentToken, position.IsFirst);
+					WriteToken(sb, writeMode, currentToken, position.IsFirst);
 					position.IsFirst = false;
 					if (position.IsProperty && (currentToken == JsonToken.Boolean || currentToken == JsonToken.Null || currentToken == JsonToken.Number || currentToken == JsonToken.String)) {
 						stack.Pop();
@@ -346,7 +349,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public string ReadRawSync() {
+		public string ReadRawSync(JsonWriteMode writeMode = JsonWriteMode.Json) {
 			var currentToken = Token;
 
 			if (currentToken == JsonToken.Comment) {
@@ -369,7 +372,10 @@ namespace IonKiwi.Json {
 
 			if (JsonReader.IsValueToken(currentToken)) {
 				if (currentToken == JsonToken.String) {
-					return JsonUtility.JavaScriptStringEncode(GetValue(), JsonUtility.JavaScriptEncodeMode.Hex, JsonUtility.JavaScriptQuoteMode.Always);
+					return JsonUtility.JavaScriptStringEncode(
+						GetValue(),
+						writeMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+						JsonUtility.JavaScriptQuoteMode.Always);
 				}
 				return GetValue();
 			}
@@ -379,7 +385,7 @@ namespace IonKiwi.Json {
 				stack.Push(new RawPosition());
 
 				var sb = new StringBuilder();
-				WriteToken(sb, currentToken, true);
+				WriteToken(sb, writeMode, currentToken, true);
 
 				var startDepth = Depth;
 
@@ -414,7 +420,7 @@ namespace IonKiwi.Json {
 								break;
 							}
 					}
-					WriteToken(sb, currentToken, position.IsFirst);
+					WriteToken(sb, writeMode, currentToken, position.IsFirst);
 					position.IsFirst = false;
 					if (position.IsProperty && (currentToken == JsonToken.Boolean || currentToken == JsonToken.Null || currentToken == JsonToken.Number || currentToken == JsonToken.String)) {
 						stack.Pop();
@@ -430,7 +436,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		private void WriteToken(StringBuilder sb, JsonToken token, bool isFirst) {
+		private void WriteToken(StringBuilder sb, JsonWriteMode writeMode, JsonToken token, bool isFirst) {
 			switch (token) {
 				case JsonToken.ObjectStart: {
 						if (!isFirst) { sb.Append(','); }
@@ -450,7 +456,10 @@ namespace IonKiwi.Json {
 					break;
 				case JsonToken.ObjectProperty: {
 						if (!isFirst) { sb.Append(','); }
-						sb.Append(JsonUtility.JavaScriptStringEncode(GetValue(), JsonUtility.JavaScriptEncodeMode.Hex, JsonUtility.JavaScriptQuoteMode.Always));
+						sb.Append(JsonUtility.JavaScriptStringEncode(
+							GetValue(),
+							writeMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+							writeMode == JsonWriteMode.Json ? JsonUtility.JavaScriptQuoteMode.Always : JsonUtility.JavaScriptQuoteMode.WhenRequired));
 						sb.Append(":");
 						break;
 					}
@@ -463,7 +472,10 @@ namespace IonKiwi.Json {
 					}
 				case JsonToken.String: {
 						if (!isFirst) { sb.Append(','); }
-						sb.Append(JsonUtility.JavaScriptStringEncode(GetValue(), JsonUtility.JavaScriptEncodeMode.Hex, JsonUtility.JavaScriptQuoteMode.Always));
+						sb.Append(JsonUtility.JavaScriptStringEncode(
+							GetValue(),
+							writeMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
+							JsonUtility.JavaScriptQuoteMode.Always));
 						break;
 					}
 				default:
