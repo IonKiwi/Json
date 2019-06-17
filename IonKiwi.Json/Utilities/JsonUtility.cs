@@ -282,12 +282,24 @@ namespace IonKiwi.Json.Utilities {
 			throw new NotSupportedException("Query contains duplicate paths.");
 		}
 
-		private static void ThrowQueryFailed(List<(string path, Type type)> paths) {
+		private static void ThrowQueryFailed(List<(string path, Type type)> paths, Exception[] exceptions) {
+			string message;
 			if (paths.Count == 1) {
-				throw new Exception($"Failed to get the value for '{paths[0].path}'" + (paths[0].type == null ? "." : " with type '" + ReflectionUtility.GetTypeName(paths[0].type) + "'."));
+				message = $"Failed to get the value for '{paths[0].path}'" + (paths[0].type == null ? "." : " with type '" + ReflectionUtility.GetTypeName(paths[0].type) + "'.");
 			}
 			else {
-				throw new Exception("Failed to get the values for: " + string.Join(", ", paths.Select(z => z.type == null ? z.path : z.path + " with type " + ReflectionUtility.GetTypeName(z.type))));
+				message = "Failed to get the values for: " + string.Join(", ", paths.Select(z => z.type == null ? z.path : z.path + " with type " + ReflectionUtility.GetTypeName(z.type)));
+			}
+
+			var innerExceptions = exceptions.Where(z => z != null).ToArray();
+			if (innerExceptions.Length == 1) {
+				throw new Exception(message, innerExceptions[0]);
+			}
+			else if (innerExceptions.Length > 1) {
+				throw new AggregateException(message, innerExceptions);
+			}
+			else {
+				throw new Exception(message);
 			}
 		}
 
@@ -295,7 +307,8 @@ namespace IonKiwi.Json.Utilities {
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
-			HandleJsonPathSync(reader, parts, result, completed);
+			var exceptions = new Exception[query.Length];
+			HandleJsonPathSync(reader, parts, result, completed, exceptions);
 			return result;
 		}
 
@@ -307,7 +320,8 @@ namespace IonKiwi.Json.Utilities {
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
-			await HandleJsonPath(reader, parts, result, completed).NoSync();
+			var exceptions = new Exception[query.Length];
+			await HandleJsonPath(reader, parts, result, completed, exceptions).NoSync();
 			return result;
 		}
 
@@ -315,7 +329,8 @@ namespace IonKiwi.Json.Utilities {
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
-			HandleJsonPathSync(reader, parts, result, completed);
+			var exceptions = new Exception[query.Length];
+			HandleJsonPathSync(reader, parts, result, completed, exceptions);
 			var failedQueries = new List<(string path, Type type)>();
 			for (int i = 0; i < completed.Length; i++) {
 				if (!completed[i]) {
@@ -323,7 +338,7 @@ namespace IonKiwi.Json.Utilities {
 				}
 			}
 			if (failedQueries.Count > 0) {
-				ThrowQueryFailed(failedQueries);
+				ThrowQueryFailed(failedQueries, exceptions);
 			}
 			return result;
 		}
@@ -336,7 +351,8 @@ namespace IonKiwi.Json.Utilities {
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
-			await HandleJsonPath(reader, parts, result, completed).NoSync();
+			var exceptions = new Exception[query.Length];
+			await HandleJsonPath(reader, parts, result, completed, exceptions).NoSync();
 			var failedQueries = new List<(string path, Type type)>();
 			for (int i = 0; i < completed.Length; i++) {
 				if (!completed[i]) {
@@ -344,7 +360,7 @@ namespace IonKiwi.Json.Utilities {
 				}
 			}
 			if (failedQueries.Count > 0) {
-				ThrowQueryFailed(failedQueries);
+				ThrowQueryFailed(failedQueries, exceptions);
 			}
 			return result;
 		}
@@ -366,7 +382,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private static async ValueTask HandleJsonPath(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed) {
+		private static async ValueTask HandleJsonPath(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
 #else
 		private static async Task HandleJsonPath(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed) {
 #endif
@@ -396,17 +412,14 @@ namespace IonKiwi.Json.Utilities {
 							}
 							if (token == JsonToken.None) { ThrowMoreDataExpected(); }
 						}
-						var position = stack.Peek();
-						string subJson = null;
 						if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
 							isComplexValue = true;
-							if (position.Path.RequestedType == null || position.Path.SubPath.Count > 0) {
-								subJson = await reader.ReadRaw().NoSync();
-							}
 						}
-						await HandleValue(reader, token, isComplexValue, subJson, position, stack, result, completed).NoSync();
-						if (subJson != null) {
-							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed);
+						var position = stack.Peek();
+						var subJson = await reader.ReadRaw().NoSync();
+						HandleValue(token, subJson, position, result, completed, exceptions);
+						if (position.Path.SubPath.Count > 0) {
+							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed, exceptions);
 						}
 						if (isProperty || !isComplexValue) {
 							stack.Pop();
@@ -422,7 +435,7 @@ namespace IonKiwi.Json.Utilities {
 			while (token != JsonToken.None);
 		}
 
-		private static void HandleJsonPathSync(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed) {
+		private static void HandleJsonPathSync(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
 			Stack<JsonPathPosition> stack = new Stack<JsonPathPosition>();
 			stack.Push(new JsonPathPosition() { Parts = parts });
 
@@ -449,17 +462,14 @@ namespace IonKiwi.Json.Utilities {
 							}
 							if (token == JsonToken.None) { ThrowMoreDataExpected(); }
 						}
-						var position = stack.Peek();
-						string subJson = null;
 						if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
 							isComplexValue = true;
-							if (position.Path.RequestedType == null || position.Path.SubPath.Count > 0) {
-								subJson = reader.ReadRawSync();
-							}
 						}
-						HandleValueSync(reader, token, isComplexValue, subJson, position, stack, result, completed);
-						if (subJson != null) {
-							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed);
+						var position = stack.Peek();
+						var subJson = reader.ReadRawSync();
+						HandleValue(token, subJson, position, result, completed, exceptions);
+						if (position.Path.SubPath.Count > 0) {
+							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed, exceptions);
 						}
 						if (isProperty || !isComplexValue) {
 							stack.Pop();
@@ -475,10 +485,10 @@ namespace IonKiwi.Json.Utilities {
 			while (token != JsonToken.None);
 		}
 
-		private static void HandleSubJsonSync(string subJson, Dictionary<string, JsonPath> parts, object[] result, bool[] completed) {
+		private static void HandleSubJsonSync(string subJson, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
 			using (StringReader r = new StringReader(subJson)) {
 				var reader = new JsonReader(r);
-				HandleJsonPathSync(reader, parts, result, completed);
+				HandleJsonPathSync(reader, parts, result, completed, exceptions);
 			}
 		}
 
@@ -490,76 +500,23 @@ namespace IonKiwi.Json.Utilities {
 			return typeInfo.ObjectType == JsonReflection.JsonObjectType.SimpleValue;
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
-		private static async ValueTask HandleValue(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
-#else
-		private static async Task HandleValue(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
-#endif
+		private static void HandleValue(JsonToken token, string subJson, JsonPathPosition position, object[] result, bool[] completed, Exception[] exceptions) {
 			if (position.Path.RequestedType == null) {
-				string value;
-				if (isComplexValue) {
-					value = subJson;
-					result[position.Path.QueryIndex.Value] = value;
-					completed[position.Path.QueryIndex.Value] = true;
-				}
-				else {
-					value = reader.GetValue();
-					result[position.Path.QueryIndex.Value] = value;
-					completed[position.Path.QueryIndex.Value] = true;
-				}
+				result[position.Path.QueryIndex.Value] = subJson;
+				completed[position.Path.QueryIndex.Value] = true;
 			}
 			else {
 				if (ValidateObjectType(position.Path.RequestedType, token)) {
-					if (subJson != null) {
-						using (var r = new StringReader(subJson)) {
+					using (var r = new StringReader(subJson)) {
+						try {
 							var typedValue = JsonParser.ParseSync<object>(new JsonReader(r), position.Path.RequestedType);
 							result[position.Path.QueryIndex.Value] = typedValue;
 							completed[position.Path.QueryIndex.Value] = true;
 						}
-					}
-					else {
-						var typedValue = await JsonParser.Parse<object>(reader, position.Path.RequestedType).NoSync();
-						result[position.Path.QueryIndex.Value] = typedValue;
-						completed[position.Path.QueryIndex.Value] = true;
-					}
-				}
-				else if (isComplexValue && subJson == null) {
-					await reader.Skip().NoSync();
-				}
-			}
-		}
-
-		private static void HandleValueSync(JsonReader reader, JsonToken token, bool isComplexValue, string subJson, JsonPathPosition position, Stack<JsonPathPosition> stack, object[] result, bool[] completed) {
-			if (position.Path.RequestedType == null) {
-				string value;
-				if (isComplexValue) {
-					value = subJson;
-					result[position.Path.QueryIndex.Value] = value;
-					completed[position.Path.QueryIndex.Value] = true;
-				}
-				else {
-					value = reader.GetValue();
-					result[position.Path.QueryIndex.Value] = value;
-					completed[position.Path.QueryIndex.Value] = true;
-				}
-			}
-			else {
-				if (ValidateObjectType(position.Path.RequestedType, token)) {
-					if (subJson != null) {
-						using (var r = new StringReader(subJson)) {
-							var typedValue = JsonParser.ParseSync<object>(new JsonReader(r), position.Path.RequestedType);
-							result[position.Path.QueryIndex.Value] = typedValue;
-							completed[position.Path.QueryIndex.Value] = true;
+						catch (Exception ex) {
+							exceptions[position.Path.QueryIndex.Value] = ex;
 						}
 					}
-					else {
-						var typedValue = JsonParser.ParseSync<object>(reader, position.Path.RequestedType);
-						result[position.Path.QueryIndex.Value] = typedValue;
-						completed[position.Path.QueryIndex.Value] = true;
-					}
-				}
-				else if (isComplexValue && subJson == null) {
-					reader.SkipSync();
 				}
 			}
 		}

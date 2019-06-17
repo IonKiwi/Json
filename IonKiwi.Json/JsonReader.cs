@@ -285,7 +285,7 @@ namespace IonKiwi.Json {
 
 			if (JsonReader.IsValueToken(currentToken)) {
 				if (currentToken == JsonToken.String) {
-					return "\"" + GetValue() + "\"";
+					return JsonUtility.JavaScriptStringEncode(GetValue(), JsonUtility.JavaScriptEncodeMode.Hex, JsonUtility.JavaScriptQuoteMode.Always);
 				}
 				return GetValue();
 			}
@@ -369,7 +369,7 @@ namespace IonKiwi.Json {
 
 			if (JsonReader.IsValueToken(currentToken)) {
 				if (currentToken == JsonToken.String) {
-					return "\"" + GetValue() + "\"";
+					return JsonUtility.JavaScriptStringEncode(GetValue(), JsonUtility.JavaScriptEncodeMode.Hex, JsonUtility.JavaScriptQuoteMode.Always);
 				}
 				return GetValue();
 			}

@@ -48,7 +48,7 @@ namespace IonKiwi.Json.Test {
 				(".property2.subObjectProperty1.property1", null),
 				(".property3[1]", null),
 				(".property3[1][1].subObjectProperty1", null),
-				(".property3[1][1].subObjectProperty1.property1", null),
+				(".property3[1][1].subObjectProperty1.property1", typeof(string)),
 			};
 			var expectedResult = new object[] {
 				true,
@@ -56,7 +56,7 @@ namespace IonKiwi.Json.Test {
 				43,
 				42,
 				"[[true,42],[43,false]]",
-				"value1",
+				"\"value1\"",
 				"[\"subValue\",{\"subObjectProperty1\":{\"property1\":\"value2\"}}]",
 				"{\"property1\":\"value2\"}",
 				"value2"
@@ -114,7 +114,7 @@ namespace IonKiwi.Json.Test {
 				("[0].property1[1][0]", typeof(int)),
 				("[0].property1[0][1]", typeof(int)),
 				("[0].property1", null),
-				("[0].property2.subObjectProperty1.property1", null),
+				("[0].property2.subObjectProperty1.property1", typeof(string)),
 				("[0].property3[1]", null),
 				("[0].property3[1][1].subObjectProperty1", null),
 				("[0].property3[1][1].subObjectProperty1.property1", null),
@@ -128,7 +128,7 @@ namespace IonKiwi.Json.Test {
 				"value1",
 				"[\"subValue\",{\"subObjectProperty1\":{\"property1\":\"value2\"}}]",
 				"{\"property1\":\"value2\"}",
-				"value2"
+				"\"value2\""
 			};
 			using (var r = new StringReader(json)) {
 				var result = JsonUtility.TryGetValuesByJsonPathSync(new JsonReader(r), query);
