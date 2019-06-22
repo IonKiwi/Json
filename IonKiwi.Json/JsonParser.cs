@@ -23,9 +23,9 @@ namespace IonKiwi.Json {
 			.Seal();
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public static async ValueTask<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static async ValueTask<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #else
-		public static async Task<T> Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static async Task<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #endif
 
 			if (objectType == null) {
@@ -39,25 +39,25 @@ namespace IonKiwi.Json {
 
 			var currentToken = reader.Token;
 			if (currentToken == JsonToken.ObjectProperty) {
-				await reader.Read().NoSync();
+				await reader.ReadAsync().NoSync();
 			}
 
 			int startDepth = reader.Depth;
 			if (JsonReader.IsValueToken(currentToken)) {
-				await parser.HandleToken(reader).NoSync();
+				await parser.HandleTokenAsync(reader).NoSync();
 				if (reader.Depth != startDepth) {
 					ThrowInvalidPosition();
 				}
 				return parser.GetValue<T>();
 			}
 			else if (currentToken == JsonToken.ObjectStart) {
-				await parser.HandleToken(reader).NoSync();
+				await parser.HandleTokenAsync(reader).NoSync();
 				do {
-					currentToken = await reader.Read().NoSync();
+					currentToken = await reader.ReadAsync().NoSync();
 					if (currentToken == JsonToken.None) {
 						ThowMoreDataExpectedException();
 					}
-					await parser.HandleToken(reader).NoSync();
+					await parser.HandleTokenAsync(reader).NoSync();
 				}
 				while (reader.Depth != startDepth);
 
@@ -68,13 +68,13 @@ namespace IonKiwi.Json {
 				return parser.GetValue<T>();
 			}
 			else if (currentToken == JsonToken.ArrayStart) {
-				await parser.HandleToken(reader).NoSync();
+				await parser.HandleTokenAsync(reader).NoSync();
 				do {
-					currentToken = await reader.Read().NoSync();
+					currentToken = await reader.ReadAsync().NoSync();
 					if (currentToken == JsonToken.None) {
 						ThowMoreDataExpectedException();
 					}
-					await parser.HandleToken(reader).NoSync();
+					await parser.HandleTokenAsync(reader).NoSync();
 				}
 				while (reader.Depth != startDepth);
 
@@ -85,8 +85,8 @@ namespace IonKiwi.Json {
 				return parser.GetValue<T>();
 			}
 			else if (currentToken == JsonToken.None) {
-				while (await reader.Read().NoSync() != JsonToken.None) {
-					await parser.HandleToken(reader).NoSync();
+				while (await reader.ReadAsync().NoSync() != JsonToken.None) {
+					await parser.HandleTokenAsync(reader).NoSync();
 				}
 				if (reader.Depth != 0) {
 					ThrowInvalidPosition();
@@ -99,7 +99,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public static T ParseSync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static T Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 
 			if (objectType == null) {
 				objectType = typeof(T);
@@ -112,26 +112,26 @@ namespace IonKiwi.Json {
 
 			var currentToken = reader.Token;
 			if (currentToken == JsonToken.ObjectProperty) {
-				reader.ReadSync();
+				reader.Read();
 				currentToken = reader.Token;
 			}
 
 			int startDepth = reader.Depth;
 			if (JsonReader.IsValueToken(currentToken)) {
-				parser.HandleTokenSync(reader);
+				parser.HandleToken(reader);
 				if (reader.Depth != startDepth) {
 					ThrowInvalidPosition();
 				}
 				return parser.GetValue<T>();
 			}
 			else if (currentToken == JsonToken.ObjectStart) {
-				parser.HandleTokenSync(reader);
+				parser.HandleToken(reader);
 				do {
-					currentToken = reader.ReadSync();
+					currentToken = reader.Read();
 					if (currentToken == JsonToken.None) {
 						ThowMoreDataExpectedException();
 					}
-					parser.HandleTokenSync(reader);
+					parser.HandleToken(reader);
 				}
 				while (reader.Depth != startDepth);
 
@@ -142,13 +142,13 @@ namespace IonKiwi.Json {
 				return parser.GetValue<T>();
 			}
 			else if (currentToken == JsonToken.ArrayStart) {
-				parser.HandleTokenSync(reader);
+				parser.HandleToken(reader);
 				do {
-					currentToken = reader.ReadSync();
+					currentToken = reader.Read();
 					if (currentToken == JsonToken.None) {
 						ThowMoreDataExpectedException();
 					}
-					parser.HandleTokenSync(reader);
+					parser.HandleToken(reader);
 				}
 				while (reader.Depth != startDepth);
 
@@ -159,8 +159,8 @@ namespace IonKiwi.Json {
 				return parser.GetValue<T>();
 			}
 			else if (currentToken == JsonToken.None) {
-				while (reader.ReadSync() != JsonToken.None) {
-					parser.HandleTokenSync(reader);
+				while (reader.Read() != JsonToken.None) {
+					parser.HandleToken(reader);
 				}
 				if (reader.Depth != 0) {
 					ThrowInvalidPosition();

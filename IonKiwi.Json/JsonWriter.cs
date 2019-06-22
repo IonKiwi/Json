@@ -23,25 +23,25 @@ namespace IonKiwi.Json {
 			.Seal();
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public static async ValueTask Serialize<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static async ValueTask SerializeAsync<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 #else
-		public static async Task Serialize<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static async Task SerializeAsync<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 #endif
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
 			var realType = object.ReferenceEquals(null, value) ? objectType : value.GetType();
 			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(realType), tupleNames);
-			await jsonWriter.Serialize(writer).NoSync();
+			await jsonWriter.SerializeAsync(writer).NoSync();
 		}
 
-		public static void SerializeSync<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static void Serialize<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
 			var realType = object.ReferenceEquals(null, value) ? objectType : value.GetType();
 			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(realType), tupleNames);
-			jsonWriter.SerializeSync(writer);
+			jsonWriter.Serialize(writer);
 		}
 
 		public static string[] ReservedKeywords => new string[] {

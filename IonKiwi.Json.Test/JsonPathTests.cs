@@ -62,7 +62,7 @@ namespace IonKiwi.Json.Test {
 				"value2"
 			};
 			using (var r = new StringReader(json)) {
-				var result = JsonUtility.TryGetValuesByJsonPathSync(new JsonReader(r), query);
+				var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), query);
 				for (int i = 0; i < expectedResult.Length; i++) {
 					Assert.Equal(expectedResult[i], result[i]);
 				}
@@ -70,7 +70,7 @@ namespace IonKiwi.Json.Test {
 
 			for (int i = 0; i < query.Length; i++) {
 				using (var r = new StringReader(json)) {
-					var result = JsonUtility.TryGetValuesByJsonPathSync(new JsonReader(r), new (string path, Type type)[] { query[i] });
+					var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), new (string path, Type type)[] { query[i] });
 					Assert.Equal(expectedResult[i], result[0]);
 				}
 			}
@@ -131,7 +131,7 @@ namespace IonKiwi.Json.Test {
 				"\"value2\""
 			};
 			using (var r = new StringReader(json)) {
-				var result = JsonUtility.TryGetValuesByJsonPathSync(new JsonReader(r), query);
+				var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), query);
 				for (int i = 0; i < expectedResult.Length; i++) {
 					Assert.Equal(expectedResult[i], result[i]);
 				}
@@ -139,7 +139,7 @@ namespace IonKiwi.Json.Test {
 
 			for (int i = 0; i < query.Length; i++) {
 				using (var r = new StringReader(json)) {
-					var result = JsonUtility.TryGetValuesByJsonPathSync(new JsonReader(r), new (string path, Type type)[] { query[i] });
+					var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), new (string path, Type type)[] { query[i] });
 					Assert.Equal(expectedResult[i], result[0]);
 				}
 			}
@@ -178,7 +178,7 @@ namespace IonKiwi.Json.Test {
 				null
 			};
 			using (var r = new StringReader(json)) {
-				var result = JsonUtility.TryGetValuesByJsonPathSync(new JsonReader(r), query);
+				var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), query);
 				for (int i = 0; i < expectedResult.Length; i++) {
 					Assert.Equal(expectedResult[i], result[i]);
 				}
@@ -186,7 +186,7 @@ namespace IonKiwi.Json.Test {
 
 			for (int i = 0; i < query.Length; i++) {
 				using (var r = new StringReader(json)) {
-					var result = JsonUtility.TryGetValuesByJsonPathSync(new JsonReader(r), new (string path, Type type)[] { query[i] });
+					var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), new (string path, Type type)[] { query[i] });
 					Assert.Equal(expectedResult[i], result[0]);
 				}
 			}

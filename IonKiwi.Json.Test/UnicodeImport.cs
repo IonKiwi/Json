@@ -54,7 +54,7 @@ namespace IonKiwi.Json.Test {
 				JsonToken token;
 
 				while (true) {
-					token = reader.ReadSync();
+					token = reader.Read();
 					if (token == JsonToken.ArrayStart) {
 
 					}
@@ -73,7 +73,7 @@ namespace IonKiwi.Json.Test {
 						}
 					}
 					else if (token == JsonToken.ArrayEnd) {
-						token = reader.ReadSync();
+						token = reader.Read();
 						if (token == JsonToken.None) {
 							break;
 						}

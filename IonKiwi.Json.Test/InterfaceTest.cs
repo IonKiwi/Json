@@ -43,7 +43,7 @@ namespace IonKiwi.Json.Test {
 
 			StringBuilder sb = new StringBuilder();
 			using (var w = new StringWriter(sb)) {
-				JsonWriter.SerializeSync(w, v, writerSettings: jws);
+				JsonWriter.Serialize(w, v, writerSettings: jws);
 			}
 			var json = sb.ToString();
 
@@ -53,7 +53,7 @@ namespace IonKiwi.Json.Test {
 			v.Value = new Object3() { Value = 42 };
 			sb = new StringBuilder();
 			using (var w = new StringWriter(sb)) {
-				JsonWriter.SerializeSync(w, v, writerSettings: jws);
+				JsonWriter.Serialize(w, v, writerSettings: jws);
 			}
 			json = sb.ToString();
 			Assert.Equal("{\"Value\":{\"$type\":\"IonKiwi.Json.Test.InterfaceTest+Object3, IonKiwi.Json.Test\",\"Value\":42}}", json);
@@ -62,7 +62,7 @@ namespace IonKiwi.Json.Test {
 			jps.SetDefaultAssemblyName(typeof(InterfaceTest).Assembly.GetName(false));
 
 			using (var r = new StringReader(json)) {
-				v = JsonParser.ParseSync<Object1>(new JsonReader(r), parserSettings: jps);
+				v = JsonParser.Parse<Object1>(new JsonReader(r), parserSettings: jps);
 				Assert.NotNull(v);
 				Assert.NotNull(v.Value);
 				Assert.Equal(typeof(Object3), v.Value.GetType());
@@ -91,7 +91,7 @@ namespace IonKiwi.Json.Test {
 
 			StringBuilder sb = new StringBuilder();
 			using (var w = new StringWriter(sb)) {
-				JsonWriter.SerializeSync<IInterface2>(w, v, writerSettings: jws);
+				JsonWriter.Serialize<IInterface2>(w, v, writerSettings: jws);
 			}
 			var json = sb.ToString();
 			Assert.Equal("{\"$type\":\"IonKiwi.Json.Test.InterfaceTest+Object4, IonKiwi.Json.Test\",\"Value\":42}", json);
@@ -100,7 +100,7 @@ namespace IonKiwi.Json.Test {
 			jps.SetDefaultAssemblyName(typeof(InterfaceTest).Assembly.GetName(false));
 
 			using (var r = new StringReader(json)) {
-				var v2 = JsonParser.ParseSync<IInterface2>(new JsonReader(r), parserSettings: jps);
+				var v2 = JsonParser.Parse<IInterface2>(new JsonReader(r), parserSettings: jps);
 				Assert.NotNull(v2);
 				Assert.Equal(typeof(Object4), v2.GetType());
 				Assert.Equal(42, ((Object4)v2).Value);

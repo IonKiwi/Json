@@ -13,9 +13,9 @@ namespace IonKiwi.Json {
 	partial class JsonReader {
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private async ValueTask<bool> ReadData() {
+		private async ValueTask<bool> ReadDataAsync() {
 #else
-		private async Task<bool> ReadData() {
+		private async Task<bool> ReadDataAsync() {
 #endif
 			if (_length - _offset > 0) {
 				return true;
@@ -30,7 +30,7 @@ namespace IonKiwi.Json {
 			return bs != 0;
 		}
 
-		private bool ReadDataSync() {
+		private bool ReadData() {
 			if (_length - _offset > 0) {
 				return true;
 			}

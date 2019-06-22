@@ -64,13 +64,13 @@ namespace IonKiwi.Json.Test {
 		[Fact]
 		public void Test1() {
 			string json = "{Property1:\"test\",Property2:true,Property4:42}";
-			var v1 = JsonUtility.ParseSync<Object1>(json);
+			var v1 = JsonUtility.Parse<Object1>(json);
 			Assert.NotNull(v1);
 			Assert.Equal("test", v1.Property1);
 			Assert.True(v1.Property2);
 			Assert.Equal(0, v1.Property3);
 			Assert.Equal(42, v1.Property4);
-			json = JsonUtility.SerializeSync(v1);
+			json = JsonUtility.Serialize(v1);
 			Assert.Equal("{\"Property1\":\"test\",\"Property2\":true,\"Property3\":0,\"Property4\":42}", json);
 			return;
 		}
@@ -78,13 +78,13 @@ namespace IonKiwi.Json.Test {
 		[Fact]
 		public void Test2() {
 			string json = "{Property1:\"test\",Property2:true,Property3:42,Property4:12}";
-			var v1 = JsonUtility.ParseSync<Object1>(json);
+			var v1 = JsonUtility.Parse<Object1>(json);
 			Assert.NotNull(v1);
 			Assert.Equal("test", v1.Property1);
 			Assert.True(v1.Property2);
 			Assert.Equal(42, v1.Property3);
 			Assert.Equal(12, v1.Property4);
-			json = JsonUtility.SerializeSync(v1);
+			json = JsonUtility.Serialize(v1);
 			Assert.Equal("{\"Property1\":\"test\",\"Property2\":true,\"Property3\":42,\"Property4\":12}", json);
 			return;
 		}
@@ -93,11 +93,11 @@ namespace IonKiwi.Json.Test {
 		public void Test3() {
 			var hostAssembly = typeof(JsonParserTest).Assembly.GetName(false);
 			string json = "{$type:\"IonKiwi.Json.Test.ConstructorTests+Object2, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\",property1:true}";
-			var v1 = JsonUtility.ParseSync<Object2>(json);
+			var v1 = JsonUtility.Parse<Object2>(json);
 			Assert.NotNull(v1);
 			Assert.True(v1.Property1);
 			Assert.Equal(0, v1.Property2);
-			json = JsonUtility.SerializeSync(v1);
+			json = JsonUtility.Serialize(v1);
 			Assert.Equal("{\"property1\":true,\"property2\":0}", json);
 			return;
 		}
@@ -106,11 +106,11 @@ namespace IonKiwi.Json.Test {
 		public void Test4() {
 			var hostAssembly = typeof(JsonParserTest).Assembly.GetName(false);
 			string json = "{$type:\"IonKiwi.Json.Test.ConstructorTests+Object3, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\",property1:true}";
-			var v1 = JsonUtility.ParseSync<Object2>(json);
+			var v1 = JsonUtility.Parse<Object2>(json);
 			Assert.NotNull(v1);
 			Assert.True(v1.Property1);
 			Assert.Equal(0, v1.Property2);
-			json = JsonUtility.SerializeSync(v1);
+			json = JsonUtility.Serialize(v1);
 			Assert.Equal("{\"$type\":\"IonKiwi.Json.Test.ConstructorTests+Object3, IonKiwi.Json.Test, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null\",\"property1\":true,\"property2\":0}", json);
 			return;
 		}

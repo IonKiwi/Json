@@ -28,39 +28,39 @@ namespace IonKiwi.Json {
 			}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			public async ValueTask HandleToken(JsonReader reader) {
+			public async ValueTask HandleTokenAsync(JsonReader reader) {
 #else
-			public async Task HandleToken(JsonReader reader) {
+			public async Task HandleTokenAsync(JsonReader reader) {
 #endif
 				var result = HandleTokenInternal(reader);
 				switch (result) {
 					case HandleStateResult.Skip:
-						await reader.Skip().NoSync();
+						await reader.SkipAsync().NoSync();
 						break;
 					case HandleStateResult.ReadTypeToken: {
-							await reader.Read().NoSync();
+							await reader.ReadAsync().NoSync();
 							ValidateTypeTokenIsString(reader);
 							var state = _currentState.Peek();
 							var t = HandleTypeToken(reader, state, reader.GetValue());
-							await HandleNewTypeAndVisitor(reader, state, t, JsonToken.ObjectStart).NoSync();
+							await HandleNewTypeAndVisitorAsync(reader, state, t, JsonToken.ObjectStart).NoSync();
 							break;
 						}
 					case HandleStateResult.ProcessTypeToken: {
 							var state = _currentState.Peek();
 							var t = HandleTypeToken(reader, state, reader.GetValue().Substring("$type:".Length));
-							await HandleNewTypeAndVisitor(reader, state, t, JsonToken.ArrayStart).NoSync();
+							await HandleNewTypeAndVisitorAsync(reader, state, t, JsonToken.ArrayStart).NoSync();
 							break;
 						}
 					case HandleStateResult.CreateInstance: {
 							var state = _currentState.Peek();
-							await HandleTypeAndVisitor(reader, state).NoSync();
+							await HandleTypeAndVisitorAsync(reader, state).NoSync();
 							break;
 						}
 					case HandleStateResult.HandleToken:
-						await HandleToken(reader).NoSync();
+						await HandleTokenAsync(reader).NoSync();
 						break;
 					case HandleStateResult.Raw: {
-							var json = await reader.ReadRaw().NoSync();
+							var json = await reader.ReadRawAsync().NoSync();
 							var state = new JsonParserSimpleValueState();
 							state.Parent = _currentState.Peek();
 							state.Value = new RawJson(json);
@@ -70,44 +70,44 @@ namespace IonKiwi.Json {
 							break;
 						}
 					case HandleStateResult.UntypedObject:
-						await HandleUntypedObject(reader).NoSync();
+						await HandleUntypedObjectAsync(reader).NoSync();
 						break;
 					case HandleStateResult.UntypedArray:
-						await HandleUntypedArray(reader).NoSync();
+						await HandleUntypedArrayAsync(reader).NoSync();
 						break;
 				}
 			}
 
-			public void HandleTokenSync(JsonReader reader) {
+			public void HandleToken(JsonReader reader) {
 				var result = HandleTokenInternal(reader);
 				switch (result) {
 					case HandleStateResult.Skip:
-						reader.SkipSync();
+						reader.Skip();
 						break;
 					case HandleStateResult.ReadTypeToken: {
-							reader.ReadSync();
+							reader.Read();
 							ValidateTypeTokenIsString(reader);
 							var state = _currentState.Peek();
 							var t = HandleTypeToken(reader, state, reader.GetValue());
-							HandleNewTypeAndVisitorSync(reader, state, t, JsonToken.ObjectStart);
+							HandleNewTypeAndVisitor(reader, state, t, JsonToken.ObjectStart);
 							break;
 						}
 					case HandleStateResult.ProcessTypeToken: {
 							var state = _currentState.Peek();
 							var t = HandleTypeToken(reader, state, reader.GetValue().Substring("$type:".Length));
-							HandleNewTypeAndVisitorSync(reader, state, t, JsonToken.ArrayStart);
+							HandleNewTypeAndVisitor(reader, state, t, JsonToken.ArrayStart);
 							break;
 						}
 					case HandleStateResult.CreateInstance: {
 							var state = _currentState.Peek();
-							HandleTypeAndVisitorSync(reader, state);
+							HandleTypeAndVisitor(reader, state);
 							break;
 						}
 					case HandleStateResult.HandleToken:
-						HandleTokenSync(reader);
+						HandleToken(reader);
 						break;
 					case HandleStateResult.Raw: {
-							string json = reader.ReadRawSync();
+							string json = reader.ReadRaw();
 							var state = new JsonParserSimpleValueState();
 							state.Parent = _currentState.Peek();
 							state.Value = new RawJson(json);
@@ -117,22 +117,22 @@ namespace IonKiwi.Json {
 							break;
 						}
 					case HandleStateResult.UntypedObject:
-						HandleUntypedObjectSync(reader);
+						HandleUntypedObject(reader);
 						break;
 					case HandleStateResult.UntypedArray:
-						HandleUntypedArraySync(reader);
+						HandleUntypedArray(reader);
 						break;
 				}
 			}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			private async ValueTask HandleUntypedObject(JsonReader reader) {
+			private async ValueTask HandleUntypedObjectAsync(JsonReader reader) {
 #else
-			private async Task HandleUntypedObject(JsonReader reader) {
+			private async Task HandleUntypedObjectAsync(JsonReader reader) {
 #endif
-				var token = await reader.Read().NoSync();
+				var token = await reader.ReadAsync().NoSync();
 				while (token == JsonToken.Comment) {
-					token = await reader.Read().NoSync();
+					token = await reader.ReadAsync().NoSync();
 				}
 				if (token != JsonToken.ObjectProperty) {
 					ThrowNotProperty();
@@ -140,17 +140,17 @@ namespace IonKiwi.Json {
 				else if (!string.Equals("$type", reader.GetValue(), StringComparison.Ordinal)) {
 					ThrowNotProperty();
 				}
-				token = await reader.Read().NoSync();
+				token = await reader.ReadAsync().NoSync();
 				if (token != JsonToken.String) {
 					ThrowNotProperty();
 				}
 				HandleUntypedObjectInternal(reader.GetValue(), false);
 			}
 
-			private void HandleUntypedObjectSync(JsonReader reader) {
-				var token = reader.ReadSync();
+			private void HandleUntypedObject(JsonReader reader) {
+				var token = reader.Read();
 				while (token == JsonToken.Comment) {
-					token = reader.ReadSync();
+					token = reader.Read();
 				}
 				if (token != JsonToken.ObjectProperty) {
 					ThrowNotProperty();
@@ -158,7 +158,7 @@ namespace IonKiwi.Json {
 				else if (!string.Equals("$type", reader.GetValue(), StringComparison.Ordinal)) {
 					ThrowNotProperty();
 				}
-				token = reader.ReadSync();
+				token = reader.Read();
 				if (token != JsonToken.String) {
 					ThrowNotProperty();
 				}
@@ -166,13 +166,13 @@ namespace IonKiwi.Json {
 			}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			private async ValueTask HandleUntypedArray(JsonReader reader) {
+			private async ValueTask HandleUntypedArrayAsync(JsonReader reader) {
 #else
-			private async Task HandleUntypedArray(JsonReader reader) {
+			private async Task HandleUntypedArrayAsync(JsonReader reader) {
 #endif
-				var token = await reader.Read().NoSync();
+				var token = await reader.ReadAsync().NoSync();
 				while (token == JsonToken.Comment) {
-					token = await reader.Read().NoSync();
+					token = await reader.ReadAsync().NoSync();
 				}
 				if (token != JsonToken.String) {
 					ThrowNotProperty();
@@ -184,10 +184,10 @@ namespace IonKiwi.Json {
 				HandleUntypedObjectInternal(typeValue.Substring("$type:".Length), true);
 			}
 
-			private void HandleUntypedArraySync(JsonReader reader) {
-				var token = reader.ReadSync();
+			private void HandleUntypedArray(JsonReader reader) {
+				var token = reader.Read();
 				while (token == JsonToken.Comment) {
-					token = reader.ReadSync();
+					token = reader.Read();
 				}
 				if (token != JsonToken.String) {
 					ThrowNotProperty();
@@ -356,9 +356,9 @@ namespace IonKiwi.Json {
 			}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			private async ValueTask HandleTypeAndVisitor(JsonReader reader, JsonParserInternalState state) {
+			private async ValueTask HandleTypeAndVisitorAsync(JsonReader reader, JsonParserInternalState state) {
 #else
-			private async Task HandleTypeAndVisitor(JsonReader reader, JsonParserInternalState state) {
+			private async Task HandleTypeAndVisitorAsync(JsonReader reader, JsonParserInternalState state) {
 #endif
 				JsonTypeInfo typeInfo = null;
 				JsonToken token = JsonToken.None;
@@ -393,7 +393,7 @@ namespace IonKiwi.Json {
 					reader.RewindReaderPositionForVisitor(token);
 
 					int currentDepth = reader.Depth;
-					var result = await visitor.ParseObject(reader, visitorContext).NoSync();
+					var result = await visitor.ParseObjectAsync(reader, visitorContext).NoSync();
 					if (HandleVisitorResult(reader, visitorContext, result, state, token, targetType, currentDepth)) {
 						return;
 					}
@@ -405,10 +405,10 @@ namespace IonKiwi.Json {
 						a(state.Value);
 					}
 				}
-				await HandleToken(reader).NoSync();
+				await HandleTokenAsync(reader).NoSync();
 			}
 
-			private void HandleTypeAndVisitorSync(JsonReader reader, JsonParserInternalState state) {
+			private void HandleTypeAndVisitor(JsonReader reader, JsonParserInternalState state) {
 				JsonTypeInfo typeInfo = null;
 				JsonToken token = JsonToken.None;
 				bool isDelayed = false;
@@ -442,7 +442,7 @@ namespace IonKiwi.Json {
 					reader.RewindReaderPositionForVisitor(token);
 
 					int currentDepth = reader.Depth;
-					var result = visitor.ParseObjectSync(reader, visitorContext);
+					var result = visitor.ParseObject(reader, visitorContext);
 					if (HandleVisitorResult(reader, visitorContext, result, state, token, targetType, currentDepth)) {
 						return;
 					}
@@ -455,13 +455,13 @@ namespace IonKiwi.Json {
 						a(state.Value);
 					}
 				}
-				HandleTokenSync(reader);
+				HandleToken(reader);
 			}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			private async ValueTask HandleNewTypeAndVisitor(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
+			private async ValueTask HandleNewTypeAndVisitorAsync(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
 #else
-			private async Task HandleNewTypeAndVisitor(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
+			private async Task HandleNewTypeAndVisitorAsync(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
 #endif
 				if (_settings.Visitor != null) {
 					IJsonParserVisitor visitor = _settings.Visitor;
@@ -473,7 +473,7 @@ namespace IonKiwi.Json {
 					reader.RewindReaderPositionForVisitor(token);
 
 					int currentDepth = reader.Depth;
-					var result = await visitor.ParseObject(reader, visitorContext).NoSync();
+					var result = await visitor.ParseObjectAsync(reader, visitorContext).NoSync();
 					if (HandleVisitorResult(reader, visitorContext, result, state, token, newType, currentDepth)) {
 						return;
 					}
@@ -482,7 +482,7 @@ namespace IonKiwi.Json {
 				HandleTypeOnly(reader, state, newType);
 			}
 
-			private void HandleNewTypeAndVisitorSync(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
+			private void HandleNewTypeAndVisitor(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
 				if (_settings.Visitor != null) {
 					IJsonParserVisitor visitor = _settings.Visitor;
 
@@ -493,7 +493,7 @@ namespace IonKiwi.Json {
 					reader.RewindReaderPositionForVisitor(token);
 
 					int currentDepth = reader.Depth;
-					var result = visitor.ParseObjectSync(reader, visitorContext);
+					var result = visitor.ParseObject(reader, visitorContext);
 					if (HandleVisitorResult(reader, visitorContext, result, state, token, newType, currentDepth)) {
 						return;
 					}

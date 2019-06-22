@@ -111,17 +111,17 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public async ValueTask<JsonToken> Read() {
+		public async ValueTask<JsonToken> ReadAsync() {
 #else
-		public async Task<JsonToken> Read() {
+		public async Task<JsonToken> ReadAsync() {
 #endif
 			if (_rewindState != null) { return ReplayState(); }
-			return _token = await ReadInternal().NoSync();
+			return _token = await ReadInternalAsync().NoSync();
 		}
 
-		public JsonToken ReadSync() {
+		public JsonToken Read() {
 			if (_rewindState != null) { return ReplayState(); }
-			return _token = ReadInternalSync();
+			return _token = ReadInternal();
 		}
 
 		private JsonToken ReplayState() {
@@ -145,14 +145,14 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public async ValueTask Skip() {
+		public async ValueTask SkipAsync() {
 #else
-		public async Task Skip() {
+		public async Task SkipAsync() {
 #endif
 			var token = _token;
 			if (token == JsonToken.Comment) {
 				do {
-					token = await Read().NoSync();
+					token = await ReadAsync().NoSync();
 				}
 				while (token == JsonToken.Comment);
 			}
@@ -164,7 +164,7 @@ namespace IonKiwi.Json {
 					case JsonToken.ObjectStart: {
 							var depth = Depth;
 							do {
-								token = await Read().NoSync();
+								token = await ReadAsync().NoSync();
 								if (token == JsonToken.ObjectEnd && depth == Depth) {
 									return;
 								}
@@ -177,7 +177,7 @@ namespace IonKiwi.Json {
 					case JsonToken.ArrayStart: {
 							var depth = Depth;
 							do {
-								token = await Read().NoSync();
+								token = await ReadAsync().NoSync();
 								if (token == JsonToken.ArrayEnd && depth == Depth) {
 									return;
 								}
@@ -188,10 +188,10 @@ namespace IonKiwi.Json {
 							break;
 						}
 					case JsonToken.ObjectProperty: {
-							await Read().NoSync();
+							await ReadAsync().NoSync();
 							token = _token;
 							if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
-								await Skip().NoSync();
+								await SkipAsync().NoSync();
 							}
 							break;
 						}
@@ -201,11 +201,11 @@ namespace IonKiwi.Json {
 				}
 		}
 
-		public void SkipSync() {
+		public void Skip() {
 			var token = _token;
 			if (token == JsonToken.Comment) {
 				do {
-					token = ReadSync();
+					token = Read();
 				}
 				while (token == JsonToken.Comment);
 			}
@@ -216,7 +216,7 @@ namespace IonKiwi.Json {
 					case JsonToken.ObjectStart: {
 							var depth = Depth;
 							do {
-								token = ReadSync();
+								token = Read();
 								if (token == JsonToken.ObjectEnd && depth == Depth) {
 									return;
 								}
@@ -229,7 +229,7 @@ namespace IonKiwi.Json {
 					case JsonToken.ArrayStart: {
 							var depth = Depth;
 							do {
-								token = ReadSync();
+								token = Read();
 								if (token == JsonToken.ArrayEnd && depth == Depth) {
 									return;
 								}
@@ -240,10 +240,10 @@ namespace IonKiwi.Json {
 							break;
 						}
 					case JsonToken.ObjectProperty: {
-							ReadSync();
+							Read();
 							token = _token;
 							if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
-								SkipSync();
+								Skip();
 							}
 							break;
 						}
@@ -259,26 +259,26 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public async ValueTask<string> ReadRaw(JsonWriteMode writeMode = JsonWriteMode.Json) {
+		public async ValueTask<string> ReadRawAsync(JsonWriteMode writeMode = JsonWriteMode.Json) {
 #else
-		public async Task<string> ReadRaw(JsonWriteMode writeMode = JsonWriteMode.Json) {
+		public async Task<string> ReadRawAsync(JsonWriteMode writeMode = JsonWriteMode.Json) {
 #endif
 			var currentToken = Token;
 
 			if (currentToken == JsonToken.Comment) {
 				do {
-					currentToken = await Read().NoSync();
+					currentToken = await ReadAsync().NoSync();
 				}
 				while (currentToken == JsonToken.Comment);
 			}
 
 			if (currentToken == JsonToken.ObjectProperty) {
-				currentToken = await Read().NoSync();
+				currentToken = await ReadAsync().NoSync();
 			}
 
 			if (currentToken == JsonToken.Comment) {
 				do {
-					currentToken = await Read().NoSync();
+					currentToken = await ReadAsync().NoSync();
 				}
 				while (currentToken == JsonToken.Comment);
 			}
@@ -303,10 +303,10 @@ namespace IonKiwi.Json {
 				var startDepth = Depth;
 
 				do {
-					currentToken = await Read().NoSync();
+					currentToken = await ReadAsync().NoSync();
 					if (currentToken == JsonToken.Comment) {
 						do {
-							currentToken = await Read().NoSync();
+							currentToken = await ReadAsync().NoSync();
 						}
 						while (currentToken == JsonToken.Comment);
 					}
@@ -349,23 +349,23 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public string ReadRawSync(JsonWriteMode writeMode = JsonWriteMode.Json) {
+		public string ReadRaw(JsonWriteMode writeMode = JsonWriteMode.Json) {
 			var currentToken = Token;
 
 			if (currentToken == JsonToken.Comment) {
 				do {
-					currentToken = ReadSync();
+					currentToken = Read();
 				}
 				while (currentToken == JsonToken.Comment);
 			}
 
 			if (currentToken == JsonToken.ObjectProperty) {
-				currentToken = ReadSync();
+				currentToken = Read();
 			}
 
 			if (currentToken == JsonToken.Comment) {
 				do {
-					currentToken = ReadSync();
+					currentToken = Read();
 				}
 				while (currentToken == JsonToken.Comment);
 			}
@@ -390,10 +390,10 @@ namespace IonKiwi.Json {
 				var startDepth = Depth;
 
 				do {
-					currentToken = ReadSync();
+					currentToken = Read();
 					if (currentToken == JsonToken.Comment) {
 						do {
-							currentToken = ReadSync();
+							currentToken = Read();
 						}
 						while (currentToken == JsonToken.Comment);
 					}
@@ -768,9 +768,9 @@ namespace IonKiwi.Json {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		private async ValueTask<JsonToken> ReadInternal() {
+		private async ValueTask<JsonToken> ReadInternalAsync() {
 #else
-		private async Task<JsonToken> ReadInternal() {
+		private async Task<JsonToken> ReadInternalAsync() {
 #endif
 			JsonToken token = JsonToken.None;
 #if NETCOREAPP2_1 || NETCOREAPP2_2
@@ -778,7 +778,7 @@ namespace IonKiwi.Json {
 #else
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer, _offset, _length - _offset, out token)) {
 #endif
-				if (_length - _offset == 0 && !await ReadData().NoSync()) {
+				if (_length - _offset == 0 && !await ReadDataAsync().NoSync()) {
 					HandleEndOfFile(ref token);
 					return token;
 				}
@@ -786,14 +786,14 @@ namespace IonKiwi.Json {
 			return token;
 		}
 
-		private JsonToken ReadInternalSync() {
+		private JsonToken ReadInternal() {
 			JsonToken token = JsonToken.None;
 #if NETCOREAPP2_1 || NETCOREAPP2_2
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer.Span.Slice(_offset, _length - _offset), out token)) {
 #else
 			while (_length - _offset == 0 || !HandleDataBlock(_buffer, _offset, _length - _offset, out token)) {
 #endif
-				if (_length - _offset == 0 && !ReadDataSync()) {
+				if (_length - _offset == 0 && !ReadData()) {
 					HandleEndOfFile(ref token);
 					return token;
 				}

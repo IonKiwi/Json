@@ -20,7 +20,7 @@ namespace IonKiwi.Json.Test {
 		public void TestObject1() {
 			string json = "{Property1:\"value1\"}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Object1>(new JsonReader(r));
+				var v = JsonParser.Parse<Object1>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Property1);
 				Assert.Equal("value1", v.Property1);
@@ -32,7 +32,7 @@ namespace IonKiwi.Json.Test {
 		public void TestArray1() {
 			string json = "[1,2,3]";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<List<int>>(new JsonReader(r));
+				var v = JsonParser.Parse<List<int>>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.Equal(3, v.Count);
 				Assert.Equal(1, v[0]);
@@ -46,7 +46,7 @@ namespace IonKiwi.Json.Test {
 		public void TestArray2() {
 			string json = "[{Property1:\"value1\"},{Property1:\"value2\"}]";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<List<Object1>>(new JsonReader(r));
+				var v = JsonParser.Parse<List<Object1>>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.Equal(2, v.Count);
 				Assert.NotNull(v[0]);
@@ -63,7 +63,7 @@ namespace IonKiwi.Json.Test {
 		public void TestDictionary1() {
 			string json = "{Key1:\"value1\",Key2:\"value2\"}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Dictionary<string, string>>(new JsonReader(r));
+				var v = JsonParser.Parse<Dictionary<string, string>>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.Equal(2, v.Count);
 				Assert.True(v.ContainsKey("Key1"));
@@ -78,7 +78,7 @@ namespace IonKiwi.Json.Test {
 		public void TestDictionary2() {
 			string json = "[{Key:\"Key1\",Value:\"value1\"},{Key:\"Key2\",Value:\"value2\"}]";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Dictionary<string, string>>(new JsonReader(r));
+				var v = JsonParser.Parse<Dictionary<string, string>>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.Equal(2, v.Count);
 				Assert.True(v.ContainsKey("Key1"));
@@ -93,7 +93,7 @@ namespace IonKiwi.Json.Test {
 		public void TestValue1() {
 			string json = "42";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<int>(new JsonReader(r));
+				var v = JsonParser.Parse<int>(new JsonReader(r));
 				Assert.Equal(42, v);
 			}
 			return;
@@ -103,7 +103,7 @@ namespace IonKiwi.Json.Test {
 		public void TestValue2() {
 			string json = "\"42\"";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<string>(new JsonReader(r));
+				var v = JsonParser.Parse<string>(new JsonReader(r));
 				Assert.Equal("42", v);
 			}
 			return;
@@ -119,7 +119,7 @@ namespace IonKiwi.Json.Test {
 		public void TestSingleOrArrayValue1() {
 			string json = "{Value:42}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<SingleOrArrayValue1>(new JsonReader(r));
+				var v = JsonParser.Parse<SingleOrArrayValue1>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Value);
 				Assert.Single(v.Value);
@@ -128,7 +128,7 @@ namespace IonKiwi.Json.Test {
 
 			json = "{Value:[42,43]}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<SingleOrArrayValue1>(new JsonReader(r));
+				var v = JsonParser.Parse<SingleOrArrayValue1>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Value);
 				Assert.Equal(2, v.Value.Count);
@@ -148,7 +148,7 @@ namespace IonKiwi.Json.Test {
 		public void TestSingleOrArrayValue2() {
 			string json = "42";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<SingleOrArrayValue2>(new JsonReader(r));
+				var v = JsonParser.Parse<SingleOrArrayValue2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.Single(v);
 				Assert.Equal(42, v[0]);
@@ -156,7 +156,7 @@ namespace IonKiwi.Json.Test {
 
 			json = "[42,43]";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<SingleOrArrayValue2>(new JsonReader(r));
+				var v = JsonParser.Parse<SingleOrArrayValue2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.Equal(2, v.Count);
 				Assert.Equal(42, v[0]);
@@ -184,7 +184,7 @@ namespace IonKiwi.Json.Test {
 			var hostAssembly = typeof(JsonParserTest).Assembly.GetName(false);
 			string json = "{$type:\"IonKiwi.Json.Test.JsonParserTest+TypeHandling2, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\",Value1:42,Value2:43}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<TypeHandling2>(new JsonReader(r));
+				var v = JsonParser.Parse<TypeHandling2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.Equal(42, v.Value1);
 				Assert.Equal(43, v.Value2);
@@ -194,7 +194,7 @@ namespace IonKiwi.Json.Test {
 			settings.SetDefaultAssemblyName(typeof(JsonParserTest).Assembly.GetName(false));
 			json = "{$type:\"IonKiwi.Json.Test.JsonParserTest+TypeHandling2, IonKiwi.Json.Test\",Value1:42,Value2:43}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<TypeHandling2>(new JsonReader(r), parserSettings: settings);
+				var v = JsonParser.Parse<TypeHandling2>(new JsonReader(r), parserSettings: settings);
 				Assert.NotNull(v);
 				Assert.Equal(42, v.Value1);
 				Assert.Equal(43, v.Value2);
@@ -212,7 +212,7 @@ namespace IonKiwi.Json.Test {
 		public void TestRaw1() {
 			string json = "{Property1:\"value1\"}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Object2>(new JsonReader(r));
+				var v = JsonParser.Parse<Object2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Property1);
 				Assert.Equal("\"value1\"", v.Property1.Json);
@@ -224,7 +224,7 @@ namespace IonKiwi.Json.Test {
 		public void TestRaw2() {
 			string json = "{Property1:null}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Object2>(new JsonReader(r));
+				var v = JsonParser.Parse<Object2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Property1);
 				Assert.Equal("null", v.Property1.Json);
@@ -236,7 +236,7 @@ namespace IonKiwi.Json.Test {
 		public void TestRaw3() {
 			string json = "{Property1:true}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Object2>(new JsonReader(r));
+				var v = JsonParser.Parse<Object2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Property1);
 				Assert.Equal("true", v.Property1.Json);
@@ -248,7 +248,7 @@ namespace IonKiwi.Json.Test {
 		public void TestRaw4() {
 			string json = "{Property1:false}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Object2>(new JsonReader(r));
+				var v = JsonParser.Parse<Object2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Property1);
 				Assert.Equal("false", v.Property1.Json);
@@ -260,7 +260,7 @@ namespace IonKiwi.Json.Test {
 		public void TestRaw5() {
 			string json = "{Property1:42}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Object2>(new JsonReader(r));
+				var v = JsonParser.Parse<Object2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Property1);
 				Assert.Equal("42", v.Property1.Json);
@@ -272,7 +272,7 @@ namespace IonKiwi.Json.Test {
 		public void TestRaw6() {
 			string json = "{Property1:[{v1:1,v2:2},{v1:3,v2:4}]}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Object2>(new JsonReader(r));
+				var v = JsonParser.Parse<Object2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Property1);
 				Assert.Equal("[{\"v1\":1,\"v2\":2},{\"v1\":3,\"v2\":4}]", v.Property1.Json);
@@ -284,7 +284,7 @@ namespace IonKiwi.Json.Test {
 		public void TestRaw7() {
 			string json = "{Property1:{v1:1,v2:[42,{v3:\"test\"}]}}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Object2>(new JsonReader(r));
+				var v = JsonParser.Parse<Object2>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Property1);
 				Assert.Equal("{\"v1\":1,\"v2\":[42,{\"v3\":\"test\"}]}", v.Property1.Json);
@@ -302,7 +302,7 @@ namespace IonKiwi.Json.Test {
 		public void TestByteArray() {
 			string json = "{Value:\"AQ==\"}";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<Object3>(new JsonReader(r));
+				var v = JsonParser.Parse<Object3>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.NotNull(v.Value);
 				Assert.Single(v.Value);

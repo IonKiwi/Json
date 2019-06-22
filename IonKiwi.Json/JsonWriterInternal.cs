@@ -30,9 +30,9 @@ namespace IonKiwi.Json {
 			}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			internal async ValueTask Serialize(TextWriter writer) {
+			internal async ValueTask SerializeAsync(TextWriter writer) {
 #else
-			internal async Task Serialize(TextWriter writer) {
+			internal async Task SerializeAsync(TextWriter writer) {
 #endif
 				do {
 					var data = SerializeInternal(_currentState.Peek());
@@ -43,7 +43,7 @@ namespace IonKiwi.Json {
 				while (_currentState.Count > 1);
 			}
 
-			internal void SerializeSync(TextWriter writer) {
+			internal void Serialize(TextWriter writer) {
 				do {
 					var data = SerializeInternal(_currentState.Peek());
 					if (data != null) {

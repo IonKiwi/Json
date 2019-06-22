@@ -28,14 +28,14 @@ namespace IonKiwi.Json.Test {
 			public int Count { get; set; }
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			protected override ValueTask<bool> ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #else
-			protected override Task<bool> ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #endif
 				throw new NotImplementedException();
 			}
 
-			protected override bool ParseObjectSync(JsonReader reader, JsonParserContext context) {
+			protected override bool ParseObject(JsonReader reader, JsonParserContext context) {
 				if (Mode == 0) {
 					if (context.CurrentType != Types[Count]) {
 						throw new Exception("Unexpected type '" + ReflectionUtility.GetTypeName(context.CurrentType) + "'. expected: " + ReflectionUtility.GetTypeName(Types[Count]));
@@ -43,7 +43,7 @@ namespace IonKiwi.Json.Test {
 					Count++;
 				}
 				else if (Mode == 1) {
-					context.CurrentObject = ParseSync<object>(reader, context.CurrentType);
+					context.CurrentObject = Parse<object>(reader, context.CurrentType);
 					Count++;
 					return true;
 				}
@@ -64,7 +64,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject1>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject1), v.GetType());
@@ -74,7 +74,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject1>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject1), v.GetType());
@@ -94,7 +94,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject1>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject2), v.GetType());
@@ -103,7 +103,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject1>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject1>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject2), v.GetType());
@@ -133,7 +133,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection1), v.GetType());
@@ -142,7 +142,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection1), v.GetType());
@@ -162,7 +162,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection2), v.GetType());
@@ -171,7 +171,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection1>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection2), v.GetType());
@@ -197,14 +197,14 @@ namespace IonKiwi.Json.Test {
 			public int Count { get; set; }
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			protected override ValueTask<bool> ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #else
-			protected override Task<bool> ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #endif
 				throw new NotImplementedException();
 			}
 
-			protected override bool ParseObjectSync(JsonReader reader, JsonParserContext context) {
+			protected override bool ParseObject(JsonReader reader, JsonParserContext context) {
 				if (Mode == 0) {
 					if (context.CurrentType != Types[Count]) {
 						throw new Exception("Unexpected type '" + ReflectionUtility.GetTypeName(context.CurrentType) + "'. expected: " + ReflectionUtility.GetTypeName(Types[Count]));
@@ -214,14 +214,14 @@ namespace IonKiwi.Json.Test {
 				else if (Mode == 1) {
 					Count++;
 					if (Count == 1) {
-						context.CurrentObject = ParseSync<object>(reader, context.CurrentType);
+						context.CurrentObject = Parse<object>(reader, context.CurrentType);
 						return true;
 					}
 				}
 				else if (Mode == 2) {
 					Count++;
 					if (Count == 2) {
-						context.CurrentObject = ParseSync<object>(reader, context.CurrentType);
+						context.CurrentObject = Parse<object>(reader, context.CurrentType);
 						return true;
 					}
 				}
@@ -243,7 +243,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject3), v.GetType());
@@ -254,7 +254,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject3), v.GetType());
@@ -265,7 +265,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject3), v.GetType());
@@ -288,7 +288,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject3), v.GetType());
@@ -299,7 +299,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject3), v.GetType());
@@ -310,7 +310,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject3), v.GetType());
@@ -333,7 +333,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject4), v.GetType());
@@ -344,7 +344,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject4), v.GetType());
@@ -355,7 +355,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject4), v.GetType());
@@ -389,7 +389,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject5), v.GetType());
@@ -400,7 +400,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject5), v.GetType());
@@ -411,7 +411,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject5), v.GetType());
@@ -434,7 +434,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject5), v.GetType());
@@ -445,7 +445,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject5), v.GetType());
@@ -456,7 +456,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject5), v.GetType());
@@ -479,7 +479,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject6), v.GetType());
@@ -490,7 +490,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject6), v.GetType());
@@ -501,7 +501,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorObject5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorObject5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorObject6), v.GetType());
@@ -528,14 +528,14 @@ namespace IonKiwi.Json.Test {
 			public int Count { get; set; }
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-			protected override ValueTask<bool> ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #else
-			protected override Task<bool> ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #endif
 				throw new NotImplementedException();
 			}
 
-			protected override bool ParseObjectSync(JsonReader reader, JsonParserContext context) {
+			protected override bool ParseObject(JsonReader reader, JsonParserContext context) {
 				if (Mode == 0) {
 					if (context.CurrentType != Types[Count]) {
 						throw new Exception("Unexpected type '" + ReflectionUtility.GetTypeName(context.CurrentType) + "'. expected: " + ReflectionUtility.GetTypeName(Types[Count]));
@@ -545,14 +545,14 @@ namespace IonKiwi.Json.Test {
 				else if (Mode == 1) {
 					Count++;
 					if (Count == 1) {
-						context.CurrentObject = ParseSync<object>(reader, context.CurrentType);
+						context.CurrentObject = Parse<object>(reader, context.CurrentType);
 						return true;
 					}
 				}
 				else if (Mode == 2) {
 					Count++;
 					if (Count == 2) {
-						context.CurrentObject = ParseSync<object>(reader, context.CurrentType);
+						context.CurrentObject = Parse<object>(reader, context.CurrentType);
 						return true;
 					}
 				}
@@ -574,7 +574,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection3), v.GetType());
@@ -586,7 +586,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection3), v.GetType());
@@ -598,7 +598,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection3), v.GetType());
@@ -622,7 +622,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection3), v.GetType());
@@ -634,7 +634,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection3), v.GetType());
@@ -646,7 +646,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection3), v.GetType());
@@ -670,7 +670,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection4), v.GetType());
@@ -682,7 +682,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection4), v.GetType());
@@ -694,7 +694,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection3>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection4), v.GetType());
@@ -728,7 +728,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection5), v.GetType());
@@ -740,7 +740,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection5), v.GetType());
@@ -752,7 +752,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection5), v.GetType());
@@ -776,7 +776,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection5), v.GetType());
@@ -788,7 +788,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection5), v.GetType());
@@ -800,7 +800,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection5), v.GetType());
@@ -824,7 +824,7 @@ namespace IonKiwi.Json.Test {
 			var jps = JsonParser.DefaultSettings.Clone();
 			jps.Visitor = visitor;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection6), v.GetType());
@@ -836,7 +836,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 1;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(1, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection6), v.GetType());
@@ -848,7 +848,7 @@ namespace IonKiwi.Json.Test {
 			visitor.Mode = 2;
 			visitor.Count = 0;
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.ParseSync<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
+				var v = JsonParser.Parse<VisitorCollection5>(new JsonReader(r), parserSettings: jps);
 				Assert.Equal(2, visitor.Count);
 				Assert.NotNull(v);
 				Assert.Equal(typeof(VisitorCollection6), v.GetType());
