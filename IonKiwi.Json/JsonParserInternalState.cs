@@ -41,15 +41,9 @@ namespace IonKiwi.Json {
 				public TupleContextInfoWrapper TupleContext;
 				//public int StartDepth;
 				public bool IsFirst = true;
+				public bool IsDelayed = false;
 				public readonly HashSet<string> Properties = new HashSet<string>(StringComparer.Ordinal);
-			}
-
-			private sealed class JsonParserDelayedObjectState : JsonParserInternalState {
-				public JsonTypeInfo TypeInfo;
-				public TupleContextInfoWrapper TupleContext;
-				//public int StartDepth;
-				public bool IsFirst = true;
-				public readonly Dictionary<string, object> Properties = new Dictionary<string, object>(StringComparer.Ordinal);
+				public readonly Dictionary<string, object> PropertyValues = new Dictionary<string, object>(StringComparer.Ordinal);
 			}
 
 			private sealed class JsonParserArrayState : JsonParserInternalState {
