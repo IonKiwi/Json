@@ -8,6 +8,7 @@ using IonKiwi.Json.MetaData;
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static IonKiwi.Json.JsonReader;
@@ -256,6 +257,18 @@ namespace IonKiwi.Json {
 				}
 
 				switch (newTypeInfo.ObjectType) {
+					case JsonObjectType.Object when newTypeInfo.JsonConstructors.Count > 0: {
+							if (isArray) {
+								UnexpectedToken(JsonToken.ArrayStart);
+							}
+							var objectState = new JsonParserDelayedObjectState();
+							objectState.Parent = state;
+							objectState.TypeInfo = newTypeInfo;
+							objectState.TupleContext = newTupleContext;
+							//objectState.StartDepth = reader.Depth;
+							_currentState.Push(objectState);
+							break;
+						}
 					case JsonObjectType.Object: {
 							if (isArray) {
 								UnexpectedToken(JsonToken.ArrayStart);
@@ -332,6 +345,9 @@ namespace IonKiwi.Json {
 					case JsonParserObjectState objectState:
 						typeInfo = objectState.TypeInfo;
 						break;
+					case JsonParserDelayedObjectState delayedObjectState:
+						typeInfo = delayedObjectState.TypeInfo;
+						break;
 					default:
 						ThrowUnhandledType(state.GetType());
 						break;
@@ -360,20 +376,28 @@ namespace IonKiwi.Json {
 #endif
 				JsonTypeInfo typeInfo = null;
 				JsonToken token = JsonToken.None;
-				if (state is JsonParserDictionaryState dictionaryState) {
-					typeInfo = dictionaryState.TypeInfo;
-					token = dictionaryState.IsStringDictionary ? JsonToken.ObjectStart : JsonToken.ArrayStart;
-				}
-				else if (state is JsonParserArrayState arrayState) {
-					typeInfo = arrayState.TypeInfo;
-					token = JsonToken.ArrayStart;
-				}
-				else if (state is JsonParserObjectState objectState) {
-					typeInfo = objectState.TypeInfo;
-					token = JsonToken.ObjectStart;
-				}
-				else {
-					ThrowUnhandledType(state.GetType());
+				bool isDelayed = false;
+				switch (state) {
+					case JsonParserDictionaryState dictionaryState:
+						typeInfo = dictionaryState.TypeInfo;
+						token = dictionaryState.IsStringDictionary ? JsonToken.ObjectStart : JsonToken.ArrayStart;
+						break;
+					case JsonParserArrayState arrayState:
+						typeInfo = arrayState.TypeInfo;
+						token = JsonToken.ArrayStart;
+						break;
+					case JsonParserObjectState objectState:
+						typeInfo = objectState.TypeInfo;
+						token = JsonToken.ObjectStart;
+						break;
+					case JsonParserDelayedObjectState delayedObjectState:
+						typeInfo = delayedObjectState.TypeInfo;
+						token = JsonToken.ObjectStart;
+						isDelayed = true;
+						break;
+					default:
+						ThrowUnhandledType(state.GetType());
+						break;
 				}
 
 				Type targetType = typeInfo.OriginalType;
@@ -393,9 +417,11 @@ namespace IonKiwi.Json {
 					}
 				}
 
-				state.Value = TypeInstantiator.Instantiate(typeInfo.RootType);
-				foreach (var a in typeInfo.OnDeserializing) {
-					a(state.Value);
+				if (!isDelayed) {
+					state.Value = TypeInstantiator.Instantiate(typeInfo.RootType);
+					foreach (var a in typeInfo.OnDeserializing) {
+						a(state.Value);
+					}
 				}
 				await HandleToken(reader).NoSync();
 			}
@@ -403,6 +429,7 @@ namespace IonKiwi.Json {
 			private void HandleTypeAndVisitorSync(JsonReader reader, JsonParserInternalState state) {
 				JsonTypeInfo typeInfo = null;
 				JsonToken token = JsonToken.None;
+				bool isDelayed = false;
 				switch (state) {
 					case JsonParserDictionaryState dictionaryState:
 						typeInfo = dictionaryState.TypeInfo;
@@ -415,6 +442,11 @@ namespace IonKiwi.Json {
 					case JsonParserObjectState objectState:
 						typeInfo = objectState.TypeInfo;
 						token = JsonToken.ObjectStart;
+						break;
+					case JsonParserDelayedObjectState delayedObjectState:
+						typeInfo = delayedObjectState.TypeInfo;
+						token = JsonToken.ObjectStart;
+						isDelayed = true;
 						break;
 					default:
 						ThrowUnhandledType(state.GetType());
@@ -438,9 +470,11 @@ namespace IonKiwi.Json {
 					}
 				}
 
-				state.Value = TypeInstantiator.Instantiate(typeInfo.RootType);
-				foreach (var a in typeInfo.OnDeserializing) {
-					a(state.Value);
+				if (!isDelayed) {
+					state.Value = TypeInstantiator.Instantiate(typeInfo.RootType);
+					foreach (var a in typeInfo.OnDeserializing) {
+						a(state.Value);
+					}
 				}
 				HandleTokenSync(reader);
 			}
@@ -505,6 +539,9 @@ namespace IonKiwi.Json {
 						case JsonParserObjectState objectState:
 							typeInfo = objectState.TypeInfo;
 							break;
+						case JsonParserDelayedObjectState delayedObjectState:
+							typeInfo = delayedObjectState.TypeInfo;
+							break;
 						default:
 							ThrowUnhandledType(state.GetType());
 							break;
@@ -541,7 +578,6 @@ namespace IonKiwi.Json {
 							foreach (var a in dictionaryState.TypeInfo.OnDeserializing) {
 								a(dictionaryState.Value);
 							}
-
 							break;
 						}
 					case JsonParserArrayState arrayState: {
@@ -551,7 +587,6 @@ namespace IonKiwi.Json {
 							foreach (var a in arrayState.TypeInfo.OnDeserializing) {
 								a(arrayState.Value);
 							}
-
 							break;
 						}
 					case JsonParserObjectState objectState: {
@@ -561,7 +596,11 @@ namespace IonKiwi.Json {
 							foreach (var a in objectState.TypeInfo.OnDeserializing) {
 								a(objectState.Value);
 							}
-
+							break;
+						}
+					case JsonParserDelayedObjectState delayedObjectState: {
+							delayedObjectState.TypeInfo = JsonReflection.GetTypeInfo(newType);
+							delayedObjectState.TupleContext = GetContextForNewType(delayedObjectState.TupleContext, delayedObjectState.TypeInfo);
 							break;
 						}
 					default:
@@ -577,6 +616,8 @@ namespace IonKiwi.Json {
 						return HandleRootState(rootState, reader);
 					case JsonParserObjectState objectState:
 						return HandleObjectState(objectState, reader);
+					case JsonParserDelayedObjectState delayedObjectState:
+						return HandleDelayedObjectState(delayedObjectState, reader);
 					case JsonParserObjectPropertyState propertyState:
 						return HandlePropertyState(propertyState, reader);
 					case JsonParserDictionaryValueState valueState:
@@ -729,7 +770,51 @@ namespace IonKiwi.Json {
 
 								objectState.Properties.Add(propertyName);
 							}
+							break;
+						}
+					case JsonToken.ObjectEnd:
+						return CompleteObject(objectState);
+					default:
+						UnexpectedToken(token);
+						break;
+				}
+				return HandleStateResult.None;
+			}
 
+			private HandleStateResult HandleDelayedObjectState(JsonParserDelayedObjectState objectState, JsonReader reader) {
+				var token = reader.Token;
+				switch (token) {
+					case JsonToken.ObjectProperty: {
+							string propertyName = reader.GetValue();
+							if (objectState.IsFirst) {
+								objectState.IsFirst = false;
+								if (string.Equals("$type", propertyName, StringComparison.Ordinal) && !objectState.IsComplete) {
+									return HandleStateResult.ReadTypeToken;
+								}
+								return HandleStateResult.CreateInstance;
+							}
+
+							if (!objectState.TypeInfo.Properties.TryGetValue(propertyName, out var propertyInfo)) {
+								return HandleStateResult.Skip;
+							}
+							else {
+
+								Type newType = null;
+								if (objectState.Value is IJsonCustomMemberTypeProvider typeProvider) {
+									newType = typeProvider.ProvideMemberType(propertyName);
+								}
+
+								if (newType == null) {
+									newType = propertyInfo.PropertyType;
+								}
+
+								JsonParserObjectPropertyState propertyState = new JsonParserObjectPropertyState();
+								propertyState.Parent = objectState;
+								propertyState.TypeInfo = JsonReflection.GetTypeInfo(newType);
+								propertyState.TupleContext = GetNewContext(objectState.TupleContext, propertyInfo.OriginalName, propertyState.TypeInfo);
+								propertyState.PropertyInfo = propertyInfo;
+								_currentState.Push(propertyState);
+							}
 							break;
 						}
 					case JsonToken.ObjectEnd:
@@ -795,6 +880,82 @@ namespace IonKiwi.Json {
 				return HandleStateResult.None;
 			}
 
+			private HandleStateResult CompleteObject(JsonParserDelayedObjectState objectState) {
+				// validate required properties first
+				var missingRequiredProperties = new HashSet<string>();
+				foreach (var p in objectState.TypeInfo.Properties) {
+					if (!objectState.Properties.ContainsKey(p.Key)) {
+						if (p.Value.Required) {
+							missingRequiredProperties.Add(p.Key);
+						}
+						//else if (p.Value.EmitNullValue) {
+						//	missingOptionalProperties.Add(p.Key);
+						//}
+					}
+				}
+
+				if (missingRequiredProperties.Count > 0) {
+					ThrowMissingRequiredProperties(missingRequiredProperties);
+				}
+
+				// find ctor
+				var ctor = objectState.TypeInfo.JsonConstructors.Where(z => {
+					foreach (var parameterName in z.ParameterOrder) {
+						if (!objectState.Properties.ContainsKey(parameterName) && objectState.TypeInfo.Properties[parameterName].Required) {
+							return false;
+						}
+					}
+					return true;
+				}).MaxElements(z => z.ParameterOrder.Count(q => objectState.Properties.ContainsKey(q))).MinElement(z => z.ParameterOrder.Count(q => !objectState.Properties.ContainsKey(q)));
+				if (ctor == null) {
+					ThrowNoMatchingJsonConstructorException(objectState.TypeInfo.RootType, objectState.Properties.Keys);
+				}
+
+				// instantiate the type
+				object[] ctorArguments = new object[ctor.ParameterOrder.Count];
+				for (int i = 0; i < ctor.ParameterOrder.Count; i++) {
+					var name = ctor.ParameterOrder[i];
+					if (!objectState.Properties.TryGetValue(name, out var parameterValue)) {
+						parameterValue = ReflectionUtility.GetDefaultTypeValue(objectState.TypeInfo.Properties[name].PropertyType);
+					}
+					else {
+						objectState.Properties.Remove(name);
+					}
+					ctorArguments[i] = parameterValue;
+				}
+				objectState.Value = ctor.Instantiator(ctorArguments);
+				foreach (var a in objectState.TypeInfo.OnDeserializing) {
+					a(objectState.Value);
+				}
+
+				// set remaining properties
+				foreach (var kv in objectState.Properties) {
+					var propertyInfo = objectState.TypeInfo.Properties[kv.Key];
+					if (propertyInfo.Setter1 != null) {
+						objectState.Value = propertyInfo.Setter1(objectState.Value, kv.Value);
+					}
+					else if (propertyInfo.Setter2 != null) {
+						propertyInfo.Setter2(objectState.Value, kv.Value);
+					}
+					else {
+						ThrowNonSettablePropertyException(objectState.TypeInfo.OriginalType, kv.Key);
+					}
+				}
+
+				// finalize
+				if (objectState.TypeInfo.FinalizeAction != null) {
+					objectState.Value = objectState.TypeInfo.FinalizeAction(objectState.Value);
+				}
+				foreach (var a in objectState.TypeInfo.OnDeserialized) {
+					a(objectState.Value);
+				}
+
+				objectState.IsComplete = true;
+
+				HandleStateCompletion(objectState.Parent, objectState);
+				return HandleStateResult.None;
+			}
+
 			private HandleStateResult CompleteArray(JsonParserArrayState arrayState) {
 				if (object.ReferenceEquals(null, arrayState.Value)) {
 					return HandleStateResult.CreateInstance;
@@ -842,6 +1003,15 @@ namespace IonKiwi.Json {
 							state.IsComplete = true;
 							_currentState.Push(state);
 							HandleStateCompletion(state.Parent, state);
+							break;
+						}
+					case JsonObjectType.Object when token == JsonToken.ObjectStart && typeInfo.JsonConstructors.Count > 0: {
+							var objectState = new JsonParserDelayedObjectState();
+							objectState.Parent = parentState;
+							objectState.TypeInfo = typeInfo;
+							objectState.TupleContext = tupleContext;
+							//objectState.StartDepth = reader.Depth;
+							_currentState.Push(objectState);
 							break;
 						}
 					case JsonObjectType.Object when token == JsonToken.ObjectStart: {
@@ -973,7 +1143,14 @@ namespace IonKiwi.Json {
 						_currentState.Pop();
 						HandleStateCompletion(parentState.Parent, parentState);
 						break;
-					case JsonParserObjectState _: {
+					case JsonParserDelayedObjectState delayedObjectState: {
+							var propertyState = (JsonParserObjectPropertyState)completedState;
+							var propertyInfo = propertyState.PropertyInfo;
+							delayedObjectState.Properties.AddOrUpdate(propertyInfo.Name, propertyState.Value);
+							_currentState.Pop();
+							break;
+						}
+					case JsonParserObjectState objectState: {
 							var propertyState = (JsonParserObjectPropertyState)completedState;
 							var propertyInfo = propertyState.PropertyInfo;
 							if (propertyInfo.Setter1 != null) {
@@ -983,7 +1160,7 @@ namespace IonKiwi.Json {
 								propertyInfo.Setter2(parentState.Value, propertyState.Value);
 							}
 							else {
-								// log
+								ThrowNonSettablePropertyException(objectState.TypeInfo.OriginalType, propertyInfo.Name);
 							}
 							_currentState.Pop();
 							break;

@@ -64,6 +64,14 @@ namespace IonKiwi.Json {
 			throw new RequiredPropertiesMissingException("Missing required properties: " + string.Join(",", missingProperties));
 		}
 
+		private static void ThrowNoMatchingJsonConstructorException(Type t, IEnumerable<string> properties) {
+			throw new NoMatchingJsonConstructorException($"No matching constructor found for type '{ReflectionUtility.GetTypeName(t)}' with properties '{string.Join(",", properties)}'.");
+		}
+
+		private static void ThrowNonSettablePropertyException(Type t, string name) {
+			throw new NonSettablePropertyException($"Property '{name}' from type '{ReflectionUtility.GetTypeName(t)}' is not writable.");
+		}
+
 		private static void ThrowNotSupportedTokenException(JsonToken token) {
 			throw new NotSupportedException(token.ToString());
 		}

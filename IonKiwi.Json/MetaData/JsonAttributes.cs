@@ -9,6 +9,12 @@ using System.Text;
 
 namespace IonKiwi.Json.MetaData {
 
+	[AttributeUsage(AttributeTargets.Constructor, Inherited = false)]
+	public sealed class JsonConstructorAttribute : Attribute {
+
+		public JsonConstructorAttribute() { }
+	}
+
 	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Property | AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
 	public sealed class JsonKnownTypeAttribute : Attribute {
 
@@ -82,5 +88,17 @@ namespace IonKiwi.Json.MetaData {
 		public bool IsSingleOrArrayValue { get; set; }
 
 		public bool Required { get; set; } = true;
+	}
+
+	[AttributeUsage(AttributeTargets.Parameter, AllowMultiple = false, Inherited = true)]
+	public class JsonParameterAttribute : Attribute {
+
+		public JsonParameterAttribute() { }
+
+		public JsonParameterAttribute(string name = null) {
+			Name = name;
+		}
+
+		public string Name { get; set; }
 	}
 }

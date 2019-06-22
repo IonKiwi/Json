@@ -671,6 +671,31 @@ namespace IonKiwi.Json.Utilities {
 			return false;
 		}
 
+		private static Dictionary<Type, object> _defaultTypeValues = new Dictionary<Type, object>();
+		public static object GetDefaultTypeValue(Type t) {
+			object v;
+			if (!_defaultTypeValues.TryGetValue(t, out v)) {
+				lock (_globalLock) {
+					if (!_defaultTypeValues.TryGetValue(t, out v)) {
+						var expr = Expression.Default(t);
+						var untypedExpr = Expression.Convert(expr, typeof(object));
+						var l = Expression.Lambda<Func<object>>(untypedExpr);
+						v = l.Compile()();
+
+						Dictionary<Type, object> newDictionary = new Dictionary<Type, object>();
+						foreach (KeyValuePair<Type, object> kv in _defaultTypeValues) {
+							newDictionary.Add(kv.Key, kv.Value);
+						}
+						newDictionary.Add(t, v);
+
+						Thread.MemoryBarrier();
+						_defaultTypeValues = newDictionary;
+					}
+				}
+			}
+			return v;
+		}
+
 		public static string GetTypeName(Type t, JsonWriterSettings settings) {
 			StringBuilder sb = new StringBuilder();
 			GetTypeName(sb, t, settings);

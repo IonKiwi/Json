@@ -20,5 +20,27 @@ namespace IonKiwi.Json {
 
 			}
 		}
+
+		public sealed class NoMatchingJsonConstructorException : Exception {
+			public NoMatchingJsonConstructorException(string message) : base(message) {
+
+			}
+
+			private NoMatchingJsonConstructorException(SerializationInfo info, StreamingContext context)
+					: base(info, context) {
+
+			}
+		}
+
+		public sealed class NonSettablePropertyException : Exception {
+			public NonSettablePropertyException(string message) : base(message) {
+
+			}
+
+			private NonSettablePropertyException(SerializationInfo info, StreamingContext context)
+					: base(info, context) {
+
+			}
+		}
 	}
 }

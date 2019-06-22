@@ -46,6 +46,7 @@ namespace IonKiwi.Json {
 			public bool IsFlagsEnum = false;
 			public JsonObjectType ObjectType;
 			public readonly Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
+			public readonly List<JsonConstructorInfo> JsonConstructors = new List<JsonConstructorInfo>();
 			public Func<object, System.Collections.IEnumerator> EnumerateMethod;
 			public Action<object, object> CollectionAddMethod;
 			public Action<object, object, object> DictionaryAddMethod;
@@ -59,6 +60,11 @@ namespace IonKiwi.Json {
 			public readonly List<Action<object>> OnDeserialized = new List<Action<object>>();
 			public readonly List<Action<object>> OnDeserializing = new List<Action<object>>();
 			public readonly HashSet<Type> KnownTypes = new HashSet<Type>();
+		}
+
+		internal sealed class JsonConstructorInfo {
+			public Func<object[], object> Instantiator;
+			public readonly List<string> ParameterOrder = new List<string>();
 		}
 
 		internal sealed class JsonPropertyInfo {
@@ -443,6 +449,42 @@ namespace IonKiwi.Json {
 								}
 
 								ti.Properties.Add(name, pi);
+							}
+						}
+
+						foreach (var ctor in t.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+							var jsonCtor = ctor.GetCustomAttribute<JsonConstructorAttribute>(false);
+							if (jsonCtor != null) {
+
+								JsonConstructorInfo jsonConstructor = new JsonConstructorInfo();
+								ti.JsonConstructors.Add(jsonConstructor);
+
+								var invokeParameter = Expression.Parameter(typeof(object[]), "p1");
+								List<Expression> invokeParameterExpressions = new List<Expression>();
+
+								foreach (var ctorParameter in ctor.GetParameters()) {
+									var parameterIndex = jsonConstructor.ParameterOrder.Count;
+
+									string name = ctorParameter.Name;
+									var ctorParameterInfo = ctorParameter.GetCustomAttribute<JsonParameterAttribute>(false);
+									if (ctorParameterInfo != null) {
+										if (!string.IsNullOrEmpty(ctorParameterInfo.Name)) {
+											name = ctorParameterInfo.Name;
+										}
+									}
+
+									if (!ti.Properties.ContainsKey(name)) {
+										throw new NotSupportedException($"Type hierarchy of '{ReflectionUtility.GetTypeName(t)}' does not contain property '{name}' for constructor argument '" + ctorParameter.Name + "'.");
+									}
+
+									var pe = Expression.ArrayAccess(invokeParameter, Expression.Constant(parameterIndex));
+									invokeParameterExpressions.Add(Expression.Convert(pe, ctorParameter.ParameterType));
+
+									jsonConstructor.ParameterOrder.Add(name);
+								}
+
+								var invokeExpression = Expression.New(ctor, invokeParameterExpressions);
+								jsonConstructor.Instantiator = Expression.Lambda<Func<object[], object>>(invokeExpression, invokeParameter).Compile();
 							}
 						}
 					}
