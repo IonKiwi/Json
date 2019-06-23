@@ -779,6 +779,12 @@ namespace IonKiwi.Json.Utilities {
 			return t;
 		}
 
+		public static string GetFullTypeName(string typeName, JsonParserSettings settings) {
+			StringBuilder sb = new StringBuilder();
+			BuildTypeInternal(typeName, sb, typeName, settings);
+			return sb.ToString();
+		}
+
 		// internal for unit test
 		internal static void BuildTypeInternal(string inputTypeName, StringBuilder sb, string typeName, JsonParserSettings settings) {
 			int g1 = typeName.IndexOf('[');
