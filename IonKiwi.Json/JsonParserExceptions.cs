@@ -72,6 +72,10 @@ namespace IonKiwi.Json {
 			throw new NonSettablePropertyException($"Property '{name}' from type '{ReflectionUtility.GetTypeName(t)}' is not writable.");
 		}
 
+		private static void ThrowCustomInstantiatorNoValueException() {
+			throw new InvalidOperationException("Custom instantiator provided no value.");
+		}
+
 		private static void ThrowNotSupportedTokenException(JsonToken token) {
 			throw new NotSupportedException(token.ToString());
 		}

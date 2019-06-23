@@ -84,6 +84,28 @@ namespace IonKiwi.Json {
 				public TupleContextInfoWrapper TupleContext;
 				public JsonPropertyInfo PropertyInfo;
 			}
+
+			private sealed class JsonConstructorContext : IJsonConstructorContext {
+
+				private readonly Dictionary<string, object> _values;
+
+				public JsonConstructorContext(Dictionary<string, object> values) {
+					_values = values;
+				}
+
+				internal HashSet<string> RemovedProperties { get; } = new HashSet<string>(StringComparer.Ordinal);
+
+				public (bool hasValue, T value) GetValue<T>(string property, bool removeProperty) {
+					if (!_values.TryGetValue(property, out var objectValue)) {
+						return (false, default(T));
+					}
+					var value = (T)objectValue;
+					if (removeProperty) {
+						RemovedProperties.Add(property);
+					}
+					return (true, value);
+				}
+			}
 		}
 	}
 }

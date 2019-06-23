@@ -265,7 +265,7 @@ namespace IonKiwi.Json {
 							objectState.Parent = state;
 							objectState.TypeInfo = newTypeInfo;
 							objectState.TupleContext = newTupleContext;
-							objectState.IsDelayed = newTypeInfo.JsonConstructors.Count > 0;
+							objectState.IsDelayed = newTypeInfo.JsonConstructors.Count > 0 || newTypeInfo.CustomInstantiator != null;
 							//objectState.StartDepth = reader.Depth;
 							_currentState.Push(objectState);
 							break;
@@ -568,7 +568,7 @@ namespace IonKiwi.Json {
 					case JsonParserObjectState objectState: {
 							objectState.TypeInfo = JsonReflection.GetTypeInfo(newType);
 							objectState.TupleContext = GetContextForNewType(objectState.TupleContext, objectState.TypeInfo);
-							objectState.IsDelayed = objectState.TypeInfo.JsonConstructors.Count > 0;
+							objectState.IsDelayed = objectState.TypeInfo.JsonConstructors.Count > 0 || objectState.TypeInfo.CustomInstantiator != null;
 							if (!objectState.IsDelayed) {
 								objectState.Value = TypeInstantiator.Instantiate(newType);
 								foreach (var a in objectState.TypeInfo.OnDeserializing) {
@@ -830,32 +830,45 @@ namespace IonKiwi.Json {
 					ThrowMissingRequiredProperties(missingRequiredProperties);
 				}
 
-				// find ctor
-				var ctor = objectState.TypeInfo.JsonConstructors.Where(z => {
-					foreach (var parameterName in z.ParameterOrder) {
-						if (!objectState.PropertyValues.ContainsKey(parameterName) && objectState.TypeInfo.Properties[parameterName].Required) {
-							return false;
-						}
+				if (objectState.TypeInfo.CustomInstantiator != null) {
+					var context = new JsonConstructorContext(objectState.PropertyValues);
+					objectState.Value = objectState.TypeInfo.CustomInstantiator(context);
+					if (object.ReferenceEquals(null, objectState.Value)) {
+						ThrowCustomInstantiatorNoValueException();
 					}
-					return true;
-				}).MaxElements(z => z.ParameterOrder.Count(q => objectState.PropertyValues.ContainsKey(q))).MinElement(z => z.ParameterOrder.Count(q => !objectState.PropertyValues.ContainsKey(q)));
-				if (ctor == null) {
-					ThrowNoMatchingJsonConstructorException(objectState.TypeInfo.RootType, objectState.PropertyValues.Keys);
+					foreach (var removedProperty in context.RemovedProperties) {
+						objectState.PropertyValues.Remove(removedProperty);
+					}
+				}
+				else {
+					// find ctor
+					var ctor = objectState.TypeInfo.JsonConstructors.Where(z => {
+						foreach (var parameterName in z.ParameterOrder) {
+							if (!objectState.PropertyValues.ContainsKey(parameterName) && objectState.TypeInfo.Properties[parameterName].Required) {
+								return false;
+							}
+						}
+						return true;
+					}).MaxElements(z => z.ParameterOrder.Count(q => objectState.PropertyValues.ContainsKey(q))).MinElement(z => z.ParameterOrder.Count(q => !objectState.PropertyValues.ContainsKey(q)));
+					if (ctor == null) {
+						ThrowNoMatchingJsonConstructorException(objectState.TypeInfo.RootType, objectState.PropertyValues.Keys);
+					}
+
+					// instantiate the type
+					object[] ctorArguments = new object[ctor.ParameterOrder.Count];
+					for (int i = 0; i < ctor.ParameterOrder.Count; i++) {
+						var name = ctor.ParameterOrder[i];
+						if (!objectState.PropertyValues.TryGetValue(name, out var parameterValue)) {
+							parameterValue = ReflectionUtility.GetDefaultTypeValue(objectState.TypeInfo.Properties[name].PropertyType);
+						}
+						else {
+							objectState.PropertyValues.Remove(name);
+						}
+						ctorArguments[i] = parameterValue;
+					}
+					objectState.Value = ctor.Instantiator(ctorArguments);
 				}
 
-				// instantiate the type
-				object[] ctorArguments = new object[ctor.ParameterOrder.Count];
-				for (int i = 0; i < ctor.ParameterOrder.Count; i++) {
-					var name = ctor.ParameterOrder[i];
-					if (!objectState.PropertyValues.TryGetValue(name, out var parameterValue)) {
-						parameterValue = ReflectionUtility.GetDefaultTypeValue(objectState.TypeInfo.Properties[name].PropertyType);
-					}
-					else {
-						objectState.PropertyValues.Remove(name);
-					}
-					ctorArguments[i] = parameterValue;
-				}
-				objectState.Value = ctor.Instantiator(ctorArguments);
 				foreach (var a in objectState.TypeInfo.OnDeserializing) {
 					a(objectState.Value);
 				}
@@ -942,7 +955,7 @@ namespace IonKiwi.Json {
 							objectState.Parent = parentState;
 							objectState.TypeInfo = typeInfo;
 							objectState.TupleContext = tupleContext;
-							objectState.IsDelayed = typeInfo.JsonConstructors.Count > 0;
+							objectState.IsDelayed = typeInfo.JsonConstructors.Count > 0 || typeInfo.CustomInstantiator != null;
 							//objectState.StartDepth = reader.Depth;
 							_currentState.Push(objectState);
 							break;

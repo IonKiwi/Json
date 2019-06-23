@@ -47,6 +47,7 @@ namespace IonKiwi.Json {
 			public JsonObjectType ObjectType;
 			public readonly Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
 			public readonly List<JsonConstructorInfo> JsonConstructors = new List<JsonConstructorInfo>();
+			public Func<IJsonConstructorContext, object> CustomInstantiator;
 			public Func<object, System.Collections.IEnumerator> EnumerateMethod;
 			public Action<object, object> CollectionAddMethod;
 			public Action<object, object, object> DictionaryAddMethod;
@@ -360,6 +361,33 @@ namespace IonKiwi.Json {
 						pix.KnownTypes.AddRange(cp.Value.KnownTypes);
 						ti.Properties.Add(cp.Key, pix);
 					}
+					foreach (var ctor in md.Constructors) {
+						JsonConstructorInfo jsonConstructor = new JsonConstructorInfo();
+
+						var invokeParameter = Expression.Parameter(typeof(object[]), "p1");
+						List<Expression> invokeParameterExpressions = new List<Expression>();
+
+						var ctorParameters = ctor.Constructor.GetParameters();
+						for (int i = 0; i < ctorParameters.Length; i++) {
+							var ctorParameter = ctorParameters[i];
+							var parameterIndex = jsonConstructor.ParameterOrder.Count;
+
+							string name = ctor.ParameterOrder[i];
+							if (!ti.Properties.ContainsKey(name)) {
+								throw new NotSupportedException($"Type '{ReflectionUtility.GetTypeName(t)}' does not contain property '{name}' for constructor argument '" + ctorParameter.Name + "'.");
+							}
+
+							var pe = Expression.ArrayAccess(invokeParameter, Expression.Constant(parameterIndex));
+							invokeParameterExpressions.Add(Expression.Convert(pe, ctorParameter.ParameterType));
+
+							jsonConstructor.ParameterOrder.Add(name);
+						}
+
+						var invokeExpression = Expression.New(ctor.Constructor, invokeParameterExpressions);
+						jsonConstructor.Instantiator = Expression.Lambda<Func<object[], object>>(invokeExpression, invokeParameter).Compile();
+						ti.JsonConstructors.Add(jsonConstructor);
+					}
+					ti.CustomInstantiator = md.CustomInstantiator;
 				}
 				else {
 
@@ -455,9 +483,7 @@ namespace IonKiwi.Json {
 						foreach (var ctor in t.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
 							var jsonCtor = ctor.GetCustomAttribute<JsonConstructorAttribute>(false);
 							if (jsonCtor != null) {
-
 								JsonConstructorInfo jsonConstructor = new JsonConstructorInfo();
-								ti.JsonConstructors.Add(jsonConstructor);
 
 								var invokeParameter = Expression.Parameter(typeof(object[]), "p1");
 								List<Expression> invokeParameterExpressions = new List<Expression>();
@@ -485,6 +511,7 @@ namespace IonKiwi.Json {
 
 								var invokeExpression = Expression.New(ctor, invokeParameterExpressions);
 								jsonConstructor.Instantiator = Expression.Lambda<Func<object[], object>>(invokeExpression, invokeParameter).Compile();
+								ti.JsonConstructors.Add(jsonConstructor);
 							}
 						}
 					}

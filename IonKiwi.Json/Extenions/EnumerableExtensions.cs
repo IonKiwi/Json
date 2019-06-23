@@ -15,6 +15,15 @@ namespace IonKiwi.Extenions {
 			}
 		}
 
+		public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, IEnumerable<KeyValuePair<TKey, TValue>> range) {
+			if (dictionary == null) { throw new ArgumentNullException(nameof(dictionary)); }
+			else if (range == null) { return; }
+
+			foreach (var item in range) {
+				dictionary.Add(item.Key, item.Value);
+			}
+		}
+
 		public static void AddOrUpdate<T>(this Dictionary<string, T> dictionary, string key, T value) {
 			if (!dictionary.ContainsKey(key)) {
 				dictionary.Add(key, value);

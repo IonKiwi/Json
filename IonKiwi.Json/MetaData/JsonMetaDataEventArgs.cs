@@ -3,6 +3,7 @@
 // https://github.com/IonKiwi/Json/blob/master/LICENSE
 #endregion
 
+using IonKiwi.Extenions;
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
@@ -27,7 +28,11 @@ namespace IonKiwi.Json.MetaData {
 
 		internal List<Type> KnownTypes { get; } = new List<Type>();
 
-		internal Dictionary<string, PropertyInfo> Properties { get; } = new Dictionary<string, PropertyInfo>(StringComparer.Ordinal);
+		internal Dictionary<string, JsonMetaDataPropertyInfo> Properties { get; } = new Dictionary<string, JsonMetaDataPropertyInfo>(StringComparer.Ordinal);
+
+		internal List<JsonMetaDataConstructorInfo> Constructors { get; } = new List<JsonMetaDataConstructorInfo>();
+
+		internal Func<IJsonConstructorContext, object> CustomInstantiator;
 
 		internal List<Action<object>> OnSerializing { get; } = new List<Action<object>>();
 
@@ -147,6 +152,35 @@ namespace IonKiwi.Json.MetaData {
 			}
 		}
 
+		public void AddConstructor(ConstructorInfo constructor, Dictionary<string, string> parameterMapping = null) {
+			if (constructor.DeclaringType != RootType) {
+				throw new InvalidOperationException("Constructor '" + constructor.Name + "' is not from type '" + ReflectionUtility.GetTypeName(RootType) + "'.");
+			}
+
+			var i = new JsonMetaDataConstructorInfo();
+			i.Constructor = constructor;
+			foreach (var p in constructor.GetParameters()) {
+				string name = p.Name;
+				if (parameterMapping != null && parameterMapping.TryGetValue(p.Name, out var mappedName)) {
+					name = mappedName;
+				}
+				i.ParameterOrder.Add(name);
+			}
+
+			this.Constructors.Add(i);
+		}
+
+		public void AddCustomInstantiator<TValue>(Func<IJsonConstructorContext, TValue> instantiator) {
+			var valueType = typeof(TValue);
+			var validValueType = valueType == RootType || valueType.IsSubclassOf(RootType);
+
+			if (!validValueType) {
+				throw new InvalidOperationException("Invalid return type '" + ReflectionUtility.GetTypeName(valueType) + "' for custom instantiation of type '" + ReflectionUtility.GetTypeName(RootType) + "'.");
+			}
+
+			this.CustomInstantiator = (context) => instantiator(context);
+		}
+
 		public void AddProperty<TValue, TProperty>(string name, Func<TValue, TProperty> getter, Func<TValue, TProperty, TValue> setter, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType, bool emitNullValue = true, int order = -1, string originalName = null) {
 
 			if (required && !emitNullValue) {
@@ -182,7 +216,7 @@ namespace IonKiwi.Json.MetaData {
 				originalName = name;
 			}
 
-			var pi = new PropertyInfo() {
+			var pi = new JsonMetaDataPropertyInfo() {
 				Order = order,
 				OriginalName = originalName,
 				PropertyType = propertyType,
@@ -206,7 +240,7 @@ namespace IonKiwi.Json.MetaData {
 			}
 		}
 
-		public void AddProperty(string name, System.Reflection.PropertyInfo pi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType, bool emitNullValue = true, int order = -1) {
+		public void AddProperty(string name, PropertyInfo pi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType, bool emitNullValue = true, int order = -1) {
 
 			if (required && !emitNullValue) {
 				throw new InvalidOperationException("Required & !EmitNullValue");
@@ -226,7 +260,7 @@ namespace IonKiwi.Json.MetaData {
 				throw new InvalidOperationException("Invalid property '" + pi.Name + "'. declaring type: " + ReflectionUtility.GetTypeName(pi.DeclaringType) + ", root type: " + ReflectionUtility.GetTypeName(RootType));
 			}
 
-			var tpi = new PropertyInfo() {
+			var tpi = new JsonMetaDataPropertyInfo() {
 				Order = order,
 				OriginalName = pi.Name,
 				PropertyType = pi.PropertyType,
@@ -250,7 +284,7 @@ namespace IonKiwi.Json.MetaData {
 			}
 		}
 
-		public void AddField(string name, System.Reflection.FieldInfo fi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType, bool emitNullValue = true, int order = -1) {
+		public void AddField(string name, FieldInfo fi, bool required = false, bool isSingleOrArrayValue = false, Type[] knownTypes = null, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType, bool emitNullValue = true, int order = -1) {
 
 			if (required && !emitNullValue) {
 				throw new InvalidOperationException("Required & !EmitNullValue");
@@ -270,7 +304,7 @@ namespace IonKiwi.Json.MetaData {
 				throw new InvalidOperationException("Invalid property '" + fi.Name + "'. declaring type: " + ReflectionUtility.GetTypeName(fi.DeclaringType) + ", root type: " + ReflectionUtility.GetTypeName(RootType));
 			}
 
-			var tpi = new PropertyInfo() {
+			var tpi = new JsonMetaDataPropertyInfo() {
 				Order = order,
 				OriginalName = fi.Name,
 				PropertyType = fi.FieldType,
@@ -294,7 +328,7 @@ namespace IonKiwi.Json.MetaData {
 			}
 		}
 
-		internal class PropertyInfo {
+		internal sealed class JsonMetaDataPropertyInfo {
 			public int Order;
 			public string OriginalName;
 			public Type PropertyType;
@@ -306,5 +340,14 @@ namespace IonKiwi.Json.MetaData {
 			public bool IsSingleOrArrayValue;
 			public readonly List<Type> KnownTypes = new List<Type>();
 		}
+
+		internal sealed class JsonMetaDataConstructorInfo {
+			public ConstructorInfo Constructor;
+			public List<string> ParameterOrder = new List<string>();
+		}
+	}
+
+	public interface IJsonConstructorContext {
+		(bool hasValue, T value) GetValue<T>(string property, bool removeProperty = true);
 	}
 }
