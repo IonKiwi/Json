@@ -84,6 +84,8 @@ namespace IonKiwi.Json.Newtonsoft {
 						return true;
 					}
 
+					HashSet<string> properties1 = new HashSet<string>(StringComparer.Ordinal);
+					Dictionary<string, string> properties2 = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 					for (int i = typeHierarchy.Count - 1; i >= 0; i--) {
 						var currentType = typeHierarchy[i];
 						foreach (var f in currentType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
@@ -94,7 +96,12 @@ namespace IonKiwi.Json.Newtonsoft {
 								continue;
 							}
 							else if (propAttr != null || reqAttr != null) {
-								e.AddField(string.IsNullOrEmpty(propAttr?.PropertyName) ? f.Name : propAttr.PropertyName, f,
+								string name = string.IsNullOrEmpty(propAttr?.PropertyName) ? f.Name : propAttr.PropertyName;
+								properties1.Add(name);
+								if (!properties2.ContainsKey(name)) {
+									properties2.Add(name, name);
+								}
+								e.AddField(name, f,
 									required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always,
 									order: propAttr?.Order ?? -1,
 									emitTypeName: GetEmitTypeName(propAttr?.TypeNameHandling),
@@ -109,12 +116,34 @@ namespace IonKiwi.Json.Newtonsoft {
 								continue;
 							}
 							else if (propAttr != null || reqAttr != null) {
-								e.AddProperty(string.IsNullOrEmpty(propAttr?.PropertyName) ? p.Name : propAttr.PropertyName, p,
+								string name = string.IsNullOrEmpty(propAttr?.PropertyName) ? p.Name : propAttr.PropertyName;
+								properties1.Add(name);
+								if (!properties2.ContainsKey(name)) {
+									properties2.Add(name, name);
+								}
+								e.AddProperty(name, p,
 									required: reqAttr != null || propAttr?.Required == global::Newtonsoft.Json.Required.AllowNull || propAttr?.Required == global::Newtonsoft.Json.Required.Always,
 									order: propAttr?.Order ?? -1,
 									emitTypeName: GetEmitTypeName(propAttr?.TypeNameHandling),
 									emitNullValue: GetEmitNull(propAttr?.DefaultValueHandling));
 							}
+						}
+					}
+
+					foreach (var ctor in e.RootType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+						var jsonCtor = ctor.GetCustomAttribute<global::Newtonsoft.Json.JsonConstructorAttribute>();
+						if (jsonCtor != null) {
+
+							var mapping = new Dictionary<string, string>(StringComparer.Ordinal);
+							foreach (var ctorParameter in ctor.GetParameters()) {
+								if (!properties1.Contains(ctorParameter.Name)) {
+									if (properties2.TryGetValue(ctorParameter.Name, out var otherName)) {
+										mapping.Add(ctorParameter.Name, otherName);
+									}
+								}
+							}
+
+							e.AddConstructor(ctor, mapping);
 						}
 					}
 				}
