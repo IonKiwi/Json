@@ -303,7 +303,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-		public static object[] TryGetValuesByJsonPath(JsonReader reader, (string path, Type type)[] query) {
+		public static object[] TryGetValuesByJsonPath(JsonReader reader, params (string path, Type type)[] query) {
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
@@ -313,9 +313,9 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public static async ValueTask<object[]> TryGetValuesByJsonPathAsync(JsonReader reader, (string path, Type type)[] query) {
+		public static async ValueTask<object[]> TryGetValuesByJsonPathAsync(JsonReader reader, params (string path, Type type)[] query) {
 #else
-		public static async Task<object[]> TryGetValuesByJsonPathAsync(JsonReader reader, (string path, Type type)[] query) {
+		public static async Task<object[]> TryGetValuesByJsonPathAsync(JsonReader reader, params (string path, Type type)[] query) {
 #endif
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
@@ -325,7 +325,7 @@ namespace IonKiwi.Json.Utilities {
 			return result;
 		}
 
-		public static object[] GetValuesByJsonPath(JsonReader reader, (string path, Type type)[] query) {
+		public static object[] GetValuesByJsonPath(JsonReader reader, params (string path, Type type)[] query) {
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
@@ -344,9 +344,9 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
-		public static async ValueTask<object[]> GetValuesByJsonPathAsync(JsonReader reader, (string path, Type type)[] query) {
+		public static async ValueTask<object[]> GetValuesByJsonPathAsync(JsonReader reader, params (string path, Type type)[] query) {
 #else
-		public static async Task<object[]> GetValuesByJsonPathAsync(JsonReader reader, (string path, Type type)[] query) {
+		public static async Task<object[]> GetValuesByJsonPathAsync(JsonReader reader, params (string path, Type type)[] query) {
 #endif
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
