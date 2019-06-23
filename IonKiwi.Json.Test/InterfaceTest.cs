@@ -1,4 +1,5 @@
 ﻿using IonKiwi.Json.MetaData;
+using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -105,6 +106,39 @@ namespace IonKiwi.Json.Test {
 				Assert.Equal(typeof(Object4), v2.GetType());
 				Assert.Equal(42, ((Object4)v2).Value);
 			}
+		}
+
+		public interface ITestInterface1 {
+			string Prop1 { get; }
+		}
+
+		[DataContract]
+		private class TestClass8x : ITestInterface1 {
+			[DataMember]
+			public string Prop1 { get; set; }
+		}
+
+		[DataContract]
+		[KnownType(typeof(TestClass8x))]
+		private class TestClass8 {
+			[DataMember]
+			public ITestInterface1 TestValue {
+				get; set;
+			}
+		}
+
+		[Fact]
+		public void TestOptimized11Interface() {
+			TestClass8 a = new TestClass8();
+			a.TestValue = new TestClass8x() { Prop1 = "xxyy" };
+
+			string json = JsonUtility.Serialize(a);
+			TestClass8 b = JsonUtility.Parse<TestClass8>(json);
+
+			Assert.NotNull(b);
+			Assert.NotNull(b.TestValue);
+			Assert.Equal("xxyy", b.TestValue.Prop1);
+			return;
 		}
 	}
 }

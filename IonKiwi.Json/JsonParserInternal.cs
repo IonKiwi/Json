@@ -210,6 +210,7 @@ namespace IonKiwi.Json {
 
 				var state = _currentState.Peek();
 				JsonTypeInfo typeInfo = null;
+				JsonTypeInfo parentTypeInfo = null;
 				TupleContextInfoWrapper tupleContext = null;
 				JsonPropertyInfo propertyInfo = null;
 				switch (state) {
@@ -221,25 +222,25 @@ namespace IonKiwi.Json {
 					case JsonParserArrayItemState itemState:
 						typeInfo = itemState.TypeInfo;
 						tupleContext = itemState.TupleContext;
+						parentTypeInfo = ((JsonParserArrayState)itemState.Parent).TypeInfo;
 						break;
 					case JsonParserObjectPropertyState propertyState:
 						typeInfo = propertyState.TypeInfo;
 						tupleContext = propertyState.TupleContext;
 						propertyInfo = propertyState.PropertyInfo;
+						parentTypeInfo = ((JsonParserObjectState)propertyState.Parent).TypeInfo;
 						break;
 					case JsonParserDictionaryValueState dictionaryValueState:
 						typeInfo = dictionaryValueState.TypeInfo;
 						tupleContext = dictionaryValueState.TupleContext;
+						parentTypeInfo = ((JsonParserDictionaryState)dictionaryValueState.Parent).TypeInfo;
 						break;
 					default:
 						ThrowNotSupportedException(state.GetType());
 						break;
 				}
 
-				bool typedAllowed = typeInfo.KnownTypes.Contains(t);
-				if (!typedAllowed) {
-					typedAllowed = propertyInfo != null && propertyInfo.KnownTypes.Contains(t);
-				}
+				bool typedAllowed = typeInfo.KnownTypes.Contains(t) || (propertyInfo != null && propertyInfo.KnownTypes.Contains(t)) || (parentTypeInfo != null && parentTypeInfo.KnownTypes.Contains(t));
 				if (!typedAllowed) {
 					if (_settings.TypeAllowedCallback != null) {
 						typedAllowed = _settings.TypeAllowedCallback(t);
@@ -339,19 +340,31 @@ namespace IonKiwi.Json {
 						break;
 				}
 
-				if (!(typeInfo.OriginalType == t || typeInfo.KnownTypes.Contains(t))) {
+				var typedAllowed = typeInfo.OriginalType == t || typeInfo.KnownTypes.Contains(t);
+				if (!typedAllowed) {
 					if (state.Parent is JsonParserObjectPropertyState propertyState) {
-						if (!propertyState.PropertyInfo.KnownTypes.Contains(t)) {
-							bool isAllowed = false;
-							if (_settings.TypeAllowedCallback != null) {
-								isAllowed = _settings.TypeAllowedCallback(t);
-							}
-							if (!isAllowed) {
-								ThrowTypeNotAllowed(t);
-							}
+						typedAllowed = propertyState.PropertyInfo.KnownTypes.Contains(t) || ((JsonParserObjectState)propertyState.Parent).TypeInfo.KnownTypes.Contains(t);
+						// special handling for array dictionary
+						if (!typedAllowed && propertyState.Parent.Parent is JsonParserArrayItemState && propertyState.Parent.Parent.Parent is JsonParserDictionaryState) {
+							typedAllowed = ((JsonParserDictionaryState)propertyState.Parent.Parent.Parent).TypeInfo.KnownTypes.Contains(t);
 						}
 					}
+					else if (state.Parent is JsonParserArrayItemState arrayItemState) {
+						typedAllowed = ((JsonParserArrayState)arrayItemState.Parent).TypeInfo.KnownTypes.Contains(t);
+					}
+					else if (state.Parent is JsonParserDictionaryValueState dictionaryValueState) {
+						typedAllowed = ((JsonParserDictionaryState)dictionaryValueState.Parent).TypeInfo.KnownTypes.Contains(t);
+					}
 				}
+				if (!typedAllowed) {
+					if (_settings.TypeAllowedCallback != null) {
+						typedAllowed = _settings.TypeAllowedCallback(t);
+					}
+					if (!typedAllowed) {
+						ThrowTypeNotAllowed(t);
+					}
+				}
+
 				return t;
 			}
 

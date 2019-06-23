@@ -38,6 +38,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[JsonObject]
+		[JsonKnownType(typeof(Object3))]
 		private class Object2 {
 
 			[JsonConstructor]
