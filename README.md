@@ -35,7 +35,7 @@ _Manual for top level tuples or when using generics_
 
 ```csharp
 
-JsonWriter.SerializeSync(
+JsonWriter.Serialize(
     output,
     (true, 42),
     JsonWriter.DefaultSettings.With(s => s.JsonWriteMode = JsonWriteMode.ECMAScript),
@@ -54,7 +54,7 @@ public class ClassContaingTupleMethod {
   }
 }
 
-string json = JsonUtility.SerializeSync(
+string json = JsonUtility.Serialize(
   new ClassContaingTupleMethod().MethodReturningTuple(),
   tupleNames: 
     typeof(ClassContaingTupleMethod).GetMethod("MethodReturningTuple", BindingFlags.Instance | BindingFlags.Public)
@@ -71,12 +71,12 @@ _parsing a json string synchronously_
 ```csharp
 
 using (var reader = new StringReader(json)) {
-  var value = JsonParser.ParseSync<ObjectType>(new JsonReader(reader));
+  var value = JsonParser.Parse<ObjectType>(new JsonReader(reader));
 }
 
 or
 
-var value = JsonUtility.ParseSync<ObjectType>(json);
+var value = JsonUtility.Parse<ObjectType>(json);
 
 ```
 
@@ -85,12 +85,12 @@ _parsing a json string asynchronously_
 ```csharp
 
 using (var reader = new StringReader(json)) {
-  var value = await JsonParser.Parsec<ObjectType>(new JsonReader(reader));
+  var value = await JsonParser.ParseAsync<ObjectType>(new JsonReader(reader));
 }
 
 or
 
-var value = await JsonUtility.Parse<ObjectType>(json);
+var value = await JsonUtility.ParseAsync<ObjectType>(json);
 
 ```
 
@@ -99,12 +99,12 @@ _parsing a json stream synchronously_
 ```csharp
 
 using (var reader = new StreamReader(stream)) {
-  var value = JsonParser.ParseSync<ObjectType>(new JsonReader(reader));
+  var value = JsonParser.Parse<ObjectType>(new JsonReader(reader));
 }
 
 or
 
-var value = JsonUtility.ParseSync<ObjectType>(stream);
+var value = JsonUtility.Parse<ObjectType>(stream);
 
 ```
 
@@ -113,12 +113,12 @@ _parsing a json stream asynchronously_
 ```csharp
 
 using (var reader = new StreamReader(stream)) {
-  var value = await JsonParser.Parse<ObjectType>(new JsonReader(reader));
+  var value = await JsonParser.ParseAsync<ObjectType>(new JsonReader(reader));
 }
 
 or
 
-var value = await JsonUtility.Parse<ObjectType>(stream);
+var value = await JsonUtility.ParseAsync<ObjectType>(stream);
 
 ```
 
@@ -129,13 +129,13 @@ _serializing a value as json string synchronously_
 
 var sb = new StringBuilder();
 using (var writer = new StringWriter(sb)) {
-  var value = JsonWriter.SerializeSync(writer, value);
+  var value = JsonWriter.Serialize(writer, value);
 }
 var json = sb.ToString();
 
 or
 
-var json = JsonUtility.SerializeSync(value);
+var json = JsonUtility.Serialize(value);
 
 ```
 
@@ -145,13 +145,13 @@ _serializing a value as json string asynchronously_
 
 var sb = new StringBuilder();
 using (var writer = new StringWriter(sb)) {
-  var value = await JsonWriter.Serialize(writer, value);
+  var value = await JsonWriter.SerializeAsync(writer, value);
 }
 var json = sb.ToString();
 
 or
 
-var json = await JsonUtility.Serialize(value);
+var json = await JsonUtility.SerializeAsync(value);
 
 ```
 
@@ -160,12 +160,12 @@ _serializing a value to a stream synchronously_
 ```csharp
 
 using (var writer = new StreamWriter(stream)) {
-  JsonWriter.SerializeSync(writer, value);
+  JsonWriter.Serialize(writer, value);
 }
 
 or
 
-JsonUtility.SerializeSync(stream, value);
+JsonUtility.Serialize(stream, value);
 
 ```
 
@@ -174,12 +174,12 @@ _serializing a value to a stream asynchronously_
 ```csharp
 
 using (var writer = new StreamWriter(stream)) {
-  await JsonWriter.Serialize(writer, value);
+  await JsonWriter.SerializeAsync(writer, value);
 }
 
 or
 
-await JsonUtility.Serialize(stream, value);
+await JsonUtility.SerializeAsync(stream, value);
 
 ```
 
