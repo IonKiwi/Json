@@ -268,7 +268,7 @@ private class Object2 {
 	public int Property3 { get; }
 }
 
-```csharp
+```
 
 For non required properties, the default value will be used.
 You can declare multiple [JsonConstructor] constructors, the one with the most available parameters will be called.
