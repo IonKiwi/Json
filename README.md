@@ -183,3 +183,62 @@ await JsonUtility.SerializeAsync(stream, value);
 
 ```
 
+
+## Annotation
+
+**Objects**
+
+_use JsonObjectAttribute & JsonPropertyAttribute_
+
+```csharp
+
+[JsonObject]
+public class Object1 {
+
+	[JsonProperty]
+	public string Property1 { get; set; }
+}
+
+```
+
+**Collections**
+
+_use JsonCollectionAttribute and implement IEnumerable<>_
+
+```csharp
+
+[JsonCollection]
+public class Collection1<T> : IEnumerable<T> {
+}
+
+```
+
+**Dictionaries**
+
+_use JsonDictionaryAttribute and implement IDictionary<,>_
+
+```csharp
+
+[JsonDictionary]
+public class Dictionary1<TKey, TValue> : IDictionary<TKey, TValue> {
+}
+
+```
+
+**External/existing annotation**
+
+_use existing DataContract/DataMember attributes (System.Runtime.Serialization)_
+
+```csharp
+
+IonKiwi.Json.Utilities.DataContractSupport.Register();
+
+```
+
+_use existing Newtonsoft attributes_
+
+```csharp
+
+IonKiwi.Json.Newtonsoft.NewtonsoftSupport.Register();
+
+```
