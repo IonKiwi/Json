@@ -228,7 +228,13 @@ namespace IonKiwi.Json {
 						typeInfo = propertyState.TypeInfo;
 						tupleContext = propertyState.TupleContext;
 						propertyInfo = propertyState.PropertyInfo;
-						parentTypeInfo = ((JsonParserObjectState)propertyState.Parent).TypeInfo;
+						// special handling for array dictionary
+						if (propertyState.Parent.Parent is JsonParserArrayItemState && propertyState.Parent.Parent.Parent is JsonParserDictionaryState) {
+							parentTypeInfo = ((JsonParserDictionaryState)propertyState.Parent.Parent.Parent).TypeInfo;
+						}
+						else {
+							parentTypeInfo = ((JsonParserObjectState)propertyState.Parent).TypeInfo;
+						}
 						break;
 					case JsonParserDictionaryValueState dictionaryValueState:
 						typeInfo = dictionaryValueState.TypeInfo;
