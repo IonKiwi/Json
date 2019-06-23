@@ -188,7 +188,7 @@ await JsonUtility.SerializeAsync(stream, value);
 
 **Objects**
 
-_use JsonObjectAttribute & JsonPropertyAttribute_
+_use IonKiwi.Json.MetaData.JsonObjectAttribute & IonKiwi.Json.MetaData.JsonPropertyAttribute_
 
 ```csharp
 
@@ -203,7 +203,7 @@ public class Object1 {
 
 **Collections**
 
-_use JsonCollectionAttribute and implement IEnumerable<>_
+_use IonKiwi.Json.MetaData.JsonCollectionAttribute and implement IEnumerable<>_
 
 ```csharp
 
@@ -215,7 +215,7 @@ public class Collection1<T> : IEnumerable<T> {
 
 **Dictionaries**
 
-_use JsonDictionaryAttribute and implement IDictionary<,>_
+_use IonKiwi.Json.MetaData.JsonDictionaryAttribute and implement IDictionary<,>_
 
 ```csharp
 
@@ -242,3 +242,33 @@ _use existing Newtonsoft attributes_
 IonKiwi.Json.Newtonsoft.NewtonsoftSupport.Register();
 
 ```
+
+**Custom constructors**
+
+_use IonKiwi.Json.MetaData.JsonConstructorAttribute & IonKiwi.Json.MetaData.JsonParameterAttribute_
+
+```csharp
+
+[JsonObject]
+private class Object2 {
+
+	[JsonConstructor]
+	public Object2(bool property1, int property2, [JsonParameter("Property3")]int property3) {
+		Property1 = property1;
+		Property2 = property2;
+	}
+
+	[JsonProperty(Name = "property1")]
+	public bool Property1 { get; }
+
+	[JsonProperty(Name = "property2", Required = false)]
+	public int Property2 { get; }
+
+	[JsonProperty]
+	public int Property3 { get; }
+}
+
+```csharp
+
+For non required properties, the default value will be used.
+You can declare multiple [JsonConstructor] constructors, the one with the most available parameters will be called.
