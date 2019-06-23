@@ -253,8 +253,8 @@ _use IonKiwi.Json.MetaData.JsonConstructorAttribute & IonKiwi.Json.MetaData.Json
 private class Object2 {
 
 	[JsonConstructor]
-	public Object2(bool property1, int property2, [JsonParameter("Property3")]int property3) {
-		Property1 = property1;
+	public Object2([JsonParameter("property1")]bool parameter1, int property2) {
+		Property1 = parameter1;
 		Property2 = property2;
 	}
 
