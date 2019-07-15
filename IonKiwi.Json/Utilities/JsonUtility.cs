@@ -99,14 +99,6 @@ namespace IonKiwi.Json.Utilities {
 			SurrogatePairsAsCodePoint
 		}
 
-		public static string JavaScriptStringEncode(string value, JavaScriptEncodeMode encodeMode, JavaScriptQuoteMode quoteMode) {
-			string result = JavaScriptStringEncodeInternal(value, encodeMode, quoteMode == JavaScriptQuoteMode.WhenRequired, out var requiresQuotes);
-			if (quoteMode == JavaScriptQuoteMode.None || (!requiresQuotes && quoteMode == JavaScriptQuoteMode.WhenRequired)) {
-				return result;
-			}
-			return ("\"" + result + "\"");
-		}
-
 		private static void ThrowExpectedLowSurrogateForHighSurrogate() {
 			throw new InvalidOperationException("Expected low surrogate for high surrogate");
 		}
@@ -115,25 +107,34 @@ namespace IonKiwi.Json.Utilities {
 			throw new Exception("Low surrogate without high surrogate");
 		}
 
-		private static string JavaScriptStringEncodeInternal(string value, JavaScriptEncodeMode encodeMode, bool validateIdentifier, out bool requiresQuotes) {
-			requiresQuotes = false;
+		public static string JavaScriptStringEncode(string value, JavaScriptEncodeMode encodeMode, JavaScriptQuoteMode quoteMode) {
 			if (string.IsNullOrEmpty(value)) {
-				if (validateIdentifier) { requiresQuotes = true; }
+				if (quoteMode == JavaScriptQuoteMode.Always || quoteMode == JavaScriptQuoteMode.WhenRequired) { return "\"\""; }
 				return string.Empty;
 			}
 
-			if (validateIdentifier) {
+			StringBuilder builder = null;
+			bool requiresQuotes = false;
+			if (quoteMode == JavaScriptQuoteMode.Always) {
+				requiresQuotes = true;
+				builder = new StringBuilder(value.Length + 7);
+				builder.Append('"');
+			}
+			else if (quoteMode == JavaScriptQuoteMode.WhenRequired) {
 				requiresQuotes = JsonWriter.ValidateIdentifier(value);
+				if (requiresQuotes) {
+					builder = new StringBuilder(value.Length + 7);
+					builder.Append('"');
+				}
 			}
 
-			StringBuilder builder = null;
 			int startIndex = 0;
 			int count = 0;
-			for (int i = 0; i < value.Length; i++) {
+			for (int i = 0, l = value.Length; i < l; i++) {
 				char c = value[i];
 				if (CharRequiresJavaScriptEncoding(c)) {
 					if (builder == null) {
-						builder = new StringBuilder(value.Length + 5);
+						builder = new StringBuilder(l + 5);
 					}
 					if (count > 0) {
 						builder.Append(value, startIndex, count);
@@ -207,6 +208,9 @@ namespace IonKiwi.Json.Utilities {
 			}
 			if (count > 0) {
 				builder.Append(value, startIndex, count);
+			}
+			if (requiresQuotes) {
+				builder.Append('"');
 			}
 			return builder.ToString();
 		}
