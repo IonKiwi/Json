@@ -25,8 +25,7 @@ namespace IonKiwi.Json {
 
 			public JsonWriterInternal(JsonWriterSettings settings, object value, Type objectType, JsonTypeInfo typeInfo, string[] tupleNames) {
 				_settings = settings;
-				var wrapper = new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames);
-				_currentState.Push(new JsonWriterRootState() { TypeInfo = typeInfo, TupleContext = wrapper, Value = value, ValueType = objectType });
+				_currentState.Push(new JsonWriterRootState() { TypeInfo = typeInfo, TupleContext = typeInfo.TupleContext != null ? new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames) : null, Value = value, ValueType = objectType });
 			}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
@@ -315,7 +314,9 @@ namespace IonKiwi.Json {
 				newState.ValueType = currentProperty.ValueType;
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
 				newState.TypeInfo = JsonReflection.GetTypeInfo(currentProperty.ValueType);
-				newState.TupleContext = new TupleContextInfoWrapper(newState.TypeInfo.TupleContext, null);
+				if (newState.TypeInfo.TupleContext != null) {
+					newState.TupleContext = new TupleContextInfoWrapper(newState.TypeInfo.TupleContext, null);
+				}
 				if (newState.ValueType != realType && !(newState.TypeInfo.OriginalType.IsValueType && newState.TypeInfo.IsNullable && newState.TypeInfo.ItemType == realType)) {
 					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 					newState.TypeInfo = newTypeInfo;
@@ -346,7 +347,7 @@ namespace IonKiwi.Json {
 						var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 
 						typeInfo = newTypeInfo;
-						tupleContext = new TupleContextInfoWrapper(newTypeInfo.TupleContext, null);
+						tupleContext = newTypeInfo.TupleContext != null ? new TupleContextInfoWrapper(newTypeInfo.TupleContext, null) : null;
 					}
 				}
 
@@ -679,6 +680,9 @@ namespace IonKiwi.Json {
 			private TupleContextInfoWrapper GetNewContext(TupleContextInfoWrapper context, string propertyName, JsonTypeInfo propertyTypeInfo) {
 				var newContext = context?.GetPropertyContext(propertyName);
 				if (newContext == null) {
+					if (propertyTypeInfo.TupleContext == null) {
+						return null;
+					}
 					return new TupleContextInfoWrapper(propertyTypeInfo.TupleContext, null);
 				}
 				newContext.Add(propertyTypeInfo.TupleContext);

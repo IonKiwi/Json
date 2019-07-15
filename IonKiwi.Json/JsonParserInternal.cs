@@ -23,8 +23,7 @@ namespace IonKiwi.Json {
 
 			public JsonInternalParser(JsonParserSettings settings, JsonTypeInfo typeInfo, string[] tupleNames) {
 				_settings = settings;
-				var wrapper = new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames);
-				_currentState.Push(new JsonParserRootState() { TypeInfo = typeInfo, TupleContext = wrapper });
+				_currentState.Push(new JsonParserRootState() { TypeInfo = typeInfo, TupleContext = typeInfo.TupleContext != null ? new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames) : null });
 			}
 
 #if NETCOREAPP2_1 || NETCOREAPP2_2
@@ -780,6 +779,9 @@ namespace IonKiwi.Json {
 			private TupleContextInfoWrapper GetNewContext(TupleContextInfoWrapper context, string propertyName, JsonTypeInfo propertyTypeInfo) {
 				var newContext = context?.GetPropertyContext(propertyName);
 				if (newContext == null) {
+					if (propertyTypeInfo.TupleContext == null) {
+						return null;
+					}
 					return new TupleContextInfoWrapper(propertyTypeInfo.TupleContext, null);
 				}
 				newContext.Add(propertyTypeInfo.TupleContext);

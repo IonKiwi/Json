@@ -20,32 +20,24 @@ namespace IonKiwi.Json {
 	partial class JsonReflection {
 
 		internal sealed class TupleContextInfo {
-			public Dictionary<string, int> PropertyMapping1 = new Dictionary<string, int>(StringComparer.Ordinal);
-			public Dictionary<string, string> PropertyMapping2 = new Dictionary<string, string>(StringComparer.Ordinal);
-			public Dictionary<string, TupleContextInfo> PropertyInfo = new Dictionary<string, TupleContextInfo>(StringComparer.Ordinal);
-
-			public TupleContextInfo Clone() {
-				var clone = new TupleContextInfo();
-				foreach (var kv in this.PropertyMapping1) {
-					clone.PropertyMapping1.Add(kv.Key, kv.Value);
-				}
-				foreach (var kv in this.PropertyMapping2) {
-					clone.PropertyMapping2.Add(kv.Key, kv.Value);
-				}
-				foreach (var kv in this.PropertyInfo) {
-					clone.PropertyInfo.Add(kv.Key, kv.Value.Clone());
-				}
-				return clone;
-			}
+			public Dictionary<string, int> PropertyMapping1 = null;
+			public Dictionary<string, string> PropertyMapping2 = null;
+			public Dictionary<string, TupleContextInfo> PropertyInfo = null;
 		}
 
 		internal sealed class TupleContextInfoWrapper {
 
 			private readonly string[] _tupleNames;
-			private readonly TupleContextInfo _context;
+			private readonly List<(TupleContextInfo context, bool topLevel)> _context;
 
 			public TupleContextInfoWrapper(TupleContextInfo tupleContext, string[] tupleNames) {
-				_context = tupleContext?.Clone() ?? new TupleContextInfo();
+				_context = new List<(TupleContextInfo context, bool topLevel)>();
+				_context.Add((tupleContext, true));
+				_tupleNames = tupleNames;
+			}
+
+			private TupleContextInfoWrapper(List<(TupleContextInfo context, bool topLevel)> context, string[] tupleNames) {
+				_context = context;
 				_tupleNames = tupleNames;
 			}
 
@@ -53,76 +45,66 @@ namespace IonKiwi.Json {
 				if (context == null) {
 					return;
 				}
-
-				Add(this._context, context);
-			}
-
-			private static void Add(TupleContextInfo context1, TupleContextInfo context2) {
-				// only add string based tuple names
 				// index based tuple names are only for top level types / contexts
-
-				foreach (var kv in context2.PropertyMapping2) {
-					if (!context1.PropertyMapping2.TryGetValue(kv.Key, out var vv)) {
-						context1.PropertyMapping2.Add(kv.Key, kv.Value);
-					}
-					else if (!string.Equals(vv, kv.Value, StringComparison.Ordinal)) {
-						throw new InvalidOperationException("TupleContext does not match current context");
-					}
-				}
-
-				foreach (var kv in context2.PropertyInfo) {
-					if (!context1.PropertyInfo.TryGetValue(kv.Key, out var propertyInfo)) {
-						context1.PropertyInfo.Add(kv.Key, kv.Value.Clone());
-					}
-					else {
-						Add(propertyInfo, kv.Value);
-					}
-				}
+				_context.Add((context, false));
 			}
 
 			public TupleContextInfoWrapper GetPropertyContext(string propertyName) {
 
-				if (!_context.PropertyInfo.TryGetValue(propertyName, out var context)) {
+				List<(TupleContextInfo context, bool topLevel)> subContexts = null;
+				foreach (var context in _context) {
+					if (context.context.PropertyInfo != null && context.context.PropertyInfo.TryGetValue(propertyName, out var subContext)) {
+						if (subContexts == null) { subContexts = new List<(TupleContextInfo context, bool topLevel)>(); }
+						subContexts.Add((subContext, context.topLevel));
+					}
+				}
+
+				if (subContexts == null) {
 					return null;
 				}
 
-				TupleContextInfoWrapper wrapper = new TupleContextInfoWrapper(context, this._tupleNames);
-				return wrapper;
+				return new TupleContextInfoWrapper(subContexts, this._tupleNames);
 			}
 
 			public bool TryGetPropertyMapping(string property, out string tupleName) {
-				if (_tupleNames != null && _context.PropertyMapping1.TryGetValue(property, out var index)) {
-					if (index >= _tupleNames.Length) {
-						throw new Exception("Tuple index does not match given tuple names");
+				foreach (var context in _context) {
+					if (_tupleNames != null && context.topLevel && context.context.PropertyMapping1 != null && context.context.PropertyMapping1.TryGetValue(property, out var index)) {
+						if (index >= _tupleNames.Length) {
+							throw new Exception("Tuple index does not match given tuple names");
+						}
+						tupleName = _tupleNames[index];
+						return true;
 					}
-					tupleName = _tupleNames[index];
-					return true;
-				}
-				else if (_context.PropertyMapping2.TryGetValue(property, out var name)) {
-					tupleName = name;
-					return true;
+					else if (context.context.PropertyMapping2 != null && context.context.PropertyMapping2.TryGetValue(property, out var name)) {
+						tupleName = name;
+						return true;
+					}
 				}
 				tupleName = null;
 				return false;
 			}
 
 			public bool TryGetReversePropertyMapping(string tupleName, out string property) {
-				if (_tupleNames != null) {
-					foreach (var kv in _context.PropertyMapping1) {
-						if (kv.Value >= _tupleNames.Length) {
-							throw new Exception("Tuple index does not match given tuple names");
-						}
-						string tempName = _tupleNames[kv.Value];
-						if (string.Equals(tupleName, tempName, StringComparison.Ordinal)) {
-							property = kv.Key;
-							return true;
+				foreach (var context in _context) {
+					if (_tupleNames != null && context.topLevel && context.context.PropertyMapping1 != null) {
+						foreach (var kv in context.context.PropertyMapping1) {
+							if (kv.Value >= _tupleNames.Length) {
+								throw new Exception("Tuple index does not match given tuple names");
+							}
+							string tempName = _tupleNames[kv.Value];
+							if (string.Equals(tupleName, tempName, StringComparison.Ordinal)) {
+								property = kv.Key;
+								return true;
+							}
 						}
 					}
-				}
-				foreach (var kv in _context.PropertyMapping2) {
-					if (string.Equals(kv.Value, tupleName, StringComparison.Ordinal)) {
-						property = kv.Key;
-						return true;
+					if (context.context.PropertyMapping2 != null) {
+						foreach (var kv in context.context.PropertyMapping2) {
+							if (string.Equals(kv.Value, tupleName, StringComparison.Ordinal)) {
+								property = kv.Key;
+								return true;
+							}
+						}
 					}
 				}
 				property = null;
@@ -226,13 +208,17 @@ namespace IonKiwi.Json {
 		}
 
 		private static void HandlePropertyParameter(Type currentType, TupleContextInfo context, string propertyName, TypeLevelTupleInfo tupleTypeInfo) {
+			if (context.PropertyInfo == null) {
+				context.PropertyInfo = new Dictionary<string, TupleContextInfo>(StringComparer.Ordinal);
+			}
 			if (!context.PropertyInfo.TryGetValue(propertyName, out var propertyInfo)) {
 				propertyInfo = new TupleContextInfo();
 				context.PropertyInfo.Add(propertyName, propertyInfo);
 			}
 
 			if (tupleTypeInfo.TupleNames.Count > 0) {
-				if (propertyInfo.PropertyMapping2.Count == 0) {
+				if (propertyInfo.PropertyMapping2 == null) {
+					propertyInfo.PropertyMapping2 = new Dictionary<string, string>(StringComparer.Ordinal);
 					for (int i = 0; i < tupleTypeInfo.TupleNames.Count; i++) {
 						propertyInfo.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleNames[i]);
 					}
@@ -242,7 +228,8 @@ namespace IonKiwi.Json {
 				}
 			}
 			else if (tupleTypeInfo.TupleIndexes.Count > 0) {
-				if (propertyInfo.PropertyMapping1.Count == 0) {
+				if (propertyInfo.PropertyMapping1 == null) {
+					propertyInfo.PropertyMapping1 = new Dictionary<string, int>(StringComparer.Ordinal);
 					for (int i = 0; i < tupleTypeInfo.TupleIndexes.Count; i++) {
 						propertyInfo.PropertyMapping1.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleTypeInfo.TupleIndexes[i]);
 					}
@@ -264,6 +251,10 @@ namespace IonKiwi.Json {
 			for (int i = 0; i < propertyArguments.Length; i++) {
 				var propertyArgument = propertyArguments[i];
 				if (typeInfo.TryGetValue(propertyArgument, out var tupleTypeInfo)) {
+
+					if (context.PropertyInfo == null) {
+						context.PropertyInfo = new Dictionary<string, TupleContextInfo>(StringComparer.Ordinal);
+					}
 
 					if (!context.PropertyInfo.TryGetValue(propertyName, out var propertyInfo)) {
 						propertyInfo = new TupleContextInfo();
@@ -481,6 +472,7 @@ namespace IonKiwi.Json {
 			}
 
 			if (ReflectionUtility.IsTupleType(currentType, out var tupleRank, out var isNullable)) {
+				context.PropertyMapping2 = new Dictionary<string, string>(StringComparer.Ordinal);
 				for (int ii = offset, i = 0; ii < offset + tupleRank; ii++, i++) {
 					context.PropertyMapping2.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), tupleNames.TransformNames[ii]);
 				}
@@ -516,6 +508,9 @@ namespace IonKiwi.Json {
 
 			int offset = 0;
 			if (ReflectionUtility.IsTupleType(rootType, out var tupleRank, out var isNullable)) {
+				if (context.PropertyMapping1 == null) {
+					context.PropertyMapping1 = new Dictionary<string, int>(StringComparer.Ordinal);
+				}
 				for (int i = 0, ii = offset; ii < offset + tupleRank; ii++, i++) {
 					context.PropertyMapping1.Add("Item" + (i + 1).ToString(CultureInfo.InvariantCulture), ii);
 				}
@@ -587,6 +582,9 @@ namespace IonKiwi.Json {
 						if (!f.FieldType.IsGenericType) {
 							throw new Exception($"Expected property '{f.Name}' type '{ReflectionUtility.GetTypeName(f.FieldType)}' to be generic. type: {ReflectionUtility.GetTypeName(rootType)}");
 						}
+						if (context.PropertyInfo == null) {
+							context.PropertyInfo = new Dictionary<string, TupleContextInfo>(StringComparer.Ordinal);
+						}
 						if (!context.PropertyInfo.TryGetValue(f.Name, out var propertyInfo)) {
 							propertyInfo = new TupleContextInfo();
 							context.PropertyInfo.Add(f.Name, propertyInfo);
@@ -595,6 +593,9 @@ namespace IonKiwi.Json {
 					}
 					var typeLevelTupleNames = f.FieldType.GetCustomAttribute<TupleElementNamesAttribute>();
 					if (typeLevelTupleNames != null) {
+						if (context.PropertyInfo == null) {
+							context.PropertyInfo = new Dictionary<string, TupleContextInfo>(StringComparer.Ordinal);
+						}
 						if (!context.PropertyInfo.TryGetValue(f.Name, out var propertyInfo)) {
 							propertyInfo = new TupleContextInfo();
 							context.PropertyInfo.Add(f.Name, propertyInfo);
@@ -608,6 +609,9 @@ namespace IonKiwi.Json {
 						if (!f.PropertyType.IsGenericType) {
 							throw new Exception($"Expected property '{f.Name}' type '{ReflectionUtility.GetTypeName(f.PropertyType)}' to be generic. type: {ReflectionUtility.GetTypeName(rootType)}");
 						}
+						if (context.PropertyInfo == null) {
+							context.PropertyInfo = new Dictionary<string, TupleContextInfo>(StringComparer.Ordinal);
+						}
 						if (!context.PropertyInfo.TryGetValue(f.Name, out var propertyInfo)) {
 							propertyInfo = new TupleContextInfo();
 							context.PropertyInfo.Add(f.Name, propertyInfo);
@@ -616,6 +620,9 @@ namespace IonKiwi.Json {
 					}
 					var typeLevelTupleNames = f.PropertyType.GetCustomAttribute<TupleElementNamesAttribute>();
 					if (typeLevelTupleNames != null) {
+						if (context.PropertyInfo == null) {
+							context.PropertyInfo = new Dictionary<string, TupleContextInfo>(StringComparer.Ordinal);
+						}
 						if (!context.PropertyInfo.TryGetValue(f.Name, out var propertyInfo)) {
 							propertyInfo = new TupleContextInfo();
 							context.PropertyInfo.Add(f.Name, propertyInfo);
