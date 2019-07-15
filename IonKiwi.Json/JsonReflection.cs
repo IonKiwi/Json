@@ -32,6 +32,53 @@ namespace IonKiwi.Json {
 			Untyped,
 		}
 
+		internal enum SimpleValueType {
+			Null,
+			Byte,
+			NullableByte,
+			SignedByte,
+			NullableSignedByte,
+			Char,
+			NullableChar,
+			Short,
+			NullableShort,
+			UnsignedShort,
+			NullableUnsignedShort,
+			Int,
+			NullableInt,
+			UnsignedInt,
+			NullableUnsignedInt,
+			Long,
+			NullableLong,
+			UnsignedLong,
+			NullableUnsignedLong,
+			IntPtr,
+			NullableIntPtr,
+			UnsignedIntPtr,
+			NullableUnsignedIntPtr,
+			Float,
+			NullableFloat,
+			Double,
+			NullableDouble,
+			Decimal,
+			NullableDecimal,
+			BigInteger,
+			NullableBigInteger,
+			String,
+			Bool,
+			NullableBool,
+			DateTime,
+			NullableDateTime,
+			TimeSpan,
+			NullableTimeSpan,
+			Uri,
+			Guid,
+			NullableGuid,
+			ByteArray,
+			Enum,
+			NullableEnum,
+		}
+
 		internal sealed class JsonTypeInfo {
 			public Type OriginalType;
 			public Type RootType;
@@ -39,6 +86,7 @@ namespace IonKiwi.Json {
 			public Type ValueType;
 			public Type ItemType;
 			public bool IsSimpleValue;
+			public SimpleValueType SimpleValueType;
 			public bool IsTuple;
 			public bool IsSingleOrArrayValue;
 			public bool IsNullable = true;
@@ -109,26 +157,124 @@ namespace IonKiwi.Json {
 			return typeInfo;
 		}
 
-		private static bool IsSimpleValue(Type t, out bool isNullable) {
+		private static bool IsSimpleValue(Type t, bool isNullable, out SimpleValueType valueType) {
+
+			if (t == typeof(byte)) {
+				valueType = isNullable ? SimpleValueType.NullableByte : SimpleValueType.Byte;
+				return true;
+			}
+			else if (t == typeof(sbyte)) {
+				valueType = isNullable ? SimpleValueType.NullableSignedByte : SimpleValueType.SignedByte;
+				return true;
+			}
+			else if (t == typeof(Char)) {
+				valueType = isNullable ? SimpleValueType.NullableChar : SimpleValueType.Char;
+				return true;
+			}
+			else if (t == typeof(short)) {
+				valueType = isNullable ? SimpleValueType.NullableShort : SimpleValueType.Short;
+				return true;
+			}
+			else if (t == typeof(ushort)) {
+				valueType = isNullable ? SimpleValueType.NullableUnsignedShort : SimpleValueType.UnsignedShort;
+				return true;
+			}
+			else if (t == typeof(int)) {
+				valueType = isNullable ? SimpleValueType.NullableInt : SimpleValueType.Int;
+				return true;
+			}
+			else if (t == typeof(uint)) {
+				valueType = isNullable ? SimpleValueType.NullableUnsignedInt : SimpleValueType.UnsignedInt;
+				return true;
+			}
+			else if (t == typeof(long)) {
+				valueType = isNullable ? SimpleValueType.NullableLong : SimpleValueType.Long;
+				return true;
+			}
+			else if (t == typeof(ulong)) {
+				valueType = isNullable ? SimpleValueType.NullableUnsignedLong : SimpleValueType.UnsignedLong;
+				return true;
+			}
+			else if (t == typeof(IntPtr)) {
+				valueType = isNullable ? SimpleValueType.NullableIntPtr : SimpleValueType.IntPtr;
+				return true;
+			}
+			else if (t == typeof(UIntPtr)) {
+				valueType = isNullable ? SimpleValueType.NullableUnsignedIntPtr : SimpleValueType.UnsignedIntPtr;
+				return true;
+			}
+			else if (t == typeof(float)) {
+				valueType = isNullable ? SimpleValueType.NullableFloat : SimpleValueType.Float;
+				return true;
+			}
+			else if (t == typeof(double)) {
+				valueType = isNullable ? SimpleValueType.NullableDouble : SimpleValueType.Double;
+				return true;
+			}
+			else if (t == typeof(decimal)) {
+				valueType = isNullable ? SimpleValueType.NullableDecimal : SimpleValueType.Decimal;
+				return true;
+			}
+			else if (t == typeof(BigInteger)) {
+				valueType = isNullable ? SimpleValueType.NullableBigInteger : SimpleValueType.BigInteger;
+				return true;
+			}
+			else if (t == typeof(string)) {
+				valueType = SimpleValueType.String;
+				return true;
+			}
+			else if (t == typeof(bool)) {
+				valueType = isNullable ? SimpleValueType.NullableBool : SimpleValueType.Bool;
+				return true;
+			}
+			else if (t == typeof(DateTime)) {
+				valueType = isNullable ? SimpleValueType.NullableDateTime : SimpleValueType.DateTime;
+				return true;
+			}
+			else if (t == typeof(TimeSpan)) {
+				valueType = isNullable ? SimpleValueType.NullableTimeSpan : SimpleValueType.TimeSpan;
+				return true;
+			}
+			else if (t == typeof(Uri)) {
+				valueType = SimpleValueType.Uri;
+				return true;
+			}
+			else if (t == typeof(Guid)) {
+				valueType = isNullable ? SimpleValueType.NullableGuid : SimpleValueType.Guid;
+				return true;
+			}
+			else if (t == typeof(byte[])) {
+				valueType = SimpleValueType.ByteArray;
+				return true;
+			}
+			else if (t.IsEnum) {
+				valueType = isNullable ? SimpleValueType.NullableEnum : SimpleValueType.Enum;
+				return true;
+			}
+			else {
+				valueType = SimpleValueType.Null;
+				return false;
+			}
+		}
+
+		internal static bool IsSimpleValue(Type t, out bool isNullable, out SimpleValueType valueType) {
 
 			if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Nullable<>)) {
-				bool result = IsSimpleValue(t.GenericTypeArguments[0], out _);
+				bool result = IsSimpleValue(t.GenericTypeArguments[0], true, out valueType);
 				isNullable = true;
 				return result;
 			}
 
-			bool isSimpleValue = (t.IsValueType && t.IsPrimitive) || t == typeof(string) || t == typeof(Uri) || t == typeof(DateTime) ||
-				t == typeof(Decimal) || t == typeof(BigInteger) || t == typeof(TimeSpan) || t.IsEnum || t == typeof(byte[]) ||
-				t == typeof(Guid);
-			isNullable = !t.IsValueType;
-			return isSimpleValue;
+			isNullable = false;
+			return IsSimpleValue(t, false, out valueType);
 		}
 
 		private static JsonTypeInfo CreateTypeInfo(Type t) {
 			var ti = new JsonTypeInfo();
 			ti.RootType = t;
 			ti.OriginalType = t;
-			ti.IsSimpleValue = IsSimpleValue(t, out var isNullable);
+			ti.IsSimpleValue = IsSimpleValue(t, out var isNullable, out var simpleType);
+			ti.SimpleValueType = simpleType;
 
 			if (ti.IsSimpleValue) {
 				ti.ObjectType = JsonObjectType.SimpleValue;

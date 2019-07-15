@@ -1038,7 +1038,7 @@ namespace IonKiwi.Json {
 						UnexpectedToken(token);
 						break;
 					case JsonObjectType.SimpleValue: {
-							object v = GetSimpleValue(reader, reader.Token, typeInfo.RootType);
+							object v = GetSimpleValue(reader, reader.Token, typeInfo.SimpleValueType, typeInfo.RootType);
 							if (typeInfo.FinalizeAction != null) {
 								v = typeInfo.FinalizeAction(v);
 							}

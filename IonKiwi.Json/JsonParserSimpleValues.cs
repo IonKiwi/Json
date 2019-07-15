@@ -382,50 +382,47 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			//private T GetValueAsEnum<T>(JsonReader reader, JsonToken token) where T : struct
-			//{
-			//	switch (token)
-			//	{
+			//private T GetValueAsEnum<T>(JsonReader reader, JsonToken token) where T : struct {
+			//	switch (token) {
 			//		case JsonToken.Null:
 			//			ThrowNonNullableTypeRequested(typeof(T));
 			//			return default(T);
-			//		case JsonToken.String:
-			//		{
-			//			string v = reader.GetValue();
-			//			if (string.IsNullOrEmpty(v)) {
-			//				ThrowEmptyValueNonNullableTypeRequested(typeof(T));
-			//			}
-
-			//			if (ReflectionUtility.TryParseEnum<T>(v, true, out var result)) {
-			//				return result;
-			//			}
-
-			//			ThrowDataDoesNotMatchTypeRequested(v, typeof(T));
-			//			return default(T);
-			//		}
-			//		case JsonToken.Number:
-			//		{
-			//			var enumType = typeof(T);
-			//			var realType = Enum.GetUnderlyingType(enumType);
-			//			var enumValue = GetSimpleValue(reader, token, realType);
-			//			var isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
-
-			//			if (!isFlags) {
-			//				if (Enum.IsDefined(enumType, enumValue)) {
-			//					return (T)Enum.ToObject(enumType, enumValue);
+			//		case JsonToken.String: {
+			//				string v = reader.GetValue();
+			//				if (string.IsNullOrEmpty(v)) {
+			//					ThrowEmptyValueNonNullableTypeRequested(typeof(T));
 			//				}
-			//			}
-			//			else {
-			//				var rev = Enum.ToObject(enumType, enumValue);
-			//				var hasFlag = ReflectionUtility.HasEnumFlag(enumType, rev);
-			//				if (hasFlag) {
-			//					return (T)rev;
-			//				}
-			//			}
 
-			//			ThrowDataDoesNotMatchTypeRequested(reader.GetValue(), typeof(T));
-			//			return default(T);
-			//		}
+			//				if (ReflectionUtility.TryParseEnum<T>(v, true, out var result)) {
+			//					return result;
+			//				}
+
+			//				ThrowDataDoesNotMatchTypeRequested(v, typeof(T));
+			//				return default(T);
+			//			}
+			//		case JsonToken.Number: {
+			//				var enumType = typeof(T);
+			//				var realType = Enum.GetUnderlyingType(enumType);
+			//				JsonReflection.IsSimpleValue(realType, out _, out var realSimpleType);
+			//				var enumValue = GetSimpleValue(reader, token, realSimpleType, realType);
+			//				var isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
+
+			//				if (!isFlags) {
+			//					if (Enum.IsDefined(enumType, enumValue)) {
+			//						return (T)Enum.ToObject(enumType, enumValue);
+			//					}
+			//				}
+			//				else {
+			//					var rev = Enum.ToObject(enumType, enumValue);
+			//					var hasFlag = ReflectionUtility.HasEnumFlag(enumType, rev);
+			//					if (hasFlag) {
+			//						return (T)rev;
+			//					}
+			//				}
+
+			//				ThrowDataDoesNotMatchTypeRequested(reader.GetValue(), typeof(T));
+			//				return default(T);
+			//			}
 			//		default:
 			//			ThrowTokenDoesNotMatchRequestedType(token, typeof(T));
 			//			return default(T);
@@ -452,7 +449,8 @@ namespace IonKiwi.Json {
 						}
 					case JsonToken.Number: {
 							var realType = Enum.GetUnderlyingType(enumType);
-							var enumValue = GetSimpleValue(reader, token, realType);
+							JsonReflection.IsSimpleValue(realType, out _, out var realSimpleType);
+							var enumValue = GetSimpleValue(reader, token, realSimpleType, realType);
 							var isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
 
 							if (!isFlags) {
@@ -477,49 +475,46 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			//private T? GetValueAsNullableEnum<T>(JsonReader reader, JsonToken token) where T : struct
-			//{
-			//	switch (token)
-			//	{
+			//private T? GetValueAsNullableEnum<T>(JsonReader reader, JsonToken token) where T : struct {
+			//	switch (token) {
 			//		case JsonToken.Null:
 			//			return null;
-			//		case JsonToken.String:
-			//		{
-			//			string v = reader.GetValue();
-			//			if (string.IsNullOrEmpty(v)) {
+			//		case JsonToken.String: {
+			//				string v = reader.GetValue();
+			//				if (string.IsNullOrEmpty(v)) {
+			//					return null;
+			//				}
+
+			//				if (ReflectionUtility.TryParseEnum<T>(v, true, out var result)) {
+			//					return result;
+			//				}
+
+			//				ThrowDataDoesNotMatchTypeRequested(v, typeof(T?));
 			//				return null;
 			//			}
+			//		case JsonToken.Number: {
+			//				var enumType = typeof(T);
+			//				var realType = Enum.GetUnderlyingType(enumType);
+			//				JsonReflection.IsSimpleValue(realType, out _, out var realSimpleType);
+			//				var enumValue = GetSimpleValue(reader, token, realSimpleType, realType);
+			//				var isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
 
-			//			if (ReflectionUtility.TryParseEnum<T>(v, true, out var result)) {
-			//				return result;
-			//			}
-
-			//			ThrowDataDoesNotMatchTypeRequested(v, typeof(T?));
-			//			return null;
-			//		}
-			//		case JsonToken.Number:
-			//		{
-			//			var enumType = typeof(T);
-			//			var realType = Enum.GetUnderlyingType(enumType);
-			//			var enumValue = GetSimpleValue(reader, token, realType);
-			//			var isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
-
-			//			if (!isFlags) {
-			//				if (Enum.IsDefined(enumType, enumValue)) {
-			//					return (T)Enum.ToObject(enumType, enumValue);
+			//				if (!isFlags) {
+			//					if (Enum.IsDefined(enumType, enumValue)) {
+			//						return (T)Enum.ToObject(enumType, enumValue);
+			//					}
 			//				}
-			//			}
-			//			else {
-			//				var rev = Enum.ToObject(enumType, enumValue);
-			//				var hasFlag = ReflectionUtility.HasEnumFlag(enumType, rev);
-			//				if (hasFlag) {
-			//					return (T)rev;
+			//				else {
+			//					var rev = Enum.ToObject(enumType, enumValue);
+			//					var hasFlag = ReflectionUtility.HasEnumFlag(enumType, rev);
+			//					if (hasFlag) {
+			//						return (T)rev;
+			//					}
 			//				}
-			//			}
 
-			//			ThrowDataDoesNotMatchTypeRequested(reader.GetValue(), typeof(T?));
-			//			return null;
-			//		}
+			//				ThrowDataDoesNotMatchTypeRequested(reader.GetValue(), typeof(T?));
+			//				return null;
+			//			}
 			//		default:
 			//			ThrowTokenDoesNotMatchRequestedType(token, typeof(T?));
 			//			return null;
@@ -545,7 +540,8 @@ namespace IonKiwi.Json {
 						}
 					case JsonToken.Number: {
 							var realType = Enum.GetUnderlyingType(enumType);
-							var enumValue = GetSimpleValue(reader, token, realType);
+							JsonReflection.IsSimpleValue(realType, out _, out var realSimpleType);
+							var enumValue = GetSimpleValue(reader, token, realSimpleType, realType);
 							var isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
 
 							if (!isFlags) {
@@ -570,74 +566,74 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private object GetSimpleValue(JsonReader reader, JsonToken token, Type expectedValueType) {
-				if (expectedValueType == typeof(int)) {
+			private object GetSimpleValue(JsonReader reader, JsonToken token, SimpleValueType simpleType, Type expectedValueType) {
+				if (simpleType == SimpleValueType.Int) {
 					return GetValueAsInt(reader, token);
 				}
-				else if (expectedValueType == typeof(int?)) {
+				else if (simpleType == SimpleValueType.NullableInt) {
 					return GetValueAsNullableInt(reader, token);
 				}
-				else if (expectedValueType == typeof(long)) {
+				else if (simpleType == SimpleValueType.Long) {
 					return GetValueAsLong(reader, token);
 				}
-				else if (expectedValueType == typeof(long?)) {
+				else if (simpleType == SimpleValueType.NullableLong) {
 					return GetValueAsNullableLong(reader, token);
 				}
-				else if (expectedValueType == typeof(float)) {
+				else if (simpleType == SimpleValueType.Float) {
 					return GetValueAsSingle(reader, token);
 				}
-				else if (expectedValueType == typeof(float?)) {
+				else if (simpleType == SimpleValueType.NullableFloat) {
 					return GetValueAsNullableSingle(reader, token);
 				}
-				else if (expectedValueType == typeof(double)) {
+				else if (simpleType == SimpleValueType.Double) {
 					return GetValueAsDouble(reader, token);
 				}
-				else if (expectedValueType == typeof(double?)) {
+				else if (simpleType == SimpleValueType.NullableDouble) {
 					return GetValueAsNullableDouble(reader, token);
 				}
-				else if (expectedValueType == typeof(BigInteger)) {
+				else if (simpleType == SimpleValueType.BigInteger) {
 					return GetValueAsBigInteger(reader, token);
 				}
-				else if (expectedValueType == typeof(BigInteger?)) {
+				else if (simpleType == SimpleValueType.NullableBigInteger) {
 					return GetValueAsNullableBigInteger(reader, token);
 				}
-				else if (expectedValueType == typeof(string)) {
+				else if (simpleType == SimpleValueType.String) {
 					return GetValueAsString(reader, token);
 				}
-				else if (expectedValueType == typeof(bool)) {
+				else if (simpleType == SimpleValueType.Bool) {
 					return GetValueAsBoolean(reader, token);
 				}
-				else if (expectedValueType == typeof(bool?)) {
+				else if (simpleType == SimpleValueType.NullableBool) {
 					return GetValueAsNullableBoolean(reader, token);
 				}
-				else if (expectedValueType == typeof(DateTime)) {
+				else if (simpleType == SimpleValueType.DateTime) {
 					return GetValueAsDateTime(reader, token);
 				}
-				else if (expectedValueType == typeof(DateTime?)) {
+				else if (simpleType == SimpleValueType.NullableDateTime) {
 					return GetValueAsNullableDateTime(reader, token);
 				}
-				else if (expectedValueType == typeof(TimeSpan)) {
+				else if (simpleType == SimpleValueType.TimeSpan) {
 					return GetValueAsTimeSpan(reader, token);
 				}
-				else if (expectedValueType == typeof(TimeSpan?)) {
+				else if (simpleType == SimpleValueType.NullableTimeSpan) {
 					return GetValueAsNullableTimeSpan(reader, token);
 				}
-				else if (expectedValueType == typeof(Uri)) {
+				else if (simpleType == SimpleValueType.Uri) {
 					return GetValueAsUri(reader, token);
 				}
-				else if (expectedValueType == typeof(Guid)) {
+				else if (simpleType == SimpleValueType.Guid) {
 					return GetValueAsGuid(reader, token);
 				}
-				else if (expectedValueType == typeof(Guid?)) {
+				else if (simpleType == SimpleValueType.NullableGuid) {
 					return GetValueAsNullableGuid(reader, token);
 				}
-				else if (expectedValueType == typeof(byte[])) {
+				else if (simpleType == SimpleValueType.ByteArray) {
 					return GetValueAsByteArray(reader, token);
 				}
-				else if (expectedValueType.IsEnum) {
+				else if (simpleType == SimpleValueType.Enum) {
 					return GetValueAsEnumUntyped(reader, token, expectedValueType);
 				}
-				else if (expectedValueType.IsGenericType && expectedValueType.GetGenericTypeDefinition() == typeof(Nullable<>) && expectedValueType.GenericTypeArguments[0].IsEnum) {
+				else if (simpleType == SimpleValueType.NullableEnum) {
 					return GetValueAsNullableEnumUntyped(reader, token, expectedValueType.GenericTypeArguments[0]);
 				}
 				else {

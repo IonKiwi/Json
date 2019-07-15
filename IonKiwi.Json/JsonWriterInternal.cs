@@ -515,7 +515,8 @@ namespace IonKiwi.Json {
 					return "null";
 				}
 
-				if (typeInfo.RootType.IsEnum) {
+				var simpleType = typeInfo.SimpleValueType;
+				if (simpleType == SimpleValueType.Enum || simpleType == SimpleValueType.NullableEnum) {
 					if (_settings.EnumValuesAsString) {
 						if (!typeInfo.IsFlagsEnum) {
 							string name = Enum.GetName(typeInfo.RootType, value);
@@ -536,51 +537,51 @@ namespace IonKiwi.Json {
 						return WriteSimpleValue(value, JsonReflection.GetTypeInfo(typeInfo.ItemType));
 					}
 				}
-				else if (typeInfo.RootType == typeof(string)) {
+				else if (simpleType == SimpleValueType.String) {
 					return JsonUtility.JavaScriptStringEncode((string)value,
 						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
 						JsonUtility.JavaScriptQuoteMode.Always);
 				}
-				else if (typeInfo.RootType == typeof(bool)) {
+				else if (simpleType == SimpleValueType.Bool || simpleType == SimpleValueType.NullableBool) {
 					if ((bool)value) {
 						return "true";
 					}
 					return "false";
 				}
-				else if (typeInfo.RootType == typeof(Char)) {
+				else if (simpleType == SimpleValueType.Char || simpleType == SimpleValueType.NullableChar) {
 					return string.Empty + (char)value;
 				}
-				else if (typeInfo.RootType == typeof(byte)) {
+				else if (simpleType == SimpleValueType.Byte || simpleType == SimpleValueType.NullableByte) {
 					if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
 						return "0x" + ((byte)value).ToString("x", CultureInfo.InvariantCulture);
 					}
 					return ((byte)value).ToString(CultureInfo.InvariantCulture);
 				}
-				else if (typeInfo.RootType == typeof(sbyte)) {
+				else if (simpleType == SimpleValueType.SignedByte || simpleType == SimpleValueType.NullableSignedByte) {
 					if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
 						return "0x" + ((sbyte)value).ToString("x", CultureInfo.InvariantCulture);
 					}
 					return ((sbyte)value).ToString(CultureInfo.InvariantCulture);
 				}
-				else if (typeInfo.RootType == typeof(Int16)) {
+				else if (simpleType == SimpleValueType.Short || simpleType == SimpleValueType.NullableShort) {
 					return ((Int16)value).ToString(CultureInfo.InvariantCulture);
 				}
-				else if (typeInfo.RootType == typeof(UInt16)) {
+				else if (simpleType == SimpleValueType.UnsignedShort || simpleType == SimpleValueType.NullableUnsignedShort) {
 					return ((UInt16)value).ToString(CultureInfo.InvariantCulture);
 				}
-				else if (typeInfo.RootType == typeof(Int32)) {
+				else if (simpleType == SimpleValueType.Int || simpleType == SimpleValueType.NullableInt) {
 					return ((Int32)value).ToString(CultureInfo.InvariantCulture);
 				}
-				else if (typeInfo.RootType == typeof(UInt32)) {
+				else if (simpleType == SimpleValueType.UnsignedInt || simpleType == SimpleValueType.NullableUnsignedInt) {
 					return ((UInt32)value).ToString(CultureInfo.InvariantCulture);
 				}
-				else if (typeInfo.RootType == typeof(Int64)) {
+				else if (simpleType == SimpleValueType.Long || simpleType == SimpleValueType.NullableLong) {
 					return ((Int64)value).ToString(CultureInfo.InvariantCulture);
 				}
-				else if (typeInfo.RootType == typeof(UInt64)) {
+				else if (simpleType == SimpleValueType.UnsignedLong || simpleType == SimpleValueType.NullableUnsignedLong) {
 					return ((UInt64)value).ToString(CultureInfo.InvariantCulture);
 				}
-				else if (typeInfo.RootType == typeof(IntPtr)) {
+				else if (simpleType == SimpleValueType.IntPtr || simpleType == SimpleValueType.NullableIntPtr) {
 					if (IntPtr.Size == 4) {
 						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
 							return "0x" + ((IntPtr)value).ToInt32().ToString("x4", CultureInfo.InvariantCulture);
@@ -598,7 +599,7 @@ namespace IonKiwi.Json {
 						return null;
 					}
 				}
-				else if (typeInfo.RootType == typeof(UIntPtr)) {
+				else if (simpleType == SimpleValueType.UnsignedIntPtr || simpleType == SimpleValueType.NullableUnsignedIntPtr) {
 					if (UIntPtr.Size == 4) {
 						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
 							return "0x" + ((UIntPtr)value).ToUInt32().ToString("x4", CultureInfo.InvariantCulture);
@@ -616,43 +617,42 @@ namespace IonKiwi.Json {
 						return null;
 					}
 				}
-				else if (typeInfo.RootType == typeof(double)) {
+				else if (simpleType == SimpleValueType.Double || simpleType == SimpleValueType.NullableDouble) {
 					string v = ((double)value).ToString("R", CultureInfo.InvariantCulture);
 					return EnsureDecimal(v);
 				}
-				else if (typeInfo.RootType == typeof(Single)) {
-					// float
+				else if (simpleType == SimpleValueType.Float || simpleType == SimpleValueType.NullableFloat) {
 					string v = ((Single)value).ToString("R", CultureInfo.InvariantCulture);
 					return EnsureDecimal(v);
 				}
-				else if (typeInfo.RootType == typeof(decimal)) {
+				else if (simpleType == SimpleValueType.Decimal || simpleType == SimpleValueType.NullableDecimal) {
 					string v = ((decimal)value).ToString("R", CultureInfo.InvariantCulture);
 					return EnsureDecimal(v);
 				}
-				else if (typeInfo.RootType == typeof(BigInteger)) {
+				else if (simpleType == SimpleValueType.BigInteger || simpleType == SimpleValueType.NullableBigInteger) {
 					string v = ((BigInteger)value).ToString("R", CultureInfo.InvariantCulture);
 					return v;
 				}
-				else if (typeInfo.RootType == typeof(DateTime)) {
+				else if (simpleType == SimpleValueType.DateTime || simpleType == SimpleValueType.NullableDateTime) {
 					var v = JsonUtility.EnsureDateTime((DateTime)value, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
 					char[] chars = new char[64];
 					int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, v, null, v.Kind);
 					//int pos = JsonDateTimeUtility.WriteMicrosoftDateTimeString(chars, 0, value, null, value.Kind);
 					return '"' + new string(chars.Take(pos).ToArray()) + '"';
 				}
-				else if (typeInfo.RootType == typeof(TimeSpan)) {
+				else if (simpleType == SimpleValueType.TimeSpan || simpleType == SimpleValueType.NullableTimeSpan) {
 					return ((TimeSpan)value).Ticks.ToString(CultureInfo.InvariantCulture);
 				}
-				else if (typeInfo.RootType == typeof(Uri)) {
+				else if (simpleType == SimpleValueType.Uri) {
 					return JsonUtility.JavaScriptStringEncode(
 						((Uri)value).OriginalString,
 						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
 						JsonUtility.JavaScriptQuoteMode.Always);
 				}
-				else if (typeInfo.RootType == typeof(Guid)) {
+				else if (simpleType == SimpleValueType.Guid || simpleType == SimpleValueType.NullableGuid) {
 					return '"' + ((Guid)value).ToString("D") + '"';
 				}
-				else if (typeInfo.RootType == typeof(byte[])) {
+				else if (simpleType == SimpleValueType.ByteArray) {
 					return '"' + Convert.ToBase64String((byte[])value) + '"';
 				}
 				else {
