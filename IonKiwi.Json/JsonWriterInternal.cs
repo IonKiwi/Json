@@ -28,7 +28,7 @@ namespace IonKiwi.Json {
 				_currentState.Push(new JsonWriterRootState() { TypeInfo = typeInfo, TupleContext = typeInfo.TupleContext != null ? new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames) : null, Value = value, ValueType = objectType });
 			}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			internal async ValueTask SerializeAsync(TextWriter writer) {
 #else
 			internal async Task SerializeAsync(TextWriter writer) {

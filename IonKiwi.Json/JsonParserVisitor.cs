@@ -12,7 +12,7 @@ namespace IonKiwi.Json {
 	internal interface IJsonParserVisitor {
 		void Initialize(JsonParserSettings parserSettings);
 		bool ParseObject(JsonReader reader, JsonParserContext context);
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context);
 #else
 		Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context);
@@ -46,7 +46,7 @@ namespace IonKiwi.Json {
 			return JsonParser.Parse<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		protected ValueTask<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
 #else
 		protected Task<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
@@ -54,7 +54,7 @@ namespace IonKiwi.Json {
 			return JsonParser.ParseAsync<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		protected abstract ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context);
 #else
 		protected abstract Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context);
@@ -71,7 +71,7 @@ namespace IonKiwi.Json {
 			return ParseObject(reader, context);
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		ValueTask<bool> IJsonParserVisitor.ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #else
 		Task<bool> IJsonParserVisitor.ParseObjectAsync(JsonReader reader, JsonParserContext context) {

@@ -26,7 +26,7 @@ namespace IonKiwi.Json {
 				_currentState.Push(new JsonParserRootState() { TypeInfo = typeInfo, TupleContext = typeInfo.TupleContext != null ? new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames) : null });
 			}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			public async ValueTask HandleTokenAsync(JsonReader reader) {
 #else
 			public async Task HandleTokenAsync(JsonReader reader) {
@@ -124,7 +124,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			private async ValueTask HandleUntypedObjectAsync(JsonReader reader) {
 #else
 			private async Task HandleUntypedObjectAsync(JsonReader reader) {
@@ -164,7 +164,7 @@ namespace IonKiwi.Json {
 				HandleUntypedObjectInternal(reader.GetValue(), false);
 			}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			private async ValueTask HandleUntypedArrayAsync(JsonReader reader) {
 #else
 			private async Task HandleUntypedArrayAsync(JsonReader reader) {
@@ -373,7 +373,7 @@ namespace IonKiwi.Json {
 				return t;
 			}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			private async ValueTask HandleTypeAndVisitorAsync(JsonReader reader, JsonParserInternalState state) {
 #else
 			private async Task HandleTypeAndVisitorAsync(JsonReader reader, JsonParserInternalState state) {
@@ -476,7 +476,7 @@ namespace IonKiwi.Json {
 				HandleToken(reader);
 			}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			private async ValueTask HandleNewTypeAndVisitorAsync(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {
 #else
 			private async Task HandleNewTypeAndVisitorAsync(JsonReader reader, JsonParserInternalState state, Type newType, JsonToken token) {

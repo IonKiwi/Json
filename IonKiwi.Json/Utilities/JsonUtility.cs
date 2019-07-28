@@ -19,7 +19,7 @@ namespace IonKiwi.Json.Utilities {
 
 		private static readonly UTF8Encoding _utf8Encoding = new UTF8Encoding(false);
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		public static async ValueTask<T> ParseAsync<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #else
 		public static async Task<T> ParseAsync<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
@@ -35,7 +35,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		public static async ValueTask<T> ParseAsync<T>(Stream stream, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #else
 		public static async Task<T> ParseAsync<T>(Stream stream, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
@@ -51,7 +51,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		public static async ValueTask SerializeAsync<T>(Stream stream, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 #else
 		public static async Task SerializeAsync<T>(Stream stream, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
@@ -67,7 +67,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		public static async ValueTask<string> SerializeAsync<T>(T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
 #else
 		public static async Task<string> SerializeAsync<T>(T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
@@ -316,7 +316,7 @@ namespace IonKiwi.Json.Utilities {
 			return result;
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		public static async ValueTask<object[]> TryGetValuesByJsonPathAsync(JsonReader reader, params (string path, Type type)[] query) {
 #else
 		public static async Task<object[]> TryGetValuesByJsonPathAsync(JsonReader reader, params (string path, Type type)[] query) {
@@ -347,7 +347,7 @@ namespace IonKiwi.Json.Utilities {
 			return result;
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		public static async ValueTask<object[]> GetValuesByJsonPathAsync(JsonReader reader, params (string path, Type type)[] query) {
 #else
 		public static async Task<object[]> GetValuesByJsonPathAsync(JsonReader reader, params (string path, Type type)[] query) {
@@ -385,7 +385,7 @@ namespace IonKiwi.Json.Utilities {
 			public Dictionary<string, JsonPath> Parts;
 		}
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		private static async ValueTask HandleJsonPathAsync(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
 #else
 		private static async Task HandleJsonPathAsync(JsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {

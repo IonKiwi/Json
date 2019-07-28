@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace IonKiwi.Json {
 	partial class JsonReader {
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		private async ValueTask<bool> ReadDataAsync() {
 #else
 		private async Task<bool> ReadDataAsync() {
@@ -20,7 +20,7 @@ namespace IonKiwi.Json {
 			if (_length - _offset > 0) {
 				return true;
 			}
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			var bs = await _dataReader.ReadBlockAsync(_buffer);
 #else
 			var bs = await _dataReader.ReadBlockAsync(_buffer, 0, _buffer.Length);
@@ -34,7 +34,7 @@ namespace IonKiwi.Json {
 			if (_length - _offset > 0) {
 				return true;
 			}
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			var bs = _dataReader.ReadBlock(_buffer.Span);
 #else
 			var bs = _dataReader.ReadBlock(_buffer, 0, _buffer.Length);

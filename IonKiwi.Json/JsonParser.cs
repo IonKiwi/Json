@@ -22,7 +22,7 @@ namespace IonKiwi.Json {
 			.AddDefaultAssemblyName(typeof(string).Assembly.GetName(false))
 			.Seal();
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 		public static async ValueTask<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #else
 		public static async Task<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {

@@ -27,7 +27,7 @@ namespace IonKiwi.Json.Test {
 			public List<Type> Types { get; } = new List<Type>();
 			public int Count { get; set; }
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			protected override ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #else
 			protected override Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
@@ -196,7 +196,7 @@ namespace IonKiwi.Json.Test {
 			public List<Type> Types { get; } = new List<Type>();
 			public int Count { get; set; }
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			protected override ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #else
 			protected override Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
@@ -527,7 +527,7 @@ namespace IonKiwi.Json.Test {
 			public List<Type> Types { get; } = new List<Type>();
 			public int Count { get; set; }
 
-#if NETCOREAPP2_1 || NETCOREAPP2_2
+#if !NET472
 			protected override ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
 #else
 			protected override Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
