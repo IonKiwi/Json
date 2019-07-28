@@ -36,7 +36,7 @@ namespace IonKiwi.Json {
 				do {
 					var data = SerializeInternal(_currentState.Peek());
 					if (data != null) {
-						await writer.WriteAsync(data);
+						await writer.WriteAsync(data).NoSync();
 					}
 				}
 				while (_currentState.Count > 1);
