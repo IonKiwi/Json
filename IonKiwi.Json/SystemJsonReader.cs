@@ -180,7 +180,7 @@ namespace IonKiwi.Json {
 			return token;
 		}
 
-		public void Read(Func<JsonReader.JsonToken, bool> callback) {
+		public JsonReader.JsonToken Read(Func<JsonReader.JsonToken, bool> callback) {
 			JsonReader.JsonToken token;
 			if (_rewindState != null) {
 				bool cb;
@@ -189,11 +189,11 @@ namespace IonKiwi.Json {
 					cb = callback(token);
 				}
 				while (_rewindState != null && cb);
-				if (!cb) { return; }
+				if (!cb) { return token; }
 			}
 			else if (_complete) {
 				callback(JsonReader.JsonToken.None);
-				return;
+				return JsonReader.JsonToken.None;
 			}
 
 			if (_offset >= _length) {
@@ -269,9 +269,10 @@ namespace IonKiwi.Json {
 				_readerState = reader.CurrentState;
 			}
 			while (callback(token));
+			return token;
 		}
 
-		public async ValueTask ReadAsync(Func<JsonReader.JsonToken, ValueTask<bool>> callback) {
+		public async ValueTask<JsonReader.JsonToken> ReadAsync(Func<JsonReader.JsonToken, ValueTask<bool>> callback) {
 			bool cb;
 			JsonReader.JsonToken token;
 			if (_rewindState != null) {
@@ -280,11 +281,11 @@ namespace IonKiwi.Json {
 					cb = await callback(token).NoSync();
 				}
 				while (_rewindState != null && cb);
-				if (!cb) { return; }
+				if (!cb) { return token; }
 			}
 			else if (_complete) {
 				await callback(JsonReader.JsonToken.None).NoSync();
-				return;
+				return JsonReader.JsonToken.None;
 			}
 
 			if (_offset >= _length) {
@@ -341,6 +342,7 @@ namespace IonKiwi.Json {
 					cb = continuation.Result;
 				}
 			} while (cb);
+			return _token;
 		}
 
 		private bool HandleDataBlock(Func<JsonReader.JsonToken, ValueTask<bool>> callback, out ValueTask<bool> continuation) {
@@ -529,10 +531,7 @@ namespace IonKiwi.Json {
 			var currentToken = Token;
 
 			if (currentToken == JsonReader.JsonToken.Comment) {
-				do {
-					currentToken = Read();
-				}
-				while (currentToken == JsonReader.JsonToken.Comment);
+				currentToken = Read((token2) => token2 == JsonReader.JsonToken.Comment);
 			}
 
 			if (currentToken == JsonReader.JsonToken.ObjectProperty) {
@@ -540,10 +539,7 @@ namespace IonKiwi.Json {
 			}
 
 			if (currentToken == JsonReader.JsonToken.Comment) {
-				do {
-					currentToken = Read();
-				}
-				while (currentToken == JsonReader.JsonToken.Comment);
+				currentToken = Read((token2) => token2 == JsonReader.JsonToken.Comment);
 			}
 
 			if (JsonReader.IsValueToken(currentToken)) {
@@ -569,20 +565,13 @@ namespace IonKiwi.Json {
 
 						var startDepth = Depth;
 
-						do {
-							currentToken = Read();
-							if (currentToken == JsonReader.JsonToken.Comment) {
-								do {
-									currentToken = Read();
-								}
-								while (currentToken == JsonReader.JsonToken.Comment);
-							}
-
+						currentToken = Read((token2) => {
+							if (token2 == JsonReader.JsonToken.Comment) { return true; }
 							var position = stack.Peek();
-							switch (currentToken) {
+							switch (token2) {
 								case JsonReader.JsonToken.None:
 									ThrowMoreDataExpectedException();
-									return null;
+									return false;
 								case JsonReader.JsonToken.ObjectStart:
 								case JsonReader.JsonToken.ArrayStart:
 									stack.Push(new RawPosition());
@@ -600,13 +589,13 @@ namespace IonKiwi.Json {
 										break;
 									}
 							}
-							WriteToken(writer, writeMode, currentToken, position.IsFirst);
+							WriteToken(writer, writeMode, token2, position.IsFirst);
 							position.IsFirst = false;
-							if (position.IsProperty && (currentToken == JsonReader.JsonToken.Boolean || currentToken == JsonReader.JsonToken.Null || currentToken == JsonReader.JsonToken.Number || currentToken == JsonReader.JsonToken.String)) {
+							if (position.IsProperty && (token2 == JsonReader.JsonToken.Boolean || token2 == JsonReader.JsonToken.Null || token2 == JsonReader.JsonToken.Number || token2 == JsonReader.JsonToken.String)) {
 								stack.Pop();
 							}
-						}
-						while (Depth != startDepth);
+							return Depth != startDepth;
+						});
 					}
 					return Encoding.UTF8.GetString(ms.ToArray());
 				}
@@ -625,10 +614,7 @@ namespace IonKiwi.Json {
 			var currentToken = Token;
 
 			if (currentToken == JsonReader.JsonToken.Comment) {
-				do {
-					currentToken = await ReadAsync().NoSync();
-				}
-				while (currentToken == JsonReader.JsonToken.Comment);
+				currentToken = await ReadAsync((token2) => new ValueTask<bool>(token2 == JsonReader.JsonToken.Comment)).NoSync();
 			}
 
 			if (currentToken == JsonReader.JsonToken.ObjectProperty) {
@@ -636,10 +622,7 @@ namespace IonKiwi.Json {
 			}
 
 			if (currentToken == JsonReader.JsonToken.Comment) {
-				do {
-					currentToken = await ReadAsync().NoSync();
-				}
-				while (currentToken == JsonReader.JsonToken.Comment);
+				currentToken = await ReadAsync((token2) => new ValueTask<bool>(token2 == JsonReader.JsonToken.Comment)).NoSync();
 			}
 
 			if (JsonReader.IsValueToken(currentToken)) {
@@ -665,20 +648,13 @@ namespace IonKiwi.Json {
 
 						var startDepth = Depth;
 
-						do {
-							currentToken = await ReadAsync().NoSync();
-							if (currentToken == JsonReader.JsonToken.Comment) {
-								do {
-									currentToken = await ReadAsync().NoSync();
-								}
-								while (currentToken == JsonReader.JsonToken.Comment);
-							}
-
+						currentToken = await ReadAsync((token2) => {
+							if (token2 == JsonReader.JsonToken.Comment) { return new ValueTask<bool>(true); }
 							var position = stack.Peek();
-							switch (currentToken) {
+							switch (token2) {
 								case JsonReader.JsonToken.None:
 									ThrowMoreDataExpectedException();
-									return null;
+									return new ValueTask<bool>(false);
 								case JsonReader.JsonToken.ObjectStart:
 								case JsonReader.JsonToken.ArrayStart:
 									stack.Push(new RawPosition());
@@ -696,13 +672,13 @@ namespace IonKiwi.Json {
 										break;
 									}
 							}
-							WriteToken(writer, writeMode, currentToken, position.IsFirst);
+							WriteToken(writer, writeMode, token2, position.IsFirst);
 							position.IsFirst = false;
-							if (position.IsProperty && (currentToken == JsonReader.JsonToken.Boolean || currentToken == JsonReader.JsonToken.Null || currentToken == JsonReader.JsonToken.Number || currentToken == JsonReader.JsonToken.String)) {
+							if (position.IsProperty && (token2 == JsonReader.JsonToken.Boolean || token2 == JsonReader.JsonToken.Null || token2 == JsonReader.JsonToken.Number || token2 == JsonReader.JsonToken.String)) {
 								stack.Pop();
 							}
-						}
-						while (Depth != startDepth);
+							return new ValueTask<bool>(Depth != startDepth);
+						}).NoSync();
 					}
 					return Encoding.UTF8.GetString(ms.ToArray());
 				}
@@ -811,10 +787,7 @@ namespace IonKiwi.Json {
 		public async ValueTask SkipAsync() {
 			var token = _token;
 			if (token == JsonReader.JsonToken.Comment) {
-				do {
-					token = await ReadAsync().NoSync();
-				}
-				while (token == JsonReader.JsonToken.Comment);
+				token = await ReadAsync((token2) => new ValueTask<bool>(token2 == JsonReader.JsonToken.Comment)).NoSync();
 			}
 
 			if (JsonReader.IsValueToken(token)) {
@@ -823,40 +796,34 @@ namespace IonKiwi.Json {
 			else switch (token) {
 					case JsonReader.JsonToken.ObjectStart: {
 							var depth = Depth;
-							do {
-								token = await ReadAsync().NoSync();
-								if (token == JsonReader.JsonToken.ObjectEnd && depth == Depth) {
-									return;
-								}
+							token = await ReadAsync((token2) => new ValueTask<bool>(token2 != JsonReader.JsonToken.ObjectEnd || depth != Depth)).NoSync();
+							// re-check
+							if (token != JsonReader.JsonToken.ObjectEnd || Depth != depth) {
+								ThrowMoreDataExpectedException();
 							}
-							while (token != JsonReader.JsonToken.None);
-
-							ThrowMoreDataExpectedException();
 							break;
 						}
 					case JsonReader.JsonToken.ArrayStart: {
 							var depth = Depth;
-							do {
-								token = await ReadAsync().NoSync();
-								if (token == JsonReader.JsonToken.ArrayEnd && depth == Depth) {
-									return;
-								}
+							token = await ReadAsync((token2) => new ValueTask<bool>(token2 != JsonReader.JsonToken.ArrayEnd || depth != Depth)).NoSync();
+							// re-check
+							if (token != JsonReader.JsonToken.ArrayEnd || Depth != depth) {
+								ThrowMoreDataExpectedException();
 							}
-							while (token != JsonReader.JsonToken.None);
-
-							ThrowMoreDataExpectedException();
 							break;
 						}
 					case JsonReader.JsonToken.ObjectProperty: {
-							await ReadAsync().NoSync();
-							token = _token;
+							token = await ReadAsync().NoSync();
+							if (token == JsonReader.JsonToken.Comment) {
+								token = await ReadAsync((token2) => new ValueTask<bool>(token2 == JsonReader.JsonToken.Comment)).NoSync();
+							}
 							if (token == JsonReader.JsonToken.ObjectStart || token == JsonReader.JsonToken.ArrayStart) {
 								await SkipAsync().NoSync();
 							}
 							break;
 						}
 					default:
-						ThrowReaderNotSkippablePosition(_token);
+						ThrowReaderNotSkippablePosition(token);
 						break;
 				}
 		}
@@ -864,51 +831,43 @@ namespace IonKiwi.Json {
 		public void Skip() {
 			var token = _token;
 			if (token == JsonReader.JsonToken.Comment) {
-				do {
-					token = Read();
-				}
-				while (token == JsonReader.JsonToken.Comment);
+				token = Read((token2) => token2 == JsonReader.JsonToken.Comment);
 			}
 
 			if (JsonReader.IsValueToken(token)) {
+				return;
 			}
 			else switch (token) {
 					case JsonReader.JsonToken.ObjectStart: {
 							var depth = Depth;
-							do {
-								token = Read();
-								if (token == JsonReader.JsonToken.ObjectEnd && depth == Depth) {
-									return;
-								}
+							token = Read((token2) => token2 != JsonReader.JsonToken.ObjectEnd || depth != Depth);
+							// re-check
+							if (token != JsonReader.JsonToken.ObjectEnd || Depth != depth) {
+								ThrowMoreDataExpectedException();
 							}
-							while (token != JsonReader.JsonToken.None);
-
-							ThrowMoreDataExpectedException();
 							break;
 						}
 					case JsonReader.JsonToken.ArrayStart: {
 							var depth = Depth;
-							do {
-								token = Read();
-								if (token == JsonReader.JsonToken.ArrayEnd && depth == Depth) {
-									return;
-								}
+							token = Read((token2) => token2 != JsonReader.JsonToken.ArrayEnd || depth != Depth);
+							// re-check
+							if (token != JsonReader.JsonToken.ArrayEnd || Depth != depth) {
+								ThrowMoreDataExpectedException();
 							}
-							while (token != JsonReader.JsonToken.None);
-
-							ThrowMoreDataExpectedException();
 							break;
 						}
 					case JsonReader.JsonToken.ObjectProperty: {
-							Read();
-							token = _token;
+							token = Read();
+							if (token == JsonReader.JsonToken.Comment) {
+								token = Read((token2) => token2 == JsonReader.JsonToken.Comment);
+							}
 							if (token == JsonReader.JsonToken.ObjectStart || token == JsonReader.JsonToken.ArrayStart) {
 								Skip();
 							}
 							break;
 						}
 					default:
-						ThrowReaderNotSkippablePosition(_token);
+						ThrowReaderNotSkippablePosition(token);
 						break;
 				}
 		}

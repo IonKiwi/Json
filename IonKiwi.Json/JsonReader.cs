@@ -125,23 +125,25 @@ namespace IonKiwi.Json {
 		}
 
 #if !NET472
-		public async ValueTask ReadAsync(Func<JsonToken, ValueTask<bool>> callback) {
+		public async ValueTask<JsonToken> ReadAsync(Func<JsonToken, ValueTask<bool>> callback) {
 #else
-		public async Task ReadAsync(Func<JsonToken, Task<bool>> callback) {
+		public async Task<JsonToken> ReadAsync(Func<JsonToken, Task<bool>> callback) {
 #endif
 			JsonToken token;
 			do {
 				token = await ReadAsync().NoSync();
 			}
 			while (await callback(token).NoSync() && token != JsonToken.None);
+			return token;
 		}
 
-		public void Read(Func<JsonToken, bool> callback) {
+		public JsonToken Read(Func<JsonToken, bool> callback) {
 			JsonToken token;
 			do {
 				token = Read();
 			}
 			while (callback(token) && token != JsonToken.None);
+			return token;
 		}
 
 		private JsonToken ReplayState() {
@@ -208,15 +210,20 @@ namespace IonKiwi.Json {
 							break;
 						}
 					case JsonToken.ObjectProperty: {
-							await ReadAsync().NoSync();
-							token = _token;
+							token = await ReadAsync().NoSync();
+							if (token == JsonToken.Comment) {
+								do {
+									token = await ReadAsync().NoSync();
+								}
+								while (token == JsonToken.Comment);
+							}
 							if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
 								await SkipAsync().NoSync();
 							}
 							break;
 						}
 					default:
-						ThrowReaderNotSkippablePosition(_token);
+						ThrowReaderNotSkippablePosition(token);
 						break;
 				}
 		}
@@ -260,15 +267,20 @@ namespace IonKiwi.Json {
 							break;
 						}
 					case JsonToken.ObjectProperty: {
-							Read();
-							token = _token;
+							token = Read();
+							if (token == JsonToken.Comment) {
+								do {
+									token = Read();
+								}
+								while (token == JsonToken.Comment);
+							}
 							if (token == JsonToken.ObjectStart || token == JsonToken.ArrayStart) {
 								Skip();
 							}
 							break;
 						}
 					default:
-						ThrowReaderNotSkippablePosition(_token);
+						ThrowReaderNotSkippablePosition(token);
 						break;
 				}
 		}
