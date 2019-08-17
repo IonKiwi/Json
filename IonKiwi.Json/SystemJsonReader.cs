@@ -269,8 +269,6 @@ namespace IonKiwi.Json {
 				_readerState = reader.CurrentState;
 			}
 			while (callback(token));
-			_offset += (checked((int)reader.BytesConsumed) - readeroffset);
-			_readerState = reader.CurrentState;
 		}
 
 		public async ValueTask ReadAsync(Func<JsonReader.JsonToken, ValueTask<bool>> callback) {
@@ -374,8 +372,6 @@ namespace IonKiwi.Json {
 				continuation = callback(token);
 			}
 			while (continuation.IsCompletedSuccessfully && continuation.Result);
-			_offset += (checked((int)reader.BytesConsumed) - readeroffset);
-			_readerState = reader.CurrentState;
 			return true;
 		}
 
