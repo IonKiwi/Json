@@ -1,4 +1,5 @@
-﻿using IonKiwi.Json.Utilities;
+﻿using IonKiwi.Extenions;
+using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,6 +7,12 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+
+#if !NET472
+using PlatformTaskBool = System.Threading.Tasks.ValueTask<bool>;
+#else
+using PlatformTaskBool = System.Threading.Tasks.Task<bool>;
+#endif
 
 namespace IonKiwi.Json.Test {
 	public class VisitorTests {
@@ -27,12 +34,20 @@ namespace IonKiwi.Json.Test {
 			public List<Type> Types { get; } = new List<Type>();
 			public int Count { get; set; }
 
-#if !NET472
-			protected override ValueTask<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
-#else
-			protected override Task<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
-#endif
-				throw new NotImplementedException();
+			protected override async PlatformTaskBool ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
+				if (Mode == 0) {
+					if (context.CurrentType != Types[Count]) {
+						throw new Exception("Unexpected type '" + ReflectionUtility.GetTypeName(context.CurrentType) + "'. expected: " + ReflectionUtility.GetTypeName(Types[Count]));
+					}
+					Count++;
+				}
+				else if (Mode == 1) {
+					context.CurrentObject = await ParseAsync<object>(reader, context.CurrentType).NoSync();
+					Count++;
+					return true;
+				}
+
+				return false;
 			}
 
 			protected override bool ParseObject(IJsonReader reader, JsonParserContext context) {
@@ -196,12 +211,29 @@ namespace IonKiwi.Json.Test {
 			public List<Type> Types { get; } = new List<Type>();
 			public int Count { get; set; }
 
-#if !NET472
-			protected override ValueTask<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
-#else
-			protected override Task<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
-#endif
-				throw new NotImplementedException();
+			protected override async PlatformTaskBool ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
+				if (Mode == 0) {
+					if (context.CurrentType != Types[Count]) {
+						throw new Exception("Unexpected type '" + ReflectionUtility.GetTypeName(context.CurrentType) + "'. expected: " + ReflectionUtility.GetTypeName(Types[Count]));
+					}
+					Count++;
+				}
+				else if (Mode == 1) {
+					Count++;
+					if (Count == 1) {
+						context.CurrentObject = await ParseAsync<object>(reader, context.CurrentType).NoSync();
+						return true;
+					}
+				}
+				else if (Mode == 2) {
+					Count++;
+					if (Count == 2) {
+						context.CurrentObject = await ParseAsync<object>(reader, context.CurrentType).NoSync();
+						return true;
+					}
+				}
+
+				return false;
 			}
 
 			protected override bool ParseObject(IJsonReader reader, JsonParserContext context) {
@@ -527,12 +559,29 @@ namespace IonKiwi.Json.Test {
 			public List<Type> Types { get; } = new List<Type>();
 			public int Count { get; set; }
 
-#if !NET472
-			protected override ValueTask<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
-#else
-			protected override Task<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
-#endif
-				throw new NotImplementedException();
+			protected override async PlatformTaskBool ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
+				if (Mode == 0) {
+					if (context.CurrentType != Types[Count]) {
+						throw new Exception("Unexpected type '" + ReflectionUtility.GetTypeName(context.CurrentType) + "'. expected: " + ReflectionUtility.GetTypeName(Types[Count]));
+					}
+					Count++;
+				}
+				else if (Mode == 1) {
+					Count++;
+					if (Count == 1) {
+						context.CurrentObject = await ParseAsync<object>(reader, context.CurrentType).NoSync();
+						return true;
+					}
+				}
+				else if (Mode == 2) {
+					Count++;
+					if (Count == 2) {
+						context.CurrentObject = await ParseAsync<object>(reader, context.CurrentType).NoSync();
+						return true;
+					}
+				}
+
+				return false;
 			}
 
 			protected override bool ParseObject(IJsonReader reader, JsonParserContext context) {
