@@ -611,7 +611,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
-		public void TesArrayWithObject() {
+		public void TestArrayWithObject() {
 			string json = "[{}]";
 
 			var visitor = new ArrayWithObjectVisitor();
@@ -658,7 +658,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
-		public void TesArrayWithObjectWithType1() {
+		public void TestArrayWithObjectWithType1() {
 			var hostAssembly = typeof(VisitorTests).Assembly.GetName(false);
 			string json = "[{$type:\"IonKiwi.Json.Test.VisitorTests+VisitorObject2, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\"}]";
 
@@ -706,7 +706,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
-		public void TesArrayWithObjectWithType2() {
+		public void TestArrayWithObjectWithType2() {
 			var hostAssembly = typeof(VisitorTests).Assembly.GetName(false);
 			string json = "[\"$type:IonKiwi.Json.Test.VisitorTests+VisitorCollection4, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\",{$type:\"IonKiwi.Json.Test.VisitorTests+VisitorObject2, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\"}]";
 
@@ -765,7 +765,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
-		public void TesArrayWithArray() {
+		public void TestArrayWithArray() {
 			string json = "[[]]";
 
 			var visitor = new ArrayWithObjectVisitor();
@@ -812,7 +812,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
-		public void TesArrayWithArrayWithType1() {
+		public void TestArrayWithArrayWithType1() {
 			var hostAssembly = typeof(VisitorTests).Assembly.GetName(false);
 			string json = "[[\"$type:IonKiwi.Json.Test.VisitorTests+VisitorCollection2, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\"]]";
 
@@ -860,7 +860,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[Fact]
-		public void TesArrayWithArrayWithType2() {
+		public void TestArrayWithArrayWithType2() {
 			var hostAssembly = typeof(VisitorTests).Assembly.GetName(false);
 			string json = "[\"$type:IonKiwi.Json.Test.VisitorTests+VisitorCollection6, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\",[\"$type:IonKiwi.Json.Test.VisitorTests+VisitorCollection2, IonKiwi.Json.Test, Version=" + hostAssembly.Version + ", Culture=neutral, PublicKeyToken=null\"]]";
 
