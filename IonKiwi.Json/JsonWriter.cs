@@ -1097,6 +1097,9 @@ namespace IonKiwi.Json {
 			await _output.WriteAsync('}').NoSync();
 			_requireSeparator = true;
 			_stack.Pop();
+			if (_stack.Peek() == WriterType.ObjectProperty) {
+				_stack.Pop();
+			}
 		}
 
 		public async PlatformTask WriteArrayStartAsync() {
@@ -1120,6 +1123,9 @@ namespace IonKiwi.Json {
 			await _output.WriteAsync(']').NoSync();
 			_requireSeparator = true;
 			_stack.Pop();
+			if (_stack.Peek() == WriterType.ObjectProperty) {
+				_stack.Pop();
+			}
 		}
 
 		public void WriteRaw(string json) {

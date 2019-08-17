@@ -580,6 +580,9 @@ namespace IonKiwi.Json {
 			}
 
 			private async PlatformTask WriteValueAsync(IJsonWriter writer, JsonSerializerValueState state) {
+
+				_currentState.Pop();
+
 				object value = state.Value;
 				var typeInfo = state.TypeInfo;
 				var simpleType = typeInfo.SimpleValueType;
