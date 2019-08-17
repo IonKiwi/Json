@@ -21,9 +21,9 @@ namespace IonKiwi.Json {
 				return true;
 			}
 #if !NET472
-			var bs = await _dataReader.ReadBlockAsync(_buffer);
+			var bs = await _dataReader.ReadBlockAsync(_buffer).NoSync();
 #else
-			var bs = await _dataReader.ReadBlockAsync(_buffer, 0, _buffer.Length);
+			var bs = await _dataReader.ReadBlockAsync(_buffer, 0, _buffer.Length).NoSync();
 #endif
 			_offset = 0;
 			_length = bs;

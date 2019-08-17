@@ -59,7 +59,7 @@ namespace IonKiwi.Json {
 					}
 					await parser.HandleTokenAsync(reader).NoSync();
 					return reader.Depth != startDepth;
-				});
+				}).NoSync();
 
 				if (reader.Token != JsonToken.ObjectEnd) {
 					ThrowInvalidPosition();
@@ -76,7 +76,7 @@ namespace IonKiwi.Json {
 					}
 					await parser.HandleTokenAsync(reader).NoSync();
 					return reader.Depth != startDepth;
-				});
+				}).NoSync();
 
 				if (reader.Token != JsonToken.ArrayEnd) {
 					ThrowInvalidPosition();
@@ -92,7 +92,7 @@ namespace IonKiwi.Json {
 					}
 					await parser.HandleTokenAsync(reader).NoSync();
 					return true;
-				});
+				}).NoSync();
 
 				if (reader.Depth != 0) {
 					ThrowInvalidPosition();

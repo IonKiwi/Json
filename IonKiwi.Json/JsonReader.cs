@@ -133,7 +133,7 @@ namespace IonKiwi.Json {
 			do {
 				token = await ReadAsync().NoSync();
 			}
-			while (await callback(token) && token != JsonToken.None);
+			while (await callback(token).NoSync() && token != JsonToken.None);
 		}
 
 		public void Read(Func<JsonToken, bool> callback) {
