@@ -203,9 +203,18 @@ namespace IonKiwi.Json {
 			}
 
 			var reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+			var readeroffset = 0;
+			var currentoffset = _offset;
 			do {
+
+				// for re-entrancy
+				if (currentoffset != _offset) {
+					reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+					readeroffset = 0;
+				}
+
 				while (!ReadCore(ref reader, reader.IsFinalBlock, out token)) {
-					_offset += checked((int)reader.BytesConsumed);
+					_offset += (checked((int)reader.BytesConsumed) - readeroffset);
 					_readerState = reader.CurrentState;
 
 					int bytesInBuffer = _length - _offset;
@@ -214,6 +223,7 @@ namespace IonKiwi.Json {
 						_length = _stream.Read(_buffer);
 						_offset = 0;
 						reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, 0, _length), _length == 0, _readerState);
+						readeroffset = 0;
 					}
 					else if ((uint)bytesInBuffer > ((uint)_bufferSize / 2)) {
 						// expand buffer
@@ -234,6 +244,7 @@ namespace IonKiwi.Json {
 						_length += bytesInBuffer;
 						_offset = 0;
 						reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, 0, _length), _length == 0, _readerState);
+						readeroffset = 0;
 					}
 					else {
 						Buffer.BlockCopy(_buffer, _offset, _buffer, 0, bytesInBuffer);
@@ -246,11 +257,19 @@ namespace IonKiwi.Json {
 						_length += bytesInBuffer;
 						_offset = 0;
 						reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, 0, _length), _length == 0, _readerState);
+						readeroffset = 0;
 					}
 				}
+
+				// before callback
+				var consumed = checked((int)reader.BytesConsumed);
+				_offset += (consumed - readeroffset);
+				currentoffset = _offset;
+				readeroffset = consumed;
+				_readerState = reader.CurrentState;
 			}
 			while (callback(token));
-			_offset += checked((int)reader.BytesConsumed);
+			_offset += (checked((int)reader.BytesConsumed) - readeroffset);
 			_readerState = reader.CurrentState;
 		}
 
@@ -328,18 +347,34 @@ namespace IonKiwi.Json {
 
 		private bool HandleDataBlock(Func<JsonReader.JsonToken, ValueTask<bool>> callback, out ValueTask<bool> continuation) {
 			var reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+			var readeroffset = 0;
+			var currentoffset = _offset;
 			continuation = default;
 			do {
+
+				// for re-entrancy
+				if (currentoffset != _offset) {
+					reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+					readeroffset = 0;
+				}
+
 				if (!ReadCore(ref reader, reader.IsFinalBlock, out var token)) {
-					_offset += checked((int)reader.BytesConsumed);
+					_offset += (checked((int)reader.BytesConsumed) - readeroffset);
 					_readerState = reader.CurrentState;
 					return false;
 				}
 
+				// before callback
+				var consumed = checked((int)reader.BytesConsumed);
+				_offset += (consumed - readeroffset);
+				currentoffset = _offset;
+				readeroffset = consumed;
+				_readerState = reader.CurrentState;
+				// callback
 				continuation = callback(token);
 			}
 			while (continuation.IsCompletedSuccessfully && continuation.Result);
-			_offset += checked((int)reader.BytesConsumed);
+			_offset += (checked((int)reader.BytesConsumed) - readeroffset);
 			_readerState = reader.CurrentState;
 			return true;
 		}
