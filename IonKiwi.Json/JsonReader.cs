@@ -124,6 +124,26 @@ namespace IonKiwi.Json {
 			return _token = ReadInternal();
 		}
 
+#if !NET472
+		public async ValueTask ReadAsync(Func<JsonToken, ValueTask<bool>> callback) {
+#else
+		public async Task ReadAsync(Func<JsonToken, Task<bool>> callback) {
+#endif
+			JsonToken token;
+			do {
+				token = await ReadAsync().NoSync();
+			}
+			while (await callback(token) && token != JsonToken.None);
+		}
+
+		public void Read(Func<JsonToken, bool> callback) {
+			JsonToken token;
+			do {
+				token = Read();
+			}
+			while (callback(token) && token != JsonToken.None);
+		}
+
 		private JsonToken ReplayState() {
 			var item = _rewindState.Pop();
 			if (_rewindState.Count == 0) {

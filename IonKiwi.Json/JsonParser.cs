@@ -52,16 +52,16 @@ namespace IonKiwi.Json {
 			}
 			else if (currentToken == JsonToken.ObjectStart) {
 				await parser.HandleTokenAsync(reader).NoSync();
-				do {
-					currentToken = await reader.ReadAsync().NoSync();
-					if (currentToken == JsonToken.None) {
+
+				await reader.ReadAsync(async (token2) => {
+					if (token2 == JsonToken.None) {
 						ThowMoreDataExpectedException();
 					}
 					await parser.HandleTokenAsync(reader).NoSync();
-				}
-				while (reader.Depth != startDepth);
+					return reader.Depth != startDepth;
+				});
 
-				if (currentToken != JsonToken.ObjectEnd) {
+				if (reader.Token != JsonToken.ObjectEnd) {
 					ThrowInvalidPosition();
 				}
 
@@ -69,28 +69,35 @@ namespace IonKiwi.Json {
 			}
 			else if (currentToken == JsonToken.ArrayStart) {
 				await parser.HandleTokenAsync(reader).NoSync();
-				do {
-					currentToken = await reader.ReadAsync().NoSync();
-					if (currentToken == JsonToken.None) {
+
+				await reader.ReadAsync(async (token2) => {
+					if (token2 == JsonToken.None) {
 						ThowMoreDataExpectedException();
 					}
 					await parser.HandleTokenAsync(reader).NoSync();
-				}
-				while (reader.Depth != startDepth);
+					return reader.Depth != startDepth;
+				});
 
-				if (currentToken != JsonToken.ArrayEnd) {
+				if (reader.Token != JsonToken.ArrayEnd) {
 					ThrowInvalidPosition();
 				}
 
 				return parser.GetValue<T>();
 			}
 			else if (currentToken == JsonToken.None) {
-				while (await reader.ReadAsync().NoSync() != JsonToken.None) {
+
+				await reader.ReadAsync(async (token2) => {
+					if (token2 == JsonToken.None) {
+						return false;
+					}
 					await parser.HandleTokenAsync(reader).NoSync();
-				}
+					return true;
+				});
+
 				if (reader.Depth != 0) {
 					ThrowInvalidPosition();
 				}
+
 				return parser.GetValue<T>();
 			}
 			else {
@@ -126,16 +133,16 @@ namespace IonKiwi.Json {
 			}
 			else if (currentToken == JsonToken.ObjectStart) {
 				parser.HandleToken(reader);
-				do {
-					currentToken = reader.Read();
-					if (currentToken == JsonToken.None) {
+
+				reader.Read((token2) => {
+					if (token2 == JsonToken.None) {
 						ThowMoreDataExpectedException();
 					}
 					parser.HandleToken(reader);
-				}
-				while (reader.Depth != startDepth);
+					return reader.Depth != startDepth;
+				});
 
-				if (currentToken != JsonToken.ObjectEnd) {
+				if (reader.Token != JsonToken.ObjectEnd) {
 					ThrowInvalidPosition();
 				}
 
@@ -143,28 +150,35 @@ namespace IonKiwi.Json {
 			}
 			else if (currentToken == JsonToken.ArrayStart) {
 				parser.HandleToken(reader);
-				do {
-					currentToken = reader.Read();
-					if (currentToken == JsonToken.None) {
+
+				reader.Read((token2) => {
+					if (token2 == JsonToken.None) {
 						ThowMoreDataExpectedException();
 					}
 					parser.HandleToken(reader);
-				}
-				while (reader.Depth != startDepth);
+					return reader.Depth != startDepth;
+				});
 
-				if (currentToken != JsonToken.ArrayEnd) {
+				if (reader.Token != JsonToken.ArrayEnd) {
 					ThrowInvalidPosition();
 				}
 
 				return parser.GetValue<T>();
 			}
 			else if (currentToken == JsonToken.None) {
-				while (reader.Read() != JsonToken.None) {
+
+				reader.Read((token2) => {
+					if (token2 == JsonToken.None) {
+						return false;
+					}
 					parser.HandleToken(reader);
-				}
+					return true;
+				});
+
 				if (reader.Depth != 0) {
 					ThrowInvalidPosition();
 				}
+
 				return parser.GetValue<T>();
 			}
 			else {

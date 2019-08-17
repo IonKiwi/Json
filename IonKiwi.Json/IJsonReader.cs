@@ -11,12 +11,14 @@ using static IonKiwi.Json.JsonReader;
 
 namespace IonKiwi.Json {
 	public interface IJsonReader {
+
 		JsonToken Token { get; }
 		int Depth { get; }
 		string GetValue();
 		string ReadRaw(JsonWriteMode writeMode = JsonWriteMode.Json);
 		JsonToken Read();
 		void Skip();
+		void Read(Func<JsonToken, bool> callback);
 
 		void RewindReaderPositionForVisitor(JsonToken token);
 		void Unwind();
@@ -25,10 +27,12 @@ namespace IonKiwi.Json {
 		ValueTask SkipAsync();
 		ValueTask<JsonToken> ReadAsync();
 		ValueTask<string> ReadRawAsync(JsonWriteMode writeMode = JsonWriteMode.Json);
+		ValueTask ReadAsync(Func<JsonToken, ValueTask<bool>> callback);
 #else
 		Task SkipAsync();
 		Task<JsonToken> ReadAsync();
 		Task<string> ReadRawAsync(JsonWriteMode writeMode = JsonWriteMode.Json);
+		Task ReadAsync(Func<JsonToken, Task<bool>> callback);
 #endif
 	}
 }

@@ -104,7 +104,6 @@ namespace IonKiwi.Json {
 					// read more data
 					_length = _stream.Read(_buffer.AsSpan(bytesInBuffer));
 					if (_length == 0) {
-						string text = Encoding.UTF8.GetString(_buffer, 0, bytesInBuffer);
 						ThrowMoreDataExpectedException();
 					}
 					_length += bytesInBuffer;
@@ -116,14 +115,12 @@ namespace IonKiwi.Json {
 					// read more data
 					_length = _stream.Read(_buffer.AsSpan(bytesInBuffer));
 					if (_length == 0) {
-						string text = Encoding.UTF8.GetString(_buffer, 0, bytesInBuffer);
 						ThrowMoreDataExpectedException();
 					}
 					_length += bytesInBuffer;
 					_offset = 0;
 				}
 			}
-			_token = token;
 			return token;
 		}
 
@@ -180,8 +177,171 @@ namespace IonKiwi.Json {
 					_offset = 0;
 				}
 			}
-			_token = token;
 			return token;
+		}
+
+		public void Read(Func<JsonReader.JsonToken, bool> callback) {
+			JsonReader.JsonToken token;
+			if (_rewindState != null) {
+				bool cb;
+				do {
+					token = ReplayState();
+					cb = callback(token);
+				}
+				while (_rewindState != null && cb);
+				if (!cb) { return; }
+			}
+			else if (_complete) {
+				callback(JsonReader.JsonToken.None);
+				return;
+			}
+
+			if (_offset >= _length) {
+				EnsureBuffer();
+				_offset = 0;
+				_length = _stream.Read(_buffer);
+			}
+
+			var reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+			do {
+				while (!ReadCore(ref reader, reader.IsFinalBlock, out token)) {
+					_offset += checked((int)reader.BytesConsumed);
+					_readerState = reader.CurrentState;
+
+					int bytesInBuffer = _length - _offset;
+					if (bytesInBuffer == 0) {
+						// read more data
+						_length = _stream.Read(_buffer);
+						_offset = 0;
+						reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, 0, _length), _length == 0, _readerState);
+					}
+					else if ((uint)bytesInBuffer > ((uint)_bufferSize / 2)) {
+						// expand buffer
+						_bufferSize = (_bufferSize < (int.MaxValue / 2)) ? _bufferSize * 2 : int.MaxValue;
+						var buffer2 = ArrayPool<byte>.Shared.Rent(_bufferSize);
+
+						// copy the unprocessed data
+						Buffer.BlockCopy(_buffer, _offset, buffer2, 0, bytesInBuffer);
+
+						ArrayPool<byte>.Shared.Return(_buffer);
+						_buffer = buffer2;
+
+						// read more data
+						_length = _stream.Read(_buffer.AsSpan(bytesInBuffer));
+						if (_length == 0) {
+							ThrowMoreDataExpectedException();
+						}
+						_length += bytesInBuffer;
+						_offset = 0;
+						reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, 0, _length), _length == 0, _readerState);
+					}
+					else {
+						Buffer.BlockCopy(_buffer, _offset, _buffer, 0, bytesInBuffer);
+
+						// read more data
+						_length = _stream.Read(_buffer.AsSpan(bytesInBuffer));
+						if (_length == 0) {
+							ThrowMoreDataExpectedException();
+						}
+						_length += bytesInBuffer;
+						_offset = 0;
+						reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, 0, _length), _length == 0, _readerState);
+					}
+				}
+			}
+			while (callback(token));
+			_offset += checked((int)reader.BytesConsumed);
+			_readerState = reader.CurrentState;
+		}
+
+		public async ValueTask ReadAsync(Func<JsonReader.JsonToken, ValueTask<bool>> callback) {
+			bool cb;
+			JsonReader.JsonToken token;
+			if (_rewindState != null) {
+				do {
+					token = ReplayState();
+					cb = await callback(token).NoSync();
+				}
+				while (_rewindState != null && cb);
+				if (!cb) { return; }
+			}
+			else if (_complete) {
+				await callback(JsonReader.JsonToken.None).NoSync();
+				return;
+			}
+
+			if (_offset >= _length) {
+				EnsureBuffer();
+				_offset = 0;
+				_length = await _stream.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
+			}
+
+			do {
+				ValueTask<bool> continuation;
+				while (!HandleDataBlock(callback, out continuation)) {
+					int bytesInBuffer = _length - _offset;
+					if (bytesInBuffer == 0) {
+						// read more data
+						_length = await _stream.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
+						_offset = 0;
+					}
+					else if ((uint)bytesInBuffer > ((uint)_bufferSize / 2)) {
+						// expand buffer
+						_bufferSize = (_bufferSize < (int.MaxValue / 2)) ? _bufferSize * 2 : int.MaxValue;
+						var buffer2 = ArrayPool<byte>.Shared.Rent(_bufferSize);
+
+						// copy the unprocessed data
+						Buffer.BlockCopy(_buffer, _offset, buffer2, 0, bytesInBuffer);
+
+						ArrayPool<byte>.Shared.Return(_buffer);
+						_buffer = buffer2;
+
+						// read more data
+						_length = await _stream.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
+						if (_length == 0) {
+							ThrowMoreDataExpectedException();
+						}
+						_length += bytesInBuffer;
+						_offset = 0;
+					}
+					else {
+						// copy the unprocessed data
+						Buffer.BlockCopy(_buffer, _offset, _buffer, 0, bytesInBuffer);
+
+						// read more data
+						_length = await _stream.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
+						if (_length == 0) {
+							ThrowMoreDataExpectedException();
+						}
+						_length += bytesInBuffer;
+						_offset = 0;
+					}
+				}
+				if (!continuation.IsCompletedSuccessfully) {
+					cb = await continuation.NoSync();
+				}
+				else {
+					cb = continuation.Result;
+				}
+			} while (cb);
+		}
+
+		private bool HandleDataBlock(Func<JsonReader.JsonToken, ValueTask<bool>> callback, out ValueTask<bool> continuation) {
+			var reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+			continuation = default;
+			do {
+				if (!ReadCore(ref reader, reader.IsFinalBlock, out var token)) {
+					_offset += checked((int)reader.BytesConsumed);
+					_readerState = reader.CurrentState;
+					return false;
+				}
+
+				continuation = callback(token);
+			}
+			while (continuation.IsCompletedSuccessfully && continuation.Result);
+			_offset += checked((int)reader.BytesConsumed);
+			_readerState = reader.CurrentState;
+			return true;
 		}
 
 		private JsonReader.JsonToken ReplayState() {
@@ -266,6 +426,13 @@ namespace IonKiwi.Json {
 
 		private bool ReadCore(ReadOnlySpan<byte> bytes, bool isFinalBlock, out JsonReader.JsonToken token) {
 			var reader = new Utf8JsonReader(bytes, isFinalBlock, _readerState);
+			var result = ReadCore(ref reader, isFinalBlock, out token);
+			_offset += checked((int)reader.BytesConsumed);
+			_readerState = reader.CurrentState;
+			return result;
+		}
+
+		private bool ReadCore(ref Utf8JsonReader reader, bool isFinalBlock, out JsonReader.JsonToken token) {
 			var result = reader.Read();
 			if (result) {
 				token = FromSystemToken(reader.TokenType);
@@ -314,10 +481,12 @@ namespace IonKiwi.Json {
 					PrepareStack(token);
 					result = true;
 					_complete = true;
+					if (_length > _offset + checked((int)reader.BytesConsumed)) {
+						ThrowUnexpectedDataException();
+					}
 				}
 			}
-			_offset += checked((int)reader.BytesConsumed);
-			_readerState = reader.CurrentState;
+			_token = token;
 			return result;
 		}
 
@@ -719,6 +888,10 @@ namespace IonKiwi.Json {
 
 		private static void ThrowMoreDataExpectedException() {
 			throw new JsonReader.MoreDataExpectedException();
+		}
+
+		private static void ThrowUnexpectedDataException() {
+			throw new JsonReader.UnexpectedDataException();
 		}
 
 		private static void ThrowInvalidJson(string json) {
