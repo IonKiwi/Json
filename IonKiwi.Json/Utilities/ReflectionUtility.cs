@@ -696,13 +696,13 @@ namespace IonKiwi.Json.Utilities {
 			return v;
 		}
 
-		public static string GetTypeName(Type t, JsonWriterSettings settings) {
+		public static string GetTypeName(Type t, JsonSerializerSettings settings) {
 			StringBuilder sb = new StringBuilder();
 			GetTypeName(sb, t, settings);
 			return sb.ToString();
 		}
 
-		private static void GetTypeName(StringBuilder sb, Type t, JsonWriterSettings settings) {
+		private static void GetTypeName(StringBuilder sb, Type t, JsonSerializerSettings settings) {
 			bool isPartial = IsInDefaultAssemblyVersion(t, settings) || IsInDefaultAssemblyName(t, settings);
 
 			bool isGenericType = t.IsGenericType && !t.IsGenericTypeDefinition;
@@ -731,7 +731,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-		private static void AddGenericParameters(StringBuilder sb, Type t, JsonWriterSettings settings) {
+		private static void AddGenericParameters(StringBuilder sb, Type t, JsonSerializerSettings settings) {
 			sb.Append('[');
 			Type[] arguments = t.GetGenericArguments();
 			for (int i = 0; i < arguments.Length; i++) {
@@ -751,7 +751,7 @@ namespace IonKiwi.Json.Utilities {
 			sb.Append(']');
 		}
 
-		private static bool IsInDefaultAssemblyVersion(Type t, JsonWriterSettings settings) {
+		private static bool IsInDefaultAssemblyVersion(Type t, JsonSerializerSettings settings) {
 			if (settings.DefaultAssemblyName == null) {
 				return false;
 			}
@@ -759,7 +759,7 @@ namespace IonKiwi.Json.Utilities {
 			return (asmName.Version == settings.DefaultAssemblyName.Version && CommonUtility.AreByteArraysEqual(asmName.GetPublicKeyToken(), settings.DefaultAssemblyName.PublicKeyTokenBytes));
 		}
 
-		private static bool IsInDefaultAssemblyName(Type t, JsonWriterSettings settings) {
+		private static bool IsInDefaultAssemblyName(Type t, JsonSerializerSettings settings) {
 			var asmName = t.Assembly.GetName(false);
 			if (settings.DefaultAssemblyNames.TryGetValue(asmName.Name, out var partialName)) {
 				return (asmName.Version == partialName.Version && CommonUtility.AreByteArraysEqual(asmName.GetPublicKeyToken(), partialName.GetPublicKeyToken()));

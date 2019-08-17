@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace IonKiwi.Json {
-	partial class JsonWriter {
+	partial class JsonSerializer {
 		private static void ThrowExpectedLowSurrogateForHighSurrogate() {
 			throw new Exception("Expected low surrogate for high surrogate");
 		}

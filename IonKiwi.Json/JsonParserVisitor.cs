@@ -11,11 +11,11 @@ using System.Threading.Tasks;
 namespace IonKiwi.Json {
 	internal interface IJsonParserVisitor {
 		void Initialize(JsonParserSettings parserSettings);
-		bool ParseObject(JsonReader reader, JsonParserContext context);
+		bool ParseObject(IJsonReader reader, JsonParserContext context);
 #if !NET472
-		ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context);
+		ValueTask<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context);
 #else
-		Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context);
+		Task<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context);
 #endif
 	}
 
@@ -42,39 +42,39 @@ namespace IonKiwi.Json {
 
 		protected JsonParserSettings ParserSettings => _parserSettings;
 
-		protected T Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		protected T Parse<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null) {
 			return JsonParser.Parse<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
 		}
 
 #if !NET472
-		protected ValueTask<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		protected ValueTask<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null) {
 #else
-		protected Task<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		protected Task<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null) {
 #endif
 			return JsonParser.ParseAsync<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
 		}
 
 #if !NET472
-		protected abstract ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context);
+		protected abstract ValueTask<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context);
 #else
-		protected abstract Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context);
+		protected abstract Task<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context);
 #endif
 
-		protected abstract bool ParseObject(JsonReader reader, JsonParserContext context);
+		protected abstract bool ParseObject(IJsonReader reader, JsonParserContext context);
 
 		void IJsonParserVisitor.Initialize(JsonParserSettings parserSettings) {
 			_parserSettings = parserSettings.Clone();
 			_parserSettings.Visitor = null;
 		}
 
-		bool IJsonParserVisitor.ParseObject(JsonReader reader, JsonParserContext context) {
+		bool IJsonParserVisitor.ParseObject(IJsonReader reader, JsonParserContext context) {
 			return ParseObject(reader, context);
 		}
 
 #if !NET472
-		ValueTask<bool> IJsonParserVisitor.ParseObjectAsync(JsonReader reader, JsonParserContext context) {
+		ValueTask<bool> IJsonParserVisitor.ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
 #else
-		Task<bool> IJsonParserVisitor.ParseObjectAsync(JsonReader reader, JsonParserContext context) {
+		Task<bool> IJsonParserVisitor.ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
 #endif
 			return ParseObjectAsync(reader, context);
 		}

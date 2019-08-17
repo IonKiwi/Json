@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace IonKiwi.Json {
-	public partial class JsonReader {
+	public partial class JsonReader : IJsonReader {
 		private readonly TextReader _dataReader;
 
 		private readonly Stack<JsonInternalState> _currentState = new Stack<JsonInternalState>();
@@ -134,7 +134,7 @@ namespace IonKiwi.Json {
 			return item.token;
 		}
 
-		internal void Unwind() {
+		void IJsonReader.Unwind() {
 			do {
 				var item = _rewindState.Pop();
 				item.action();
@@ -484,7 +484,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		internal void RewindReaderPositionForVisitor(JsonToken tokenType) {
+		void IJsonReader.RewindReaderPositionForVisitor(JsonToken tokenType) {
 			if (!(tokenType == JsonToken.ObjectStart || tokenType == JsonToken.ArrayStart)) {
 				ThrowTokenShouldBeObjectStartOrArrayStart(tokenType);
 			}

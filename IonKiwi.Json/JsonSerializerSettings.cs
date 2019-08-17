@@ -24,16 +24,11 @@ namespace IonKiwi.Json {
 		internal byte[] PublicKeyTokenBytes { get; }
 	}
 
-	public enum JsonWriteMode {
-		Json,
-		ECMAScript
-	}
-
-	public sealed class JsonWriterSettings : ISealable {
+	public sealed class JsonSerializerSettings : ISealable {
 		private bool _locked;
 		private readonly Dictionary<string, AssemblyName> _defaultAssemblyNames = new Dictionary<string, AssemblyName>(StringComparer.OrdinalIgnoreCase);
 
-		public JsonWriterSettings() {
+		public JsonSerializerSettings() {
 
 		}
 
@@ -48,7 +43,7 @@ namespace IonKiwi.Json {
 
 		internal IReadOnlyDictionary<string, AssemblyName> DefaultAssemblyNames => _defaultAssemblyNames;
 
-		public JsonWriterSettings AddDefaultAssemblyName(AssemblyName name) {
+		public JsonSerializerSettings AddDefaultAssemblyName(AssemblyName name) {
 			EnsureUnlocked();
 
 			string key = name.Name;
@@ -69,47 +64,11 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		private bool _enumValuesAsString = true;
-		public bool EnumValuesAsString {
-			get => _enumValuesAsString;
-			set {
-				EnsureUnlocked();
-				_enumValuesAsString = value;
-			}
-		}
-
-		private DateTimeHandling _dateTimeHandling;
-		public DateTimeHandling DateTimeHandling {
-			get => _dateTimeHandling;
-			set {
-				EnsureUnlocked();
-				_dateTimeHandling = value;
-			}
-		}
-
-		private UnspecifiedDateTimeHandling _unspecifiedDateTimeHandling;
-		public UnspecifiedDateTimeHandling UnspecifiedDateTimeHandling {
-			get => _unspecifiedDateTimeHandling;
-			set {
-				EnsureUnlocked();
-				_unspecifiedDateTimeHandling = value;
-			}
-		}
-
-		private JsonWriteMode _writeMode;
-		public JsonWriteMode JsonWriteMode {
-			get => _writeMode;
-			set {
-				EnsureUnlocked();
-				_writeMode = value;
-			}
-		}
-
 		private void EnsureUnlocked() {
 			if (_locked) { throw new InvalidOperationException("Object is sealed"); }
 		}
 
-		public JsonWriterSettings Seal() {
+		public JsonSerializerSettings Seal() {
 			_locked = true;
 			return this;
 		}
@@ -120,7 +79,7 @@ namespace IonKiwi.Json {
 
 		public bool IsSealed => _locked;
 
-		public JsonWriterSettings With(Action<JsonWriterSettings> settings) {
+		public JsonSerializerSettings With(Action<JsonSerializerSettings> settings) {
 			var v = this;
 			if (_locked) {
 				v = Clone();
@@ -129,12 +88,8 @@ namespace IonKiwi.Json {
 			return v;
 		}
 
-		public JsonWriterSettings Clone() {
-			var clone = new JsonWriterSettings();
-			clone.JsonWriteMode = this.JsonWriteMode;
-			clone.DateTimeHandling = this.DateTimeHandling;
-			clone.UnspecifiedDateTimeHandling = this.UnspecifiedDateTimeHandling;
-			clone.EnumValuesAsString = this.EnumValuesAsString;
+		public JsonSerializerSettings Clone() {
+			var clone = new JsonSerializerSettings();
 			clone.DefaultAssemblyName = this.DefaultAssemblyName;
 			foreach (var kv in this._defaultAssemblyNames) {
 				clone._defaultAssemblyNames.Add(kv.Key, kv.Value);

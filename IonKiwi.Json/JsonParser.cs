@@ -23,9 +23,9 @@ namespace IonKiwi.Json {
 			.Seal();
 
 #if !NET472
-		public static async ValueTask<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static async ValueTask<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #else
-		public static async Task<T> ParseAsync<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static async Task<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #endif
 
 			if (objectType == null) {
@@ -99,7 +99,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public static T Parse<T>(JsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static T Parse<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 
 			if (objectType == null) {
 				objectType = typeof(T);

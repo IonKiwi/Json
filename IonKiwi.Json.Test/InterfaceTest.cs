@@ -39,12 +39,12 @@ namespace IonKiwi.Json.Test {
 			var v = new Object1();
 			v.Value = new Object2();
 
-			var jws = JsonWriter.DefaultSettings.Clone();
-			jws.DefaultAssemblyName = new JsonDefaultAssemblyVersion(typeof(InterfaceTest).Assembly.GetName(false));
+			var jss = JsonSerializer.DefaultSettings.Clone();
+			jss.DefaultAssemblyName = new JsonDefaultAssemblyVersion(typeof(InterfaceTest).Assembly.GetName(false));
 
 			StringBuilder sb = new StringBuilder();
 			using (var w = new StringWriter(sb)) {
-				JsonWriter.Serialize(w, v, writerSettings: jws);
+				JsonSerializer.Serialize(new JsonWriter(w), v, serializerSettings: jss);
 			}
 			var json = sb.ToString();
 
@@ -54,7 +54,7 @@ namespace IonKiwi.Json.Test {
 			v.Value = new Object3() { Value = 42 };
 			sb = new StringBuilder();
 			using (var w = new StringWriter(sb)) {
-				JsonWriter.Serialize(w, v, writerSettings: jws);
+				JsonSerializer.Serialize(new JsonWriter(w), v, serializerSettings: jss);
 			}
 			json = sb.ToString();
 			Assert.Equal("{\"Value\":{\"$type\":\"IonKiwi.Json.Test.InterfaceTest+Object3, IonKiwi.Json.Test\",\"Value\":42}}", json);
@@ -87,12 +87,12 @@ namespace IonKiwi.Json.Test {
 
 			var v = new Object4() { Value = 42 };
 
-			var jws = JsonWriter.DefaultSettings.Clone();
-			jws.DefaultAssemblyName = new JsonDefaultAssemblyVersion(typeof(InterfaceTest).Assembly.GetName(false));
+			var jss = JsonSerializer.DefaultSettings.Clone();
+			jss.DefaultAssemblyName = new JsonDefaultAssemblyVersion(typeof(InterfaceTest).Assembly.GetName(false));
 
 			StringBuilder sb = new StringBuilder();
 			using (var w = new StringWriter(sb)) {
-				JsonWriter.Serialize<IInterface2>(w, v, writerSettings: jws);
+				JsonSerializer.Serialize<IInterface2>(new JsonWriter(w), v, serializerSettings: jss);
 			}
 			var json = sb.ToString();
 			Assert.Equal("{\"$type\":\"IonKiwi.Json.Test.InterfaceTest+Object4, IonKiwi.Json.Test\",\"Value\":42}", json);

@@ -14,33 +14,30 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace IonKiwi.Json {
-	public static partial class JsonWriter {
-		public static JsonWriterSettings DefaultSettings { get; } = new JsonWriterSettings() {
-			DateTimeHandling = DateTimeHandling.Utc,
-			UnspecifiedDateTimeHandling = UnspecifiedDateTimeHandling.AssumeLocal
-		}
+	public static partial class JsonSerializer {
+		public static JsonSerializerSettings DefaultSettings { get; } = new JsonSerializerSettings()
 			.AddDefaultAssemblyName(typeof(string).Assembly.GetName(false))
 			.Seal();
 
 #if !NET472
-		public static async ValueTask SerializeAsync<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static async ValueTask SerializeAsync<T>(IJsonWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null) {
 #else
-		public static async Task SerializeAsync<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static async Task SerializeAsync<T>(IJsonWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null) {
 #endif
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
 			var realType = object.ReferenceEquals(null, value) ? objectType : value.GetType();
-			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(realType), tupleNames);
+			JsonSerializerInternal jsonWriter = new JsonSerializerInternal(serializerSettings ?? DefaultSettings, writerSettings ?? JsonWriter.DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(realType), tupleNames);
 			await jsonWriter.SerializeAsync(writer).NoSync();
 		}
 
-		public static void Serialize<T>(TextWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonWriterSettings writerSettings = null) {
+		public static void Serialize<T>(IJsonWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null) {
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
 			var realType = object.ReferenceEquals(null, value) ? objectType : value.GetType();
-			JsonWriterInternal jsonWriter = new JsonWriterInternal(writerSettings ?? DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(realType), tupleNames);
+			JsonSerializerInternal jsonWriter = new JsonSerializerInternal(serializerSettings ?? DefaultSettings, writerSettings ?? JsonWriter.DefaultSettings, value, objectType, JsonReflection.GetTypeInfo(realType), tupleNames);
 			jsonWriter.Serialize(writer);
 		}
 

@@ -142,8 +142,8 @@ namespace IonKiwi.Json.Test {
 			var key = new TestComplexKey2() { X1 = "test1", X2 = "test2" };
 			v.Add(key, new Object2());
 
-			var jws = JsonWriter.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
-			string json = JsonUtility.Serialize(v, writerSettings: jws);
+			var jss = JsonSerializer.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
+			string json = JsonUtility.Serialize(v, serializerSettings: jss);
 			Assert.Equal("[{\"Key\":{\"$type\":\"IonKiwi.Json.Test.TypeAllowedTests+TestComplexKey2, IonKiwi.Json.Test\",\"X1\":\"test1\",\"X2\":\"test2\"},\"Value\":{\"$type\":\"IonKiwi.Json.Test.TypeAllowedTests+Object2, IonKiwi.Json.Test\"}}]", json);
 
 			var jps = JsonParser.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
@@ -162,8 +162,8 @@ namespace IonKiwi.Json.Test {
 			var v = new CustomDictionary2();
 			v.Add("test1", new Object2());
 
-			var jws = JsonWriter.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
-			string json = JsonUtility.Serialize(v, writerSettings: jws);
+			var jss = JsonSerializer.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
+			string json = JsonUtility.Serialize(v, serializerSettings: jss);
 			Assert.Equal("{\"test1\":{\"$type\":\"IonKiwi.Json.Test.TypeAllowedTests+Object2, IonKiwi.Json.Test\"}}", json);
 
 			var jps = JsonParser.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
@@ -182,8 +182,8 @@ namespace IonKiwi.Json.Test {
 			var v = new Object3();
 			v.Value1 = new Object2();
 
-			var jws = JsonWriter.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
-			string json = JsonUtility.Serialize(v, writerSettings: jws);
+			var jss = JsonSerializer.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
+			string json = JsonUtility.Serialize(v, serializerSettings: jss);
 			Assert.Equal("{\"Value1\":{\"$type\":\"IonKiwi.Json.Test.TypeAllowedTests+Object2, IonKiwi.Json.Test\"}}", json);
 
 			var jps = JsonParser.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
@@ -201,8 +201,8 @@ namespace IonKiwi.Json.Test {
 			var v = new Collection1();
 			v.Add(new Object2());
 
-			var jws = JsonWriter.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
-			string json = JsonUtility.Serialize(v, writerSettings: jws);
+			var jss = JsonSerializer.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();
+			string json = JsonUtility.Serialize(v, serializerSettings: jss);
 			Assert.Equal("[{\"$type\":\"IonKiwi.Json.Test.TypeAllowedTests+Object2, IonKiwi.Json.Test\"}]", json);
 
 			var jps = JsonParser.DefaultSettings.Clone().AddDefaultAssemblyName(typeof(TypeAllowedTests).Assembly.GetName(false)).Seal();

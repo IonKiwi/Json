@@ -28,14 +28,14 @@ namespace IonKiwi.Json.Test {
 			public int Count { get; set; }
 
 #if !NET472
-			protected override ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
+			protected override ValueTask<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
 #else
-			protected override Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
+			protected override Task<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
 #endif
 				throw new NotImplementedException();
 			}
 
-			protected override bool ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override bool ParseObject(IJsonReader reader, JsonParserContext context) {
 				if (Mode == 0) {
 					if (context.CurrentType != Types[Count]) {
 						throw new Exception("Unexpected type '" + ReflectionUtility.GetTypeName(context.CurrentType) + "'. expected: " + ReflectionUtility.GetTypeName(Types[Count]));
@@ -197,14 +197,14 @@ namespace IonKiwi.Json.Test {
 			public int Count { get; set; }
 
 #if !NET472
-			protected override ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
+			protected override ValueTask<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
 #else
-			protected override Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
+			protected override Task<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
 #endif
 				throw new NotImplementedException();
 			}
 
-			protected override bool ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override bool ParseObject(IJsonReader reader, JsonParserContext context) {
 				if (Mode == 0) {
 					if (context.CurrentType != Types[Count]) {
 						throw new Exception("Unexpected type '" + ReflectionUtility.GetTypeName(context.CurrentType) + "'. expected: " + ReflectionUtility.GetTypeName(Types[Count]));
@@ -528,14 +528,14 @@ namespace IonKiwi.Json.Test {
 			public int Count { get; set; }
 
 #if !NET472
-			protected override ValueTask<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
+			protected override ValueTask<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
 #else
-			protected override Task<bool> ParseObjectAsync(JsonReader reader, JsonParserContext context) {
+			protected override Task<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
 #endif
 				throw new NotImplementedException();
 			}
 
-			protected override bool ParseObject(JsonReader reader, JsonParserContext context) {
+			protected override bool ParseObject(IJsonReader reader, JsonParserContext context) {
 				if (Mode == 0) {
 					if (context.CurrentType != Types[Count]) {
 						throw new Exception("Unexpected type '" + ReflectionUtility.GetTypeName(context.CurrentType) + "'. expected: " + ReflectionUtility.GetTypeName(Types[Count]));

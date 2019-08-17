@@ -298,7 +298,7 @@ namespace IonKiwi.Json.Test {
 			var tupleNames = t.ReturnParameter.GetCustomAttribute<TupleElementNamesAttribute>().TransformNames.ToArray();
 			StringBuilder sb = new StringBuilder();
 			using (var w = new StringWriter(sb)) {
-				JsonWriter.Serialize(w, result, tupleNames: tupleNames);
+				JsonSerializer.Serialize(new JsonWriter(w), result, tupleNames: tupleNames);
 			}
 			var json = sb.ToString();
 			var expectedJson = "[{\"Key\":{\"item1\":{\"item2\":1,\"item3\":2},\"item4\":{\"item6\":3,\"item5\":4}},\"Value\":{\"item7\":5,\"item8\":6}}]";
@@ -328,7 +328,7 @@ namespace IonKiwi.Json.Test {
 			testObject.Result = ("x1", "x2");
 			StringBuilder sb = new StringBuilder();
 			using (var w = new StringWriter(sb)) {
-				JsonWriter.Serialize(w, testObject);
+				JsonSerializer.Serialize(new JsonWriter(w), testObject);
 			}
 			var json = sb.ToString();
 			Assert.Equal("{\"result\":{\"name\":\"x1\",\"value\":\"x2\"}}", json);
@@ -354,7 +354,7 @@ namespace IonKiwi.Json.Test {
 			testObject.Result = ("x1", (1, 2));
 			StringBuilder sb = new StringBuilder();
 			using (var w = new StringWriter(sb)) {
-				JsonWriter.Serialize(w, testObject);
+				JsonSerializer.Serialize(new JsonWriter(w), testObject);
 			}
 			var json = sb.ToString();
 			Assert.Equal("{\"result\":{\"x\":\"x1\",\"y\":{\"z1\":1,\"z2\":2}}}", json);

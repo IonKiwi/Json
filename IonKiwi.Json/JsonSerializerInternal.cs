@@ -16,74 +16,154 @@ using System.Text;
 using System.Threading.Tasks;
 using static IonKiwi.Json.JsonReflection;
 
-namespace IonKiwi.Json {
-	partial class JsonWriter {
-		private sealed partial class JsonWriterInternal {
-
-			private readonly JsonWriterSettings _settings;
-			private readonly Stack<JsonWriterInternalState> _currentState = new Stack<JsonWriterInternalState>();
-
-			public JsonWriterInternal(JsonWriterSettings settings, object value, Type objectType, JsonTypeInfo typeInfo, string[] tupleNames) {
-				_settings = settings;
-				_currentState.Push(new JsonWriterRootState() { TypeInfo = typeInfo, TupleContext = typeInfo.TupleContext != null ? new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames) : null, Value = value, ValueType = objectType });
-			}
-
-#if !NET472
-			internal async ValueTask SerializeAsync(TextWriter writer) {
+#if NET472
+using PlatformTask = System.Threading.Tasks.Task;
 #else
-			internal async Task SerializeAsync(TextWriter writer) {
+using PlatformTask = System.Threading.Tasks.ValueTask;
 #endif
+
+namespace IonKiwi.Json {
+	partial class JsonSerializer {
+		private sealed partial class JsonSerializerInternal {
+
+			private readonly JsonSerializerSettings _serializerSettings;
+			private readonly JsonWriterSettings _writerSettings;
+			private readonly Stack<JsonSerializerInternalState> _currentState = new Stack<JsonSerializerInternalState>();
+
+			public JsonSerializerInternal(JsonSerializerSettings serializerSettings, JsonWriterSettings writerSettings, object value, Type objectType, JsonTypeInfo typeInfo, string[] tupleNames) {
+				_serializerSettings = serializerSettings;
+				_writerSettings = writerSettings;
+				_currentState.Push(new JsonSerializerRootState() { TypeInfo = typeInfo, TupleContext = typeInfo.TupleContext != null ? new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames) : null, Value = value, ValueType = objectType });
+			}
+
+			internal async PlatformTask SerializeAsync(IJsonWriter writer) {
 				do {
-					var data = SerializeInternal(_currentState.Peek());
-					if (data != null) {
-						await writer.WriteAsync(data).NoSync();
+					var token = SerializeInternal(_currentState.Peek());
+					if (token == JsonSerializerToken.ObjectStart) {
+						await writer.WriteObjectStartAsync().NoSync();
+						var state = _currentState.Peek();
+						if (state is JsonSerializerObjectState objectState && objectState.EmitType) {
+							await writer.WritePropertyNameAsync("$type").NoSync();
+							await writer.WriteStringValueAsync(ReflectionUtility.GetTypeName(objectState.TypeInfo.OriginalType, _serializerSettings)).NoSync();
+						}
+						else if (state is JsonSerializerStringDictionaryState dictionaryState && dictionaryState.EmitType) {
+							await writer.WritePropertyNameAsync("$type").NoSync();
+							await writer.WriteStringValueAsync(ReflectionUtility.GetTypeName(dictionaryState.TypeInfo.OriginalType, _serializerSettings)).NoSync();
+						}
+					}
+					else if (token == JsonSerializerToken.ObjectEnd) {
+						await writer.WriteObjectEndAsync().NoSync();
+					}
+					else if (token == JsonSerializerToken.ArrayStart) {
+						await writer.WriteArrayStartAsync().NoSync();
+						var state = _currentState.Peek();
+						if (state is JsonSerializerArrayState arrayState && arrayState.EmitType) {
+							await writer.WriteStringValueAsync("$type:" + ReflectionUtility.GetTypeName(arrayState.TypeInfo.OriginalType, _serializerSettings)).NoSync();
+						}
+						else if (state is JsonSerializerDictionaryState dictionaryState && dictionaryState.EmitType) {
+							await writer.WriteStringValueAsync("$type:" + ReflectionUtility.GetTypeName(dictionaryState.TypeInfo.OriginalType, _serializerSettings)).NoSync();
+						}
+					}
+					else if (token == JsonSerializerToken.ArrayEnd) {
+						await writer.WriteArrayEndAsync().NoSync();
+					}
+					else if (token == JsonSerializerToken.Property) {
+						await WritePropertyAsync(writer, (JsonSerializerObjectPropertyState)_currentState.Peek()).NoSync();
+					}
+					else if (token == JsonSerializerToken.Value) {
+						await WriteValueAsync(writer, (JsonSerializerValueState)_currentState.Peek()).NoSync();
+					}
+					else if (token == JsonSerializerToken.Raw) {
+						await writer.WriteRawAsync((string)((JsonSerializerValueState)_currentState.Peek()).Value).NoSync();
+					}
+					else if (token == JsonSerializerToken.EmptyArray) {
+						await writer.WriteArrayStartAsync().NoSync();
+						await writer.WriteArrayEndAsync().NoSync();
 					}
 				}
 				while (_currentState.Count > 1);
 			}
 
-			internal void Serialize(TextWriter writer) {
+			internal void Serialize(IJsonWriter writer) {
 				do {
-					var data = SerializeInternal(_currentState.Peek());
-					if (data != null) {
-						writer.Write(data);
+					var token = SerializeInternal(_currentState.Peek());
+					if (token == JsonSerializerToken.ObjectStart) {
+						writer.WriteObjectStart();
+						var state = _currentState.Peek();
+						if (state is JsonSerializerObjectState objectState && objectState.EmitType) {
+							writer.WritePropertyName("$type");
+							writer.WriteStringValue(ReflectionUtility.GetTypeName(objectState.TypeInfo.OriginalType, _serializerSettings));
+						}
+						else if (state is JsonSerializerStringDictionaryState dictionaryState && dictionaryState.EmitType) {
+							writer.WritePropertyName("$type");
+							writer.WriteStringValue(ReflectionUtility.GetTypeName(dictionaryState.TypeInfo.OriginalType, _serializerSettings));
+						}
+					}
+					else if (token == JsonSerializerToken.ObjectEnd) {
+						writer.WriteObjectEnd();
+					}
+					else if (token == JsonSerializerToken.ArrayStart) {
+						writer.WriteArrayStart();
+						var state = _currentState.Peek();
+						if (state is JsonSerializerArrayState arrayState && arrayState.EmitType) {
+							writer.WriteStringValue("$type:" + ReflectionUtility.GetTypeName(arrayState.TypeInfo.OriginalType, _serializerSettings));
+						}
+						else if (state is JsonSerializerDictionaryState dictionaryState && dictionaryState.EmitType) {
+							writer.WriteStringValue("$type:" + ReflectionUtility.GetTypeName(dictionaryState.TypeInfo.OriginalType, _serializerSettings));
+						}
+					}
+					else if (token == JsonSerializerToken.ArrayEnd) {
+						writer.WriteArrayEnd();
+					}
+					else if (token == JsonSerializerToken.Property) {
+						WriteProperty(writer, (JsonSerializerObjectPropertyState)_currentState.Peek());
+					}
+					else if (token == JsonSerializerToken.Value) {
+						WriteValue(writer, (JsonSerializerValueState)_currentState.Peek());
+					}
+					else if (token == JsonSerializerToken.Raw) {
+						writer.WriteRaw((string)((JsonSerializerValueState)_currentState.Peek()).Value);
+					}
+					else if (token == JsonSerializerToken.EmptyArray) {
+						writer.WriteArrayStart();
+						writer.WriteArrayEnd();
 					}
 				}
 				while (_currentState.Count > 1);
 			}
 
-			private string SerializeInternal(JsonWriterInternalState state) {
-				if (state is JsonWriterRootState rootState) {
+			private JsonSerializerToken SerializeInternal(JsonSerializerInternalState state) {
+				if (state is JsonSerializerRootState rootState) {
 					return HandleValue(rootState, rootState.Value, rootState.ValueType, rootState.TypeInfo, rootState.TupleContext);
 				}
-				else if (state is JsonWriterObjectState objectState) {
+				else if (state is JsonSerializerObjectState objectState) {
 					return HandleObject(objectState);
 				}
-				else if (state is JsonWriterObjectPropertyState propertyState) {
+				else if (state is JsonSerializerObjectPropertyState propertyState) {
 					return HandleObjectProperty(propertyState);
 				}
-				else if (state is JsonWriterArrayState arrayState) {
+				else if (state is JsonSerializerArrayState arrayState) {
 					return HandleArray(arrayState);
 				}
-				else if (state is JsonWriterArrayItemState arrayItemState) {
+				else if (state is JsonSerializerArrayItemState arrayItemState) {
 					return HandleArrayItem(arrayItemState);
 				}
-				else if (state is JsonWriterStringDictionaryState stringDictionaryState) {
+				else if (state is JsonSerializerStringDictionaryState stringDictionaryState) {
 					return HandleStringDictionary(stringDictionaryState);
 				}
-				else if (state is JsonWriterDictionaryState dictionaryState) {
+				else if (state is JsonSerializerDictionaryState dictionaryState) {
 					return HandleArrayDictionary(dictionaryState);
 				}
-				else if (state is JsonWriterCustomObjectState customObjectState) {
+				else if (state is JsonSerializerCustomObjectState customObjectState) {
 					return HandleCustomObject(customObjectState);
 				}
 				else {
 					ThrowUnhandledType(state.GetType());
-					return null;
+					return JsonSerializerToken.None;
 				}
 			}
 
-			private string HandleObject(JsonWriterObjectState state) {
+			private JsonSerializerToken HandleObject(JsonSerializerObjectState state) {
 
 				if (!state.Properties.MoveNext()) {
 					state.Properties.Dispose();
@@ -93,19 +173,14 @@ namespace IonKiwi.Json {
 						cb(state.Value);
 					}
 
-					return "}";
+					return JsonSerializerToken.ObjectEnd;
 				}
 
 				var currentProperty = state.Properties.Current;
 				var propertyValue = currentProperty.Getter(state.Value);
 				if (!currentProperty.EmitNullValue && object.ReferenceEquals(null, propertyValue)) {
 					// skip
-					return null;
-				}
-
-				string prefix = !state.IsFirst ? "," : string.Empty;
-				if (state.IsFirst) {
-					state.IsFirst = false;
+					return JsonSerializerToken.None;
 				}
 
 				string propertyName = currentProperty.Name;
@@ -113,8 +188,9 @@ namespace IonKiwi.Json {
 					propertyName = newName;
 				}
 
-				var newState = new JsonWriterObjectPropertyState();
+				var newState = new JsonSerializerObjectPropertyState();
 				newState.Parent = state;
+				newState.PropertyName = propertyName;
 				newState.PropertyInfo = currentProperty;
 				newState.Value = propertyValue;
 				newState.ValueType = currentProperty.PropertyType;
@@ -128,22 +204,19 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return prefix + JsonUtility.JavaScriptStringEncode(propertyName,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptQuoteMode.Always : JsonUtility.JavaScriptQuoteMode.WhenRequired) + ':';
+				return JsonSerializerToken.Property;
 			}
 
-			private string HandleObjectProperty(JsonWriterObjectPropertyState state) {
+			private JsonSerializerToken HandleObjectProperty(JsonSerializerObjectPropertyState state) {
 				if (state.Processed) {
 					_currentState.Pop();
-					return null;
+					return JsonSerializerToken.None;
 				}
 				state.Processed = true;
-				var data = HandleValue(state, state.Value, state.ValueType, state.TypeInfo, state.TupleContext);
-				return data;
+				return HandleValue(state, state.Value, state.ValueType, state.TypeInfo, state.TupleContext);
 			}
 
-			private string HandleArray(JsonWriterArrayState state) {
+			private JsonSerializerToken HandleArray(JsonSerializerArrayState state) {
 
 				if (!state.Items.MoveNext()) {
 					if (state.Items is IDisposable disposable) {
@@ -157,11 +230,11 @@ namespace IonKiwi.Json {
 
 					if (state.IsSingleOrArrayValue) {
 						if (state.IsFirst) {
-							return "[]";
+							return JsonSerializerToken.EmptyArray;
 						}
-						return null;
+						return JsonSerializerToken.None;
 					}
-					return "]";
+					return JsonSerializerToken.ArrayEnd;
 				}
 
 				var currentItem = state.Items.Current;
@@ -169,12 +242,13 @@ namespace IonKiwi.Json {
 					if (state.Items.MoveNext()) {
 						// multiple items
 						state.IsSingleOrArrayValue = false;
+						state.EmitType = false;
 						state.Items.Reset();
-						return "[";
+						return JsonSerializerToken.ArrayStart;
 					}
 				}
 
-				var newState = new JsonWriterArrayItemState();
+				var newState = new JsonSerializerArrayItemState();
 				newState.Parent = state;
 				newState.Value = currentItem;
 				newState.ValueType = state.TypeInfo.ItemType;
@@ -190,22 +264,21 @@ namespace IonKiwi.Json {
 				_currentState.Push(newState);
 				if (state.IsFirst) {
 					state.IsFirst = false;
-					return null;
+					return JsonSerializerToken.None;
 				}
-				return ",";
+				return JsonSerializerToken.None;
 			}
 
-			private string HandleArrayItem(JsonWriterArrayItemState state) {
+			private JsonSerializerToken HandleArrayItem(JsonSerializerArrayItemState state) {
 				if (state.Processed) {
 					_currentState.Pop();
-					return null;
+					return JsonSerializerToken.None;
 				}
 				state.Processed = true;
-				var data = HandleValue(state, state.Value, state.ValueType, state.TypeInfo, state.TupleContext);
-				return data;
+				return HandleValue(state, state.Value, state.ValueType, state.TypeInfo, state.TupleContext);
 			}
 
-			private string HandleStringDictionary(JsonWriterStringDictionaryState state) {
+			private JsonSerializerToken HandleStringDictionary(JsonSerializerStringDictionaryState state) {
 
 				if (!state.Items.MoveNext()) {
 					if (state.Items is IDisposable disposable) {
@@ -217,15 +290,10 @@ namespace IonKiwi.Json {
 						cb(state.Value);
 					}
 
-					return "}";
+					return JsonSerializerToken.ObjectEnd;
 				}
 
 				var currentProperty = state.Items.Current;
-				string prefix = !state.IsFirst ? "," : string.Empty;
-				if (state.IsFirst) {
-					state.IsFirst = false;
-				}
-
 				object key = state.TypeInfo.GetKeyFromKeyValuePair(currentProperty);
 				object value = state.TypeInfo.GetValueFromKeyValuePair(currentProperty);
 				string propertyName;
@@ -240,9 +308,10 @@ namespace IonKiwi.Json {
 						propertyName = string.Join(", ", ReflectionUtility.GetUniqueFlags((Enum)key).Select(x => Enum.GetName(state.TypeInfo.KeyType, x)));
 					}
 				}
-				var newState = new JsonWriterObjectPropertyState();
+				var newState = new JsonSerializerObjectPropertyState();
 				newState.Parent = state;
 				newState.Value = value;
+				newState.PropertyName = propertyName;
 				newState.ValueType = state.TypeInfo.ValueType;
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
 				newState.TypeInfo = JsonReflection.GetTypeInfo(state.TypeInfo.ValueType);
@@ -254,12 +323,10 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return prefix + JsonUtility.JavaScriptStringEncode(propertyName,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptQuoteMode.Always : JsonUtility.JavaScriptQuoteMode.WhenRequired) + ':';
+				return JsonSerializerToken.Property;
 			}
 
-			private string HandleArrayDictionary(JsonWriterDictionaryState state) {
+			private JsonSerializerToken HandleArrayDictionary(JsonSerializerDictionaryState state) {
 
 				if (!state.Items.MoveNext()) {
 					if (state.Items is IDisposable disposable) {
@@ -271,12 +338,12 @@ namespace IonKiwi.Json {
 						cb(state.Value);
 					}
 
-					return "]";
+					return JsonSerializerToken.ArrayEnd;
 				}
 
 				var currentProperty = state.Items.Current;
 
-				var newState = new JsonWriterArrayItemState();
+				var newState = new JsonSerializerArrayItemState();
 				newState.Parent = state;
 				newState.Value = currentProperty;
 				newState.ValueType = state.TypeInfo.ItemType;
@@ -285,33 +352,26 @@ namespace IonKiwi.Json {
 				newState.TupleContext = state.TupleContext;
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				if (state.IsFirst) {
-					state.IsFirst = false;
-					return null;
-				}
-				return ",";
+				return JsonSerializerToken.None;
 			}
 
-			private string HandleCustomObject(JsonWriterCustomObjectState state) {
+			private JsonSerializerToken HandleCustomObject(JsonSerializerCustomObjectState state) {
 
 				if (!state.Items.MoveNext()) {
 					if (state.Items is IDisposable disposable) {
 						disposable.Dispose();
 					}
 					_currentState.Pop();
-					return "}";
+					return JsonSerializerToken.ObjectEnd;
 				}
 
 				var currentProperty = (JsonWriterProperty)state.Items.Current;
-				string prefix = !state.IsFirst ? "," : string.Empty;
-				if (state.IsFirst) {
-					state.IsFirst = false;
-				}
 
-				var newState = new JsonWriterObjectPropertyState();
+				var newState = new JsonSerializerObjectPropertyState();
 				newState.Parent = state;
 				newState.Value = currentProperty.Value;
 				newState.ValueType = currentProperty.ValueType;
+				newState.PropertyName = currentProperty.Name;
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
 				newState.TypeInfo = JsonReflection.GetTypeInfo(currentProperty.ValueType);
 				if (newState.TypeInfo.TupleContext != null) {
@@ -324,19 +384,17 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return prefix + JsonUtility.JavaScriptStringEncode(currentProperty.Name,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptQuoteMode.Always : JsonUtility.JavaScriptQuoteMode.WhenRequired) + ':';
+				return JsonSerializerToken.Property;
 			}
 
-			private string HandleValue(JsonWriterInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
+			private JsonSerializerToken HandleValue(JsonSerializerInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
 
-				if (!state.WriteValueCallbackCalled && _settings.WriteValueCallback != null) {
+				if (!state.WriteValueCallbackCalled && _serializerSettings.WriteValueCallback != null) {
 					JsonWriterWriteValueCallbackArgs e = new JsonWriterWriteValueCallbackArgs();
 					IJsonWriterWriteValueCallbackArgs e2 = e;
 					e2.Value = value;
 					e2.InputType = objectType;
-					_settings.WriteValueCallback(e);
+					_serializerSettings.WriteValueCallback(e);
 
 					if (e2.ReplaceValue) {
 						state.WriteValueCallbackCalled = true;
@@ -352,14 +410,24 @@ namespace IonKiwi.Json {
 				}
 
 				if (object.ReferenceEquals(null, value)) {
-					return "null";
+					JsonSerializerValueState valueState = new JsonSerializerValueState();
+					valueState.Parent = state;
+					valueState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+					valueState.Value = null;
+					_currentState.Push(valueState);
+					return JsonSerializerToken.Value;
 				}
 
 				switch (typeInfo.ObjectType) {
 					case JsonObjectType.Raw:
-						return ((RawJson)value).Json;
+						JsonSerializerValueState valueState = new JsonSerializerValueState();
+						valueState.Parent = state;
+						valueState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+						valueState.Value = ((RawJson)value).Json;
+						_currentState.Push(valueState);
+						return JsonSerializerToken.Raw;
 					case JsonObjectType.Object: {
-							var objectState = new JsonWriterObjectState();
+							var objectState = new JsonSerializerObjectState();
 							objectState.Parent = state;
 							objectState.Value = value;
 							objectState.Properties = typeInfo.Properties.Values.OrderBy(z => z.Order1).ThenBy(z => z.Order2).GetEnumerator();
@@ -379,7 +447,7 @@ namespace IonKiwi.Json {
 									emitType = false;
 								}
 							}
-							if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+							if (state is JsonSerializerObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
 								if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
 									emitType = true;
 								}
@@ -387,26 +455,23 @@ namespace IonKiwi.Json {
 									emitType = false;
 								}
 							}
-							if (emitType) {
-								objectState.IsFirst = false;
-								return "{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"";
-							}
-							return "{";
+							objectState.EmitType = emitType;
+							return JsonSerializerToken.ObjectStart;
 						}
 					case JsonObjectType.Array when typeInfo.ItemType == typeof(JsonWriterProperty): {
-							var customState = new JsonWriterCustomObjectState();
+							var customState = new JsonSerializerCustomObjectState();
 							customState.Parent = state;
 							customState.Value = value;
 							customState.Items = typeInfo.EnumerateMethod(value);
 							customState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 							_currentState.Push(customState);
-							return "{";
+							return JsonSerializerToken.ObjectStart;
 						}
 					case JsonObjectType.Array: {
-							var propertyState = state as JsonWriterObjectPropertyState;
+							var propertyState = state as JsonSerializerObjectPropertyState;
 							var singleOrArrayValue = typeInfo.IsSingleOrArrayValue || (propertyState != null && propertyState.PropertyInfo != null && propertyState.PropertyInfo.IsSingleOrArrayValue);
 
-							var arrayState = new JsonWriterArrayState();
+							var arrayState = new JsonSerializerArrayState();
 							arrayState.Parent = state;
 							arrayState.Value = value;
 							arrayState.Items = typeInfo.EnumerateMethod(value);
@@ -422,7 +487,7 @@ namespace IonKiwi.Json {
 
 							if (singleOrArrayValue) {
 								// no $type support
-								return null;
+								return JsonSerializerToken.None;
 							}
 
 							bool emitType = typeInfo.OriginalType != objectType;
@@ -434,16 +499,13 @@ namespace IonKiwi.Json {
 									emitType = false;
 								}
 							}
-							if (emitType) {
-								arrayState.IsFirst = false;
-								return "[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"";
-							}
-							return "[";
+							arrayState.EmitType = emitType;
+							return JsonSerializerToken.ArrayStart;
 						}
 					case JsonObjectType.Dictionary: {
-							bool isStringDictionary = typeInfo.KeyType == typeof(string) || (typeInfo.IsEnumDictionary && _settings.EnumValuesAsString);
+							bool isStringDictionary = typeInfo.KeyType == typeof(string) || (typeInfo.IsEnumDictionary && _writerSettings.EnumValuesAsString);
 							if (isStringDictionary) {
-								var objectState = new JsonWriterStringDictionaryState();
+								var objectState = new JsonSerializerStringDictionaryState();
 								objectState.Parent = state;
 								objectState.Value = value;
 								objectState.Items = typeInfo.EnumerateMethod(value);
@@ -457,7 +519,7 @@ namespace IonKiwi.Json {
 								}
 
 								bool emitType = typeInfo.OriginalType != objectType;
-								if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+								if (state is JsonSerializerObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
 									if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
 										emitType = true;
 									}
@@ -465,14 +527,11 @@ namespace IonKiwi.Json {
 										emitType = false;
 									}
 								}
-								if (emitType) {
-									objectState.IsFirst = false;
-									return "{\"$type\":\"" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"";
-								}
-								return "{";
+								objectState.EmitType = emitType;
+								return JsonSerializerToken.ObjectStart;
 							}
 							else {
-								var arrayState = new JsonWriterDictionaryState();
+								var arrayState = new JsonSerializerDictionaryState();
 								arrayState.Parent = state;
 								arrayState.Value = value;
 								arrayState.Items = typeInfo.EnumerateMethod(value);
@@ -486,7 +545,7 @@ namespace IonKiwi.Json {
 								}
 
 								bool emitType = typeInfo.OriginalType != objectType;
-								if (state is JsonWriterObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+								if (state is JsonSerializerObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
 									if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
 										emitType = true;
 									}
@@ -494,187 +553,205 @@ namespace IonKiwi.Json {
 										emitType = false;
 									}
 								}
-								if (emitType) {
-									arrayState.IsFirst = false;
-									return "[\"$type:" + ReflectionUtility.GetTypeName(typeInfo.OriginalType, _settings) + "\"";
-								}
-								return "[";
+								arrayState.EmitType = emitType;
+								return JsonSerializerToken.ArrayStart;
 							}
 						}
 					case JsonObjectType.SimpleValue:
-						return WriteSimpleValue(value, typeInfo);
+						valueState = new JsonSerializerValueState();
+						valueState.Parent = state;
+						valueState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+						valueState.Value = value;
+						valueState.TypeInfo = typeInfo;
+						_currentState.Push(valueState);
+						return JsonSerializerToken.Value;
 					default:
 						ThrowNotImplementedException();
-						return null;
+						return JsonSerializerToken.None;
 				}
 			}
 
-			private string WriteSimpleValue(object value, JsonTypeInfo typeInfo) {
+			private async PlatformTask WritePropertyAsync(IJsonWriter writer, JsonSerializerObjectPropertyState state) {
+				await writer.WritePropertyNameAsync(state.PropertyName).NoSync();
+			}
 
-				if (object.ReferenceEquals(null, value)) {
-					return "null";
-				}
+			private void WriteProperty(IJsonWriter writer, JsonSerializerObjectPropertyState state) {
+				writer.WritePropertyName(state.PropertyName);
+			}
 
+			private async PlatformTask WriteValueAsync(IJsonWriter writer, JsonSerializerValueState state) {
+				object value = state.Value;
+				var typeInfo = state.TypeInfo;
 				var simpleType = typeInfo.SimpleValueType;
-				if (simpleType == SimpleValueType.Enum || simpleType == SimpleValueType.NullableEnum) {
-					if (_settings.EnumValuesAsString) {
-						if (!typeInfo.IsFlagsEnum) {
-							string name = Enum.GetName(typeInfo.RootType, value);
-							return JsonUtility.JavaScriptStringEncode(
-								name,
-								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-								JsonUtility.JavaScriptQuoteMode.Always);
-						}
-						else {
-							string name = string.Join(", ", ReflectionUtility.GetUniqueFlags((Enum)value).Select(x => Enum.GetName(typeInfo.RootType, x)));
-							return JsonUtility.JavaScriptStringEncode(
-								name,
-								_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-								JsonUtility.JavaScriptQuoteMode.Always);
-						}
+				if (object.ReferenceEquals(null, value)) {
+					await writer.WriteNullValueAsync().NoSync();
+				}
+				else if (simpleType == SimpleValueType.Enum || simpleType == SimpleValueType.NullableEnum) {
+					if (writer is IJsonWriterInternal) {
+						await ((IJsonWriterInternal)writer).WriteEnumValueAsync(typeInfo, (Enum)value).NoSync();
 					}
 					else {
-						return WriteSimpleValue(value, JsonReflection.GetTypeInfo(typeInfo.ItemType));
+						await writer.WriteEnumValueAsync(typeInfo.OriginalType, (Enum)value).NoSync();
 					}
 				}
 				else if (simpleType == SimpleValueType.String) {
-					return JsonUtility.JavaScriptStringEncode((string)value,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						JsonUtility.JavaScriptQuoteMode.Always);
+					await writer.WriteStringValueAsync((string)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Bool || simpleType == SimpleValueType.NullableBool) {
-					if ((bool)value) {
-						return "true";
-					}
-					return "false";
+					await writer.WriteBooleanValueAsync((bool)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Char || simpleType == SimpleValueType.NullableChar) {
-					return string.Empty + (char)value;
+					await writer.WriteNumberValueAsync((char)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Byte || simpleType == SimpleValueType.NullableByte) {
-					if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-						return "0x" + ((byte)value).ToString("x", CultureInfo.InvariantCulture);
-					}
-					return ((byte)value).ToString(CultureInfo.InvariantCulture);
+					await writer.WriteNumberValueAsync((byte)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.SignedByte || simpleType == SimpleValueType.NullableSignedByte) {
-					if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-						return "0x" + ((sbyte)value).ToString("x", CultureInfo.InvariantCulture);
-					}
-					return ((sbyte)value).ToString(CultureInfo.InvariantCulture);
+					await writer.WriteNumberValueAsync((sbyte)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Short || simpleType == SimpleValueType.NullableShort) {
-					return ((Int16)value).ToString(CultureInfo.InvariantCulture);
+					await writer.WriteNumberValueAsync((short)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.UnsignedShort || simpleType == SimpleValueType.NullableUnsignedShort) {
-					return ((UInt16)value).ToString(CultureInfo.InvariantCulture);
+					await writer.WriteNumberValueAsync((ushort)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Int || simpleType == SimpleValueType.NullableInt) {
-					return ((Int32)value).ToString(CultureInfo.InvariantCulture);
+					await writer.WriteNumberValueAsync((int)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.UnsignedInt || simpleType == SimpleValueType.NullableUnsignedInt) {
-					return ((UInt32)value).ToString(CultureInfo.InvariantCulture);
+					await writer.WriteNumberValueAsync((uint)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Long || simpleType == SimpleValueType.NullableLong) {
-					return ((Int64)value).ToString(CultureInfo.InvariantCulture);
+					await writer.WriteNumberValueAsync((long)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.UnsignedLong || simpleType == SimpleValueType.NullableUnsignedLong) {
-					return ((UInt64)value).ToString(CultureInfo.InvariantCulture);
+					await writer.WriteNumberValueAsync((ulong)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.IntPtr || simpleType == SimpleValueType.NullableIntPtr) {
-					if (IntPtr.Size == 4) {
-						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-							return "0x" + ((IntPtr)value).ToInt32().ToString("x4", CultureInfo.InvariantCulture);
-						}
-						return ((IntPtr)value).ToInt32().ToString(CultureInfo.InvariantCulture);
-					}
-					else if (IntPtr.Size == 8) {
-						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-							return "0x" + ((IntPtr)value).ToInt64().ToString("x8", CultureInfo.InvariantCulture);
-						}
-						return ((IntPtr)value).ToInt64().ToString(CultureInfo.InvariantCulture);
-					}
-					else {
-						ThowNotSupportedIntPtrSize();
-						return null;
-					}
+					await writer.WriteNumberValueAsync((IntPtr)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.UnsignedIntPtr || simpleType == SimpleValueType.NullableUnsignedIntPtr) {
-					if (UIntPtr.Size == 4) {
-						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-							return "0x" + ((UIntPtr)value).ToUInt32().ToString("x4", CultureInfo.InvariantCulture);
-						}
-						return ((UIntPtr)value).ToUInt32().ToString(CultureInfo.InvariantCulture);
-					}
-					else if (UIntPtr.Size == 8) {
-						if (_settings.JsonWriteMode == JsonWriteMode.ECMAScript) {
-							return "0x" + ((UIntPtr)value).ToUInt64().ToString("x8", CultureInfo.InvariantCulture);
-						}
-						return ((UIntPtr)value).ToUInt64().ToString(CultureInfo.InvariantCulture);
-					}
-					else {
-						ThowNotSupportedUIntPtrSize();
-						return null;
-					}
+					await writer.WriteNumberValueAsync((UIntPtr)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Double || simpleType == SimpleValueType.NullableDouble) {
-					string v = ((double)value).ToString("R", CultureInfo.InvariantCulture);
-					return EnsureDecimal(v);
+					await writer.WriteNumberValueAsync((double)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Float || simpleType == SimpleValueType.NullableFloat) {
-					string v = ((Single)value).ToString("R", CultureInfo.InvariantCulture);
-					return EnsureDecimal(v);
+					await writer.WriteNumberValueAsync((float)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Decimal || simpleType == SimpleValueType.NullableDecimal) {
-					string v = ((decimal)value).ToString("R", CultureInfo.InvariantCulture);
-					return EnsureDecimal(v);
+					await writer.WriteNumberValueAsync((decimal)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.BigInteger || simpleType == SimpleValueType.NullableBigInteger) {
-					string v = ((BigInteger)value).ToString("R", CultureInfo.InvariantCulture);
-					return v;
+					await writer.WriteNumberValueAsync((BigInteger)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.DateTime || simpleType == SimpleValueType.NullableDateTime) {
-					var v = JsonUtility.EnsureDateTime((DateTime)value, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
-					char[] chars = new char[64];
-					int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, v, null, v.Kind);
-					//int pos = JsonDateTimeUtility.WriteMicrosoftDateTimeString(chars, 0, value, null, value.Kind);
-					return '"' + new string(chars.Take(pos).ToArray()) + '"';
+					await writer.WriteDateTimeValueAsync((DateTime)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.TimeSpan || simpleType == SimpleValueType.NullableTimeSpan) {
-					return ((TimeSpan)value).Ticks.ToString(CultureInfo.InvariantCulture);
+					await writer.WriteTimeSpanValueAsync((TimeSpan)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Uri) {
-					return JsonUtility.JavaScriptStringEncode(
-						((Uri)value).OriginalString,
-						_settings.JsonWriteMode == JsonWriteMode.Json ? JsonUtility.JavaScriptEncodeMode.Hex : JsonUtility.JavaScriptEncodeMode.SurrogatePairsAsCodePoint,
-						JsonUtility.JavaScriptQuoteMode.Always);
+					await writer.WriteUriValueAsync((Uri)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.Guid || simpleType == SimpleValueType.NullableGuid) {
-					return '"' + ((Guid)value).ToString("D") + '"';
+					await writer.WriteGuidValueAsync((Guid)value).NoSync();
 				}
 				else if (simpleType == SimpleValueType.ByteArray) {
-					return '"' + Convert.ToBase64String((byte[])value) + '"';
+					await writer.WriteBase64ValueAsync((byte[])value).NoSync();
 				}
 				else {
 					ThrowNotSupported(typeInfo.OriginalType);
-					return null;
 				}
 			}
 
-			private static string EnsureDecimal(string input) {
-				if (input.IndexOf('.') < 0) {
-					int x = input.IndexOf('e');
-					if (x < 0) {
-						x = input.IndexOf('E');
-					}
-					if (x < 0) {
-						input += ".0";
+			private void WriteValue(IJsonWriter writer, JsonSerializerValueState state) {
+
+				_currentState.Pop();
+
+				object value = state.Value;
+				var typeInfo = state.TypeInfo;
+				var simpleType = typeInfo.SimpleValueType;
+				if (object.ReferenceEquals(null, value)) {
+					writer.WriteNullValue();
+				}
+				else if (simpleType == SimpleValueType.Enum || simpleType == SimpleValueType.NullableEnum) {
+					if (writer is IJsonWriterInternal) {
+						((IJsonWriterInternal)writer).WriteEnumValue(typeInfo, (Enum)value);
 					}
 					else {
-						input = input.Insert(x, ".0");
+						writer.WriteEnumValue(typeInfo.OriginalType, (Enum)value);
 					}
 				}
-				return input;
+				else if (simpleType == SimpleValueType.String) {
+					writer.WriteStringValue((string)value);
+				}
+				else if (simpleType == SimpleValueType.Bool || simpleType == SimpleValueType.NullableBool) {
+					writer.WriteBooleanValue((bool)value);
+				}
+				else if (simpleType == SimpleValueType.Char || simpleType == SimpleValueType.NullableChar) {
+					writer.WriteNumberValue((char)value);
+				}
+				else if (simpleType == SimpleValueType.Byte || simpleType == SimpleValueType.NullableByte) {
+					writer.WriteNumberValue((byte)value);
+				}
+				else if (simpleType == SimpleValueType.SignedByte || simpleType == SimpleValueType.NullableSignedByte) {
+					writer.WriteNumberValue((sbyte)value);
+				}
+				else if (simpleType == SimpleValueType.Short || simpleType == SimpleValueType.NullableShort) {
+					writer.WriteNumberValue((short)value);
+				}
+				else if (simpleType == SimpleValueType.UnsignedShort || simpleType == SimpleValueType.NullableUnsignedShort) {
+					writer.WriteNumberValue((ushort)value);
+				}
+				else if (simpleType == SimpleValueType.Int || simpleType == SimpleValueType.NullableInt) {
+					writer.WriteNumberValue((int)value);
+				}
+				else if (simpleType == SimpleValueType.UnsignedInt || simpleType == SimpleValueType.NullableUnsignedInt) {
+					writer.WriteNumberValue((uint)value);
+				}
+				else if (simpleType == SimpleValueType.Long || simpleType == SimpleValueType.NullableLong) {
+					writer.WriteNumberValue((long)value);
+				}
+				else if (simpleType == SimpleValueType.UnsignedLong || simpleType == SimpleValueType.NullableUnsignedLong) {
+					writer.WriteNumberValue((ulong)value);
+				}
+				else if (simpleType == SimpleValueType.IntPtr || simpleType == SimpleValueType.NullableIntPtr) {
+					writer.WriteNumberValue((IntPtr)value);
+				}
+				else if (simpleType == SimpleValueType.UnsignedIntPtr || simpleType == SimpleValueType.NullableUnsignedIntPtr) {
+					writer.WriteNumberValue((UIntPtr)value);
+				}
+				else if (simpleType == SimpleValueType.Double || simpleType == SimpleValueType.NullableDouble) {
+					writer.WriteNumberValue((double)value);
+				}
+				else if (simpleType == SimpleValueType.Float || simpleType == SimpleValueType.NullableFloat) {
+					writer.WriteNumberValue((float)value);
+				}
+				else if (simpleType == SimpleValueType.Decimal || simpleType == SimpleValueType.NullableDecimal) {
+					writer.WriteNumberValue((decimal)value);
+				}
+				else if (simpleType == SimpleValueType.BigInteger || simpleType == SimpleValueType.NullableBigInteger) {
+					writer.WriteNumberValue((BigInteger)value);
+				}
+				else if (simpleType == SimpleValueType.DateTime || simpleType == SimpleValueType.NullableDateTime) {
+					writer.WriteDateTimeValue((DateTime)value);
+				}
+				else if (simpleType == SimpleValueType.TimeSpan || simpleType == SimpleValueType.NullableTimeSpan) {
+					writer.WriteTimeSpanValue((TimeSpan)value);
+				}
+				else if (simpleType == SimpleValueType.Uri) {
+					writer.WriteUriValue((Uri)value);
+				}
+				else if (simpleType == SimpleValueType.Guid || simpleType == SimpleValueType.NullableGuid) {
+					writer.WriteGuidValue((Guid)value);
+				}
+				else if (simpleType == SimpleValueType.ByteArray) {
+					writer.WriteBase64Value((byte[])value);
+				}
+				else {
+					ThrowNotSupported(typeInfo.OriginalType);
+				}
 			}
 
 			private TupleContextInfoWrapper GetNewContext(TupleContextInfoWrapper context, string propertyName, JsonTypeInfo propertyTypeInfo) {

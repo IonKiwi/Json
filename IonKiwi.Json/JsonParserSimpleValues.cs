@@ -19,7 +19,7 @@ namespace IonKiwi.Json {
 	partial class JsonParser {
 		partial class JsonInternalParser {
 
-			private string GetValueAsString(JsonReader reader, JsonToken token) {
+			private string GetValueAsString(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -29,7 +29,7 @@ namespace IonKiwi.Json {
 				return reader.GetValue();
 			}
 
-			private bool GetValueAsBoolean(JsonReader reader, JsonToken token) {
+			private bool GetValueAsBoolean(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					ThrowNonNullableTypeRequested(typeof(bool));
 				}
@@ -51,7 +51,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private bool? GetValueAsNullableBoolean(JsonReader reader, JsonToken token) {
+			private bool? GetValueAsNullableBoolean(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -73,7 +73,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private int GetValueAsInt(JsonReader reader, JsonToken token) {
+			private int GetValueAsInt(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					ThrowNonNullableTypeRequested(typeof(int));
 				}
@@ -89,7 +89,7 @@ namespace IonKiwi.Json {
 				return intValue;
 			}
 
-			private int? GetValueAsNullableInt(JsonReader reader, JsonToken token) {
+			private int? GetValueAsNullableInt(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -105,7 +105,7 @@ namespace IonKiwi.Json {
 				return intValue;
 			}
 
-			private long GetValueAsLong(JsonReader reader, JsonToken token) {
+			private long GetValueAsLong(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					ThrowNonNullableTypeRequested(typeof(long));
 				}
@@ -121,7 +121,7 @@ namespace IonKiwi.Json {
 				return longValue;
 			}
 
-			private long? GetValueAsNullableLong(JsonReader reader, JsonToken token) {
+			private long? GetValueAsNullableLong(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -137,7 +137,7 @@ namespace IonKiwi.Json {
 				return longValue;
 			}
 
-			private float GetValueAsSingle(JsonReader reader, JsonToken token) {
+			private float GetValueAsSingle(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					ThrowNonNullableTypeRequested(typeof(float));
 				}
@@ -153,7 +153,7 @@ namespace IonKiwi.Json {
 				return floatValue;
 			}
 
-			private float? GetValueAsNullableSingle(JsonReader reader, JsonToken token) {
+			private float? GetValueAsNullableSingle(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -169,7 +169,7 @@ namespace IonKiwi.Json {
 				return floatValue;
 			}
 
-			private double GetValueAsDouble(JsonReader reader, JsonToken token) {
+			private double GetValueAsDouble(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					ThrowNonNullableTypeRequested(typeof(double));
 				}
@@ -185,7 +185,7 @@ namespace IonKiwi.Json {
 				return doubleValue;
 			}
 
-			private double? GetValueAsNullableDouble(JsonReader reader, JsonToken token) {
+			private double? GetValueAsNullableDouble(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -201,7 +201,7 @@ namespace IonKiwi.Json {
 				return doubleValue;
 			}
 
-			private BigInteger GetValueAsBigInteger(JsonReader reader, JsonToken token) {
+			private BigInteger GetValueAsBigInteger(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					ThrowNonNullableTypeRequested(typeof(BigInteger));
 				}
@@ -216,7 +216,7 @@ namespace IonKiwi.Json {
 				return bigIntegerValue;
 			}
 
-			private BigInteger? GetValueAsNullableBigInteger(JsonReader reader, JsonToken token) {
+			private BigInteger? GetValueAsNullableBigInteger(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -231,7 +231,7 @@ namespace IonKiwi.Json {
 				return bigIntegerValue;
 			}
 
-			private DateTime GetValueAsDateTime(JsonReader reader, JsonToken token) {
+			private DateTime GetValueAsDateTime(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					ThrowNonNullableTypeRequested(typeof(DateTime));
 				}
@@ -248,7 +248,7 @@ namespace IonKiwi.Json {
 				return dt;
 			}
 
-			private DateTime? GetValueAsNullableDateTime(JsonReader reader, JsonToken token) {
+			private DateTime? GetValueAsNullableDateTime(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -265,7 +265,7 @@ namespace IonKiwi.Json {
 				return dt;
 			}
 
-			private TimeSpan GetValueAsTimeSpan(JsonReader reader, JsonToken token) {
+			private TimeSpan GetValueAsTimeSpan(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					ThrowNonNullableTypeRequested(typeof(TimeSpan));
 				}
@@ -282,7 +282,7 @@ namespace IonKiwi.Json {
 				return new TimeSpan(longValue);
 			}
 
-			private TimeSpan? GetValueAsNullableTimeSpan(JsonReader reader, JsonToken token) {
+			private TimeSpan? GetValueAsNullableTimeSpan(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -299,7 +299,7 @@ namespace IonKiwi.Json {
 				return new TimeSpan(longValue);
 			}
 
-			private Uri GetValueAsUri(JsonReader reader, JsonToken token) {
+			private Uri GetValueAsUri(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -321,7 +321,7 @@ namespace IonKiwi.Json {
 				return null;
 			}
 
-			private Guid GetValueAsGuid(JsonReader reader, JsonToken token) {
+			private Guid GetValueAsGuid(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					ThrowNonNullableTypeRequested(typeof(Guid));
 				}
@@ -338,7 +338,7 @@ namespace IonKiwi.Json {
 				return guid;
 			}
 
-			private Guid? GetValueAsNullableGuid(JsonReader reader, JsonToken token) {
+			private Guid? GetValueAsNullableGuid(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -359,7 +359,7 @@ namespace IonKiwi.Json {
 				return guid;
 			}
 
-			private byte[] GetValueAsByteArray(JsonReader reader, JsonToken token) {
+			private byte[] GetValueAsByteArray(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -429,7 +429,7 @@ namespace IonKiwi.Json {
 			//	}
 			//}
 
-			private object GetValueAsEnumUntyped(JsonReader reader, JsonToken token, Type enumType) {
+			private object GetValueAsEnumUntyped(IJsonReader reader, JsonToken token, Type enumType) {
 				switch (token) {
 					case JsonToken.Null:
 						ThrowNonNullableTypeRequested(enumType);
@@ -521,7 +521,7 @@ namespace IonKiwi.Json {
 			//	}
 			//}
 
-			private object GetValueAsNullableEnumUntyped(JsonReader reader, JsonToken token, Type enumType) {
+			private object GetValueAsNullableEnumUntyped(IJsonReader reader, JsonToken token, Type enumType) {
 				switch (token) {
 					case JsonToken.Null:
 						return null;
@@ -566,7 +566,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private object GetSimpleValue(JsonReader reader, JsonToken token, SimpleValueType simpleType, Type expectedValueType) {
+			private object GetSimpleValue(IJsonReader reader, JsonToken token, SimpleValueType simpleType, Type expectedValueType) {
 				if (simpleType == SimpleValueType.Int) {
 					return GetValueAsInt(reader, token);
 				}
