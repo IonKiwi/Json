@@ -25,20 +25,20 @@ namespace IonKiwi.Json {
 		private readonly Stream _stream;
 		private IBufferWriter<byte> _writer;
 
-		public SystemJsonWriter(Utf8JsonWriter writer, JsonWriterSettings settings) {
+		public SystemJsonWriter(Utf8JsonWriter writer, JsonWriterSettings settings = null) {
 			_output = writer;
-			_settings = settings;
+			_settings = settings ?? JsonWriter.DefaultSettings;
 		}
 
-		public SystemJsonWriter(Utf8JsonWriter writer, Stream underlyingStream, JsonWriterSettings settings) {
+		public SystemJsonWriter(Utf8JsonWriter writer, Stream underlyingStream, JsonWriterSettings settings = null) {
 			_output = writer;
-			_settings = settings;
+			_settings = settings ?? JsonWriter.DefaultSettings;
 			_stream = underlyingStream;
 		}
 
-		public SystemJsonWriter(Utf8JsonWriter writer, IBufferWriter<byte> underlyingWriter, JsonWriterSettings settings) {
+		public SystemJsonWriter(Utf8JsonWriter writer, IBufferWriter<byte> underlyingWriter, JsonWriterSettings settings = null) {
 			_output = writer;
-			_settings = settings;
+			_settings = settings ?? JsonWriter.DefaultSettings;
 			_writer = underlyingWriter;
 		}
 
