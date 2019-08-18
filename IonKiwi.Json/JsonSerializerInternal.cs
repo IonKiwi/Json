@@ -673,12 +673,14 @@ namespace IonKiwi.Json {
 				_currentState.Pop();
 
 				object value = state.Value;
-				var typeInfo = state.TypeInfo;
-				var simpleType = typeInfo.SimpleValueType;
 				if (object.ReferenceEquals(null, value)) {
 					writer.WriteNullValue();
+					return;
 				}
-				else if (simpleType == SimpleValueType.Enum || simpleType == SimpleValueType.NullableEnum) {
+
+				var typeInfo = state.TypeInfo;
+				var simpleType = typeInfo.SimpleValueType;
+				if (simpleType == SimpleValueType.Enum || simpleType == SimpleValueType.NullableEnum) {
 					if (writer is IJsonWriterInternal) {
 						((IJsonWriterInternal)writer).WriteEnumValue(typeInfo, (Enum)value);
 					}
