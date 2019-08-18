@@ -19,6 +19,7 @@ namespace IonKiwi.Json {
 	public class SystemJsonReader : IJsonReader, IDisposable {
 
 		private readonly Stream _stream;
+		private readonly ReadOnlyMemory<byte> _memory;
 		private readonly Stack<StackInformation> _stack = new Stack<StackInformation>();
 		private Stack<StackInformation> _rewindState = null;
 		private JsonReader.JsonToken _token = JsonReader.JsonToken.None;
@@ -29,9 +30,18 @@ namespace IonKiwi.Json {
 		private string _data = null;
 		private int _bufferSize = 0x400;
 		private bool _complete = false;
+		private readonly bool _isShared;
 
 		public SystemJsonReader(Stream stream) {
 			_stream = stream;
+			_isShared = true;
+		}
+
+		public SystemJsonReader(ReadOnlyMemory<byte> data) {
+			_memory = data;
+			_isShared = false;
+			_offset = 0;
+			_length = data.Length;
 		}
 
 		public JsonReader.JsonToken Token => _token;
@@ -69,6 +79,15 @@ namespace IonKiwi.Json {
 			return _data;
 		}
 
+		private ReadOnlySpan<byte> GetCurrentBlock() {
+			if (!_isShared) {
+				return _memory.Span.Slice(_offset, _length - _offset);
+			}
+			else {
+				return new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset);
+			}
+		}
+
 		public JsonReader.JsonToken Read() {
 			if (_rewindState != null) {
 				return ReplayState();
@@ -76,14 +95,15 @@ namespace IonKiwi.Json {
 			else if (_complete) {
 				return JsonReader.JsonToken.None;
 			}
-			else if (_offset >= _length) {
+			else if (_isShared && _offset >= _length) {
 				EnsureBuffer();
 				_offset = 0;
 				_length = _stream.Read(_buffer);
 			}
 
 			JsonReader.JsonToken token;
-			while (!ReadCore(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, out token)) {
+			while (!ReadCore(GetCurrentBlock(), _length == 0, out token)) {
+				if (!_isShared) { ThrowMoreDataExpectedException(); }
 				int bytesInBuffer = _length - _offset;
 				if (bytesInBuffer == 0) {
 					// read more data
@@ -131,14 +151,15 @@ namespace IonKiwi.Json {
 			else if (_complete) {
 				return JsonReader.JsonToken.None;
 			}
-			else if (_offset >= _length) {
+			else if (_isShared && _offset >= _length) {
 				EnsureBuffer();
 				_offset = 0;
 				_length = await _stream.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
 			}
 
 			JsonReader.JsonToken token;
-			while (!ReadCore(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, out token)) {
+			while (!ReadCore(GetCurrentBlock(), _length == 0, out token)) {
+				if (!_isShared) { ThrowMoreDataExpectedException(); }
 				int bytesInBuffer = _length - _offset;
 				if (bytesInBuffer == 0) {
 					// read more data
@@ -196,24 +217,25 @@ namespace IonKiwi.Json {
 				return JsonReader.JsonToken.None;
 			}
 
-			if (_offset >= _length) {
+			if (_isShared && _offset >= _length) {
 				EnsureBuffer();
 				_offset = 0;
 				_length = _stream.Read(_buffer);
 			}
 
-			var reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+			var reader = new Utf8JsonReader(GetCurrentBlock(), _length == 0, _readerState);
 			var readeroffset = 0;
 			var currentoffset = _offset;
 			do {
 
 				// for re-entrancy
 				if (currentoffset != _offset) {
-					reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+					reader = new Utf8JsonReader(GetCurrentBlock(), _length == 0, _readerState);
 					readeroffset = 0;
 				}
 
 				while (!ReadCore(ref reader, reader.IsFinalBlock, out token)) {
+					if (!_isShared) { ThrowMoreDataExpectedException(); }
 					_offset += (checked((int)reader.BytesConsumed) - readeroffset);
 					_readerState = reader.CurrentState;
 
@@ -288,7 +310,7 @@ namespace IonKiwi.Json {
 				return JsonReader.JsonToken.None;
 			}
 
-			if (_offset >= _length) {
+			if (_isShared && _offset >= _length) {
 				EnsureBuffer();
 				_offset = 0;
 				_length = await _stream.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
@@ -297,6 +319,7 @@ namespace IonKiwi.Json {
 			do {
 				ValueTask<bool> continuation;
 				while (!HandleDataBlock(callback, out continuation)) {
+					if (!_isShared) { ThrowMoreDataExpectedException(); }
 					int bytesInBuffer = _length - _offset;
 					if (bytesInBuffer == 0) {
 						// read more data
@@ -346,7 +369,7 @@ namespace IonKiwi.Json {
 		}
 
 		private bool HandleDataBlock(Func<JsonReader.JsonToken, ValueTask<bool>> callback, out ValueTask<bool> continuation) {
-			var reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+			var reader = new Utf8JsonReader(GetCurrentBlock(), _length == 0, _readerState);
 			var readeroffset = 0;
 			var currentoffset = _offset;
 			continuation = default;
@@ -354,7 +377,7 @@ namespace IonKiwi.Json {
 
 				// for re-entrancy
 				if (currentoffset != _offset) {
-					reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, _offset, _length - _offset), _length == 0, _readerState);
+					reader = new Utf8JsonReader(GetCurrentBlock(), _length == 0, _readerState);
 					readeroffset = 0;
 				}
 
