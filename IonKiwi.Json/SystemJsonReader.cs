@@ -290,7 +290,7 @@ namespace IonKiwi.Json {
 				readeroffset = consumed;
 				_readerState = reader.CurrentState;
 			}
-			while (callback(token));
+			while (callback(token) && token != JsonReader.JsonToken.None);
 			return token;
 		}
 
@@ -318,7 +318,7 @@ namespace IonKiwi.Json {
 
 			do {
 				ValueTask<bool> continuation;
-				while (!HandleDataBlock(callback, out continuation)) {
+				while (!HandleDataBlock(callback, out continuation, out token)) {
 					if (!_isShared) { ThrowMoreDataExpectedException(); }
 					int bytesInBuffer = _length - _offset;
 					if (bytesInBuffer == 0) {
@@ -364,24 +364,23 @@ namespace IonKiwi.Json {
 				else {
 					cb = continuation.Result;
 				}
-			} while (cb);
-			return _token;
+			} while (cb && token != JsonReader.JsonToken.None);
+			return token;
 		}
 
-		private bool HandleDataBlock(Func<JsonReader.JsonToken, ValueTask<bool>> callback, out ValueTask<bool> continuation) {
+		private bool HandleDataBlock(Func<JsonReader.JsonToken, ValueTask<bool>> callback, out ValueTask<bool> continuation, out JsonReader.JsonToken token) {
 			var reader = new Utf8JsonReader(GetCurrentBlock(), _length == 0, _readerState);
 			var readeroffset = 0;
 			var currentoffset = _offset;
 			continuation = default;
 			do {
-
 				// for re-entrancy
 				if (currentoffset != _offset) {
 					reader = new Utf8JsonReader(GetCurrentBlock(), _length == 0, _readerState);
 					readeroffset = 0;
 				}
 
-				if (!ReadCore(ref reader, !_isShared || reader.IsFinalBlock, out var token)) {
+				if (!ReadCore(ref reader, !_isShared || reader.IsFinalBlock, out token)) {
 					_offset += (checked((int)reader.BytesConsumed) - readeroffset);
 					_readerState = reader.CurrentState;
 					return false;
