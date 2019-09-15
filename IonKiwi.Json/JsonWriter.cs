@@ -1128,29 +1128,101 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public void WriteRaw(string json) {
+		public void WriteRawValue(string json) {
+			var wt = _stack.Peek();
+			if (wt == WriterType.ObjectProperty) { _stack.Pop(); }
+
+			if (_requireSeparator) {
+				_output.Write(',');
+			}
 			_output.Write(json);
+			_requireSeparator = true;
 		}
 
-		public async PlatformTask WriteRawAsync(string json) {
+		public void WriteRaw(string propertyName, string json) {
+			WritePropertyName(propertyName);
+			WriteRawValue(json);
+		}
+
+		public async PlatformTask WriteRawValueAsync(string json) {
+			var wt = _stack.Peek();
+			if (wt == WriterType.ObjectProperty) { _stack.Pop(); }
+
+			if (_requireSeparator) {
+				await _output.WriteAsync(',').NoSync();
+			}
 			await _output.WriteAsync(json).NoSync();
+			_requireSeparator = true;
+		}
+
+		public async PlatformTask WriteRawAsync(string propertyName, string json) {
+			await WritePropertyNameAsync(propertyName).NoSync();
+			await WriteRawValueAsync(json).NoSync();
 		}
 
 #if !NET472
-		public void WriteRaw(ReadOnlySpan<byte> utf8Value) {
+		public void WriteRawValue(ReadOnlySpan<byte> utf8Value) {
+			var wt = _stack.Peek();
+			if (wt == WriterType.ObjectProperty) { _stack.Pop(); }
+
+			if (_requireSeparator) {
+				_output.Write(',');
+			}
 			_output.Write(Encoding.UTF8.GetString(utf8Value));
+			_requireSeparator = true;
 		}
 
-		public void WriteRaw(ReadOnlySpan<char> value) {
+		public void WriteRaw(string propertyName, ReadOnlySpan<byte> utf8Value) {
+			WritePropertyName(propertyName);
+			WriteRawValue(utf8Value);
+		}
+
+		public void WriteRawValue(ReadOnlySpan<char> value) {
+			var wt = _stack.Peek();
+			if (wt == WriterType.ObjectProperty) { _stack.Pop(); }
+
+			if (_requireSeparator) {
+				_output.Write(',');
+			}
 			_output.Write(value);
+			_requireSeparator = true;
 		}
 
-		public async ValueTask WriteRawAsync(ReadOnlyMemory<byte> utf8Value) {
+		public void WriteRaw(string propertyName, ReadOnlySpan<char> value) {
+			WritePropertyName(propertyName);
+			WriteRawValue(value);
+		}
+
+		public async ValueTask WriteRawValueAsync(ReadOnlyMemory<byte> utf8Value) {
+			var wt = _stack.Peek();
+			if (wt == WriterType.ObjectProperty) { _stack.Pop(); }
+
+			if (_requireSeparator) {
+				await _output.WriteAsync(',').NoSync();
+			}
 			await _output.WriteAsync(Encoding.UTF8.GetString(utf8Value.Span)).NoSync();
+			_requireSeparator = true;
 		}
 
-		public async ValueTask WriteRawAsync(ReadOnlyMemory<char> value) {
+		public async ValueTask WriteRawAsync(string propertyName, ReadOnlyMemory<byte> utf8Value) {
+			await WritePropertyNameAsync(propertyName).NoSync();
+			await WriteRawValueAsync(utf8Value).NoSync();
+		}
+
+		public async ValueTask WriteRawValueAsync(ReadOnlyMemory<char> value) {
+			var wt = _stack.Peek();
+			if (wt == WriterType.ObjectProperty) { _stack.Pop(); }
+
+			if (_requireSeparator) {
+				await _output.WriteAsync(',').NoSync();
+			}
 			await _output.WriteAsync(value).NoSync();
+			_requireSeparator = true;
+		}
+
+		public async ValueTask WriteRawAsync(string propertyName, ReadOnlyMemory<char> value) {
+			await WritePropertyNameAsync(propertyName).NoSync();
+			await WriteRawValueAsync(value).NoSync();
 		}
 #endif
 	}

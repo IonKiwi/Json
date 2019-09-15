@@ -6,6 +6,12 @@
 using IonKiwi.Extenions;
 using IonKiwi.Json.MetaData;
 using System;
+#if !NET472
+using System.Buffers;
+#endif
+#if NETCOREAPP3_0
+using System.Text.Json;
+#endif
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -17,7 +23,39 @@ using static IonKiwi.Json.JsonReader;
 namespace IonKiwi.Json.Utilities {
 	public static class JsonUtility {
 
-		private static readonly UTF8Encoding _utf8Encoding = new UTF8Encoding(false);
+		private static readonly UTF8Encoding _utf8Encoding = new UTF8Encoding(false, true);
+
+		public static IJsonReader CreateReader(string json) {
+			var sr = new StringReader(json);
+			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
+		}
+
+#if !NET472
+		public static IJsonReader CreateReader(ReadOnlySpan<char> json) {
+			var sr = new StringReader(json.ToString());
+			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
+		}
+
+		public static IJsonReader CreateReader(ReadOnlyMemory<char> json) {
+			var sr = new StringReader(json.Span.ToString());
+			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
+		}
+
+		public static IJsonReader CreateReader(ReadOnlySpan<byte> json) {
+			var sr = new StringReader(_utf8Encoding.GetString(json));
+			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
+		}
+
+		public static IJsonReader CreateReader(ReadOnlyMemory<byte> json) {
+			var sr = new StringReader(_utf8Encoding.GetString(json.Span));
+			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
+		}
+#endif
+
+		public static IJsonWriter CreateWriter(Stream stream, JsonWriterSettings writerSettings = null) {
+			var tw = new StreamWriter(stream, _utf8Encoding, 0x400, true);
+			return new JsonWriterWrapper(new JsonWriter(tw, writerSettings), () => tw.Dispose());
+		}
 
 #if !NET472
 		public static async ValueTask<T> ParseAsync<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
@@ -40,13 +78,13 @@ namespace IonKiwi.Json.Utilities {
 #else
 		public static async Task<T> ParseAsync<T>(Stream stream, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
 #endif
-			using (var r = new StreamReader(stream, Encoding.UTF8, true, 0x400, true)) {
+			using (var r = new StreamReader(stream, _utf8Encoding, true, 0x400, true)) {
 				return await JsonParser.ParseAsync<T>(new JsonReader(r), objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings).NoSync();
 			}
 		}
 
 		public static T Parse<T>(Stream stream, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
-			using (var r = new StreamReader(stream, Encoding.UTF8, true, 0x400, true)) {
+			using (var r = new StreamReader(stream, _utf8Encoding, true, 0x400, true)) {
 				return JsonParser.Parse<T>(new JsonReader(r), objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings);
 			}
 		}
@@ -86,6 +124,133 @@ namespace IonKiwi.Json.Utilities {
 			}
 			return sb.ToString();
 		}
+
+#if NETCOREAPP3_0
+		public static class System {
+			public static IJsonReader CreateReader(string json) {
+				var l = GetUtf8ByteCount(json);
+				var b = ArrayPool<byte>.Shared.Rent(l);
+				var t = TextToUtf8(json, b);
+				var r = new SystemJsonReader(b.AsMemory(0, t));
+				return new JsonReaderWrapper(r, () => ArrayPool<byte>.Shared.Return(b));
+			}
+
+			public static IJsonReader CreateReader(ReadOnlySpan<char> json) {
+				var l = GetUtf8ByteCount(json);
+				var b = ArrayPool<byte>.Shared.Rent(l);
+				var t = TextToUtf8(json, b);
+				var r = new SystemJsonReader(b.AsMemory(0, t));
+				return new JsonReaderWrapper(r, () => ArrayPool<byte>.Shared.Return(b));
+			}
+
+			public static IJsonReader CreateReader(ReadOnlyMemory<char> json) {
+				var l = GetUtf8ByteCount(json.Span);
+				var b = ArrayPool<byte>.Shared.Rent(l);
+				var t = TextToUtf8(json.Span, b);
+				var r = new SystemJsonReader(b.AsMemory(0, t));
+				return new JsonReaderWrapper(r, () => ArrayPool<byte>.Shared.Return(b));
+			}
+
+			public static IJsonReader CreateReader(ReadOnlySpan<byte> json) {
+				var b = ArrayPool<byte>.Shared.Rent(json.Length);
+				json.CopyTo(b);
+				var r = new SystemJsonReader(b.AsMemory());
+				return new JsonReaderWrapper(r, () => ArrayPool<byte>.Shared.Return(b));
+			}
+
+			public static IJsonReader CreateReader(ReadOnlyMemory<byte> json) {
+				return new SystemJsonReader(json);
+			}
+
+			public static IJsonWriter CreateWriter(Stream stream, JsonWriterSettings writerSettings = null, JsonWriterOptions? options = null) {
+				return new SystemJsonWriter(stream, writerSettings, options);
+			}
+
+			public static async ValueTask<T> ParseAsync<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+				var l = GetUtf8ByteCount(json);
+				var b = ArrayPool<byte>.Shared.Rent(l);
+				var t = TextToUtf8(json, b);
+				var r = new SystemJsonReader(b.AsMemory(0, t));
+				IDisposable d = r;
+				try {
+					return await JsonParser.ParseAsync<T>(r, objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings).NoSync();
+				}
+				finally {
+					d.Dispose();
+					ArrayPool<byte>.Shared.Return(b);
+				}
+			}
+
+			public static T Parse<T>(string json, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+				var l = GetUtf8ByteCount(json);
+				var b = ArrayPool<byte>.Shared.Rent(l);
+				var t = TextToUtf8(json, b);
+				var r = new SystemJsonReader(b.AsMemory(0, t));
+				IDisposable d = r;
+				try {
+					return JsonParser.Parse<T>(r, objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings);
+				}
+				finally {
+					d.Dispose();
+					ArrayPool<byte>.Shared.Return(b);
+				}
+			}
+
+			public static async ValueTask<T> ParseAsync<T>(Stream stream, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+				using (var r = new SystemJsonReader(stream)) {
+					return await JsonParser.ParseAsync<T>(r, objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings).NoSync();
+				}
+			}
+
+			public static T Parse<T>(Stream stream, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+				using (var r = new SystemJsonReader(stream)) {
+					return JsonParser.Parse<T>(r, objectType: objectType, tupleNames: tupleNames, parserSettings: parserSettings);
+				}
+			}
+
+			public static async ValueTask SerializeAsync<T>(Stream stream, T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null, JsonWriterOptions? options = null) {
+				var w = new SystemJsonWriter(stream, writerSettings, options);
+				await using (w.ConfigureAwait(false)) {
+					await JsonSerializer.SerializeAsync<T>(w, value, objectType: objectType, tupleNames: tupleNames, serializerSettings: serializerSettings, writerSettings: writerSettings).NoSync();
+				}
+			}
+
+			public static void Serialize<T>(Stream stream, T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null, JsonWriterOptions? options = null) {
+				using (var w = new SystemJsonWriter(stream, writerSettings, options)) {
+					JsonSerializer.Serialize<T>(w, value, objectType: objectType, tupleNames: tupleNames, serializerSettings: serializerSettings, writerSettings: writerSettings);
+				}
+			}
+
+			public static async ValueTask<string> SerializeAsync<T>(T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null, JsonWriterOptions? options = null) {
+				using (var ap = new ArrayPoolWriter()) {
+					var w = new SystemJsonWriter(ap, writerSettings, options);
+					await using (w.ConfigureAwait(false)) {
+						await JsonSerializer.SerializeAsync<T>(w, value, objectType: objectType, tupleNames: tupleNames, serializerSettings: serializerSettings, writerSettings: writerSettings).NoSync();
+					}
+					return _utf8Encoding.GetString(ap.WrittenSpan);
+				}
+			}
+
+			public static string Serialize<T>(T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null, JsonWriterOptions? options = null) {
+				using (var ap = new ArrayPoolWriter()) {
+					using (var w = new SystemJsonWriter(ap, writerSettings, options)) {
+						JsonSerializer.Serialize<T>(w, value, objectType: objectType, tupleNames: tupleNames, serializerSettings: serializerSettings, writerSettings: writerSettings);
+					}
+					return _utf8Encoding.GetString(ap.WrittenSpan);
+				}
+			}
+		}
+#endif
+
+#if !NET472
+		internal static int GetUtf8ByteCount(ReadOnlySpan<char> value) {
+			return _utf8Encoding.GetByteCount(value);
+		}
+
+		internal static int TextToUtf8(ReadOnlySpan<char> value, Span<byte> destination) {
+			return _utf8Encoding.GetBytes(value, destination);
+		}
+#endif
 
 		public enum JavaScriptQuoteMode {
 			None,
@@ -307,34 +472,34 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-		public static object[] TryGetValuesByJsonPath(IJsonReader reader, params (string path, Type type)[] query) {
+		public static object[] TryGetValuesByJsonPath(IJsonReader reader, Func<string, IJsonReader> createReader, params (string path, Type type)[] query) {
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
 			var exceptions = new Exception[query.Length];
-			HandleJsonPath(reader, parts, result, completed, exceptions);
+			HandleJsonPath(reader, createReader, parts, result, completed, exceptions);
 			return result;
 		}
 
 #if !NET472
-		public static async ValueTask<object[]> TryGetValuesByJsonPathAsync(IJsonReader reader, params (string path, Type type)[] query) {
+		public static async ValueTask<object[]> TryGetValuesByJsonPathAsync(IJsonReader reader, Func<string, IJsonReader> createReader, params (string path, Type type)[] query) {
 #else
-		public static async Task<object[]> TryGetValuesByJsonPathAsync(IJsonReader reader, params (string path, Type type)[] query) {
+		public static async Task<object[]> TryGetValuesByJsonPathAsync(IJsonReader reader, Func<string, IJsonReader> createReader, params (string path, Type type)[] query) {
 #endif
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
 			var exceptions = new Exception[query.Length];
-			await HandleJsonPathAsync(reader, parts, result, completed, exceptions).NoSync();
+			await HandleJsonPathAsync(reader, createReader, parts, result, completed, exceptions).NoSync();
 			return result;
 		}
 
-		public static object[] GetValuesByJsonPath(IJsonReader reader, params (string path, Type type)[] query) {
+		public static object[] GetValuesByJsonPath(IJsonReader reader, Func<string, IJsonReader> createReader, params (string path, Type type)[] query) {
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
 			var exceptions = new Exception[query.Length];
-			HandleJsonPath(reader, parts, result, completed, exceptions);
+			HandleJsonPath(reader, createReader, parts, result, completed, exceptions);
 			var failedQueries = new List<(string path, Type type)>();
 			for (int i = 0; i < completed.Length; i++) {
 				if (!completed[i]) {
@@ -348,15 +513,15 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 #if !NET472
-		public static async ValueTask<object[]> GetValuesByJsonPathAsync(IJsonReader reader, params (string path, Type type)[] query) {
+		public static async ValueTask<object[]> GetValuesByJsonPathAsync(IJsonReader reader, Func<string, IJsonReader> createReader, params (string path, Type type)[] query) {
 #else
-		public static async Task<object[]> GetValuesByJsonPathAsync(IJsonReader reader, params (string path, Type type)[] query) {
+		public static async Task<object[]> GetValuesByJsonPathAsync(IJsonReader reader, Func<string, IJsonReader> createReader, params (string path, Type type)[] query) {
 #endif
 			var parts = ParsePath(query);
 			var result = new object[query.Length];
 			var completed = new bool[query.Length];
 			var exceptions = new Exception[query.Length];
-			await HandleJsonPathAsync(reader, parts, result, completed, exceptions).NoSync();
+			await HandleJsonPathAsync(reader, createReader, parts, result, completed, exceptions).NoSync();
 			var failedQueries = new List<(string path, Type type)>();
 			for (int i = 0; i < completed.Length; i++) {
 				if (!completed[i]) {
@@ -386,9 +551,9 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 #if !NET472
-		private static async ValueTask HandleJsonPathAsync(IJsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
+		private static async ValueTask HandleJsonPathAsync(IJsonReader reader, Func<string, IJsonReader> createReader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
 #else
-		private static async Task HandleJsonPathAsync(IJsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
+		private static async Task HandleJsonPathAsync(IJsonReader reader, Func<string, IJsonReader> createReader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
 #endif
 			Stack<JsonPathPosition> stack = new Stack<JsonPathPosition>();
 			stack.Push(new JsonPathPosition() { Parts = parts });
@@ -421,9 +586,9 @@ namespace IonKiwi.Json.Utilities {
 						}
 						var position = stack.Peek();
 						var subJson = await reader.ReadRawAsync().NoSync();
-						HandleValue(token, subJson, position, result, completed, exceptions);
+						HandleValue(token, subJson, createReader, position, result, completed, exceptions);
 						if (position.Path.SubPath.Count > 0) {
-							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed, exceptions);
+							HandleSubJsonSync(subJson, createReader, position.Path.SubPath, result, completed, exceptions);
 						}
 						if (isProperty || !isComplexValue) {
 							stack.Pop();
@@ -439,7 +604,7 @@ namespace IonKiwi.Json.Utilities {
 			while (token != JsonToken.None);
 		}
 
-		private static void HandleJsonPath(IJsonReader reader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
+		private static void HandleJsonPath(IJsonReader reader, Func<string, IJsonReader> createReader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
 			Stack<JsonPathPosition> stack = new Stack<JsonPathPosition>();
 			stack.Push(new JsonPathPosition() { Parts = parts });
 
@@ -471,9 +636,9 @@ namespace IonKiwi.Json.Utilities {
 						}
 						var position = stack.Peek();
 						var subJson = reader.ReadRaw();
-						HandleValue(token, subJson, position, result, completed, exceptions);
+						HandleValue(token, subJson, createReader, position, result, completed, exceptions);
 						if (position.Path.SubPath.Count > 0) {
-							HandleSubJsonSync(subJson, position.Path.SubPath, result, completed, exceptions);
+							HandleSubJsonSync(subJson, createReader, position.Path.SubPath, result, completed, exceptions);
 						}
 						if (isProperty || !isComplexValue) {
 							stack.Pop();
@@ -489,10 +654,15 @@ namespace IonKiwi.Json.Utilities {
 			while (token != JsonToken.None);
 		}
 
-		private static void HandleSubJsonSync(string subJson, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
-			using (StringReader r = new StringReader(subJson)) {
-				var reader = new JsonReader(r);
-				HandleJsonPath(reader, parts, result, completed, exceptions);
+		private static void HandleSubJsonSync(string subJson, Func<string, IJsonReader> createReader, Dictionary<string, JsonPath> parts, object[] result, bool[] completed, Exception[] exceptions) {
+			var reader = createReader(subJson);
+			try {
+				HandleJsonPath(reader, createReader, parts, result, completed, exceptions);
+			}
+			finally {
+				if (reader is IDisposable disposable) {
+					disposable.Dispose();
+				}
 			}
 		}
 
@@ -504,21 +674,25 @@ namespace IonKiwi.Json.Utilities {
 			return typeInfo.ObjectType == JsonReflection.JsonObjectType.SimpleValue;
 		}
 
-		private static void HandleValue(JsonToken token, string subJson, JsonPathPosition position, object[] result, bool[] completed, Exception[] exceptions) {
+		private static void HandleValue(JsonToken token, string subJson, Func<string, IJsonReader> createReader, JsonPathPosition position, object[] result, bool[] completed, Exception[] exceptions) {
 			if (position.Path.RequestedType == null) {
 				result[position.Path.QueryIndex.Value] = subJson;
 				completed[position.Path.QueryIndex.Value] = true;
 			}
 			else {
 				if (ValidateObjectType(position.Path.RequestedType, token)) {
-					using (var r = new StringReader(subJson)) {
-						try {
-							var typedValue = JsonParser.Parse<object>(new JsonReader(r), position.Path.RequestedType);
-							result[position.Path.QueryIndex.Value] = typedValue;
-							completed[position.Path.QueryIndex.Value] = true;
-						}
-						catch (Exception ex) {
-							exceptions[position.Path.QueryIndex.Value] = ex;
+					var r = createReader(subJson);
+					try {
+						var typedValue = JsonParser.Parse<object>(r, position.Path.RequestedType);
+						result[position.Path.QueryIndex.Value] = typedValue;
+						completed[position.Path.QueryIndex.Value] = true;
+					}
+					catch (Exception ex) {
+						exceptions[position.Path.QueryIndex.Value] = ex;
+					}
+					finally {
+						if (r is IDisposable disposable) {
+							disposable.Dispose();
 						}
 					}
 				}

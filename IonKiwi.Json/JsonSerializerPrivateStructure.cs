@@ -24,7 +24,6 @@ namespace IonKiwi.Json {
 				ObjectEnd,
 				ArrayStart,
 				ArrayEnd,
-				Property,
 				Value,
 				Raw,
 				EmptyArray

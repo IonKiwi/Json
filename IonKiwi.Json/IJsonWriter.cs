@@ -111,13 +111,19 @@ namespace IonKiwi.Json {
 #endif
 		PlatformTask WriteStringValueAsync(string value);
 
-		void WriteRaw(string json);
-		PlatformTask WriteRawAsync(string json);
+		void WriteRawValue(string json);
+		PlatformTask WriteRawValueAsync(string json);
+		void WriteRaw(string propertyName, string json);
+		PlatformTask WriteRawAsync(string propertyName, string json);
 #if !NET472
-		void WriteRaw(ReadOnlySpan<byte> utf8Value);
-		void WriteRaw(ReadOnlySpan<char> value);
-		ValueTask WriteRawAsync(ReadOnlyMemory<byte> utf8Value);
-		ValueTask WriteRawAsync(ReadOnlyMemory<char> value);
+		void WriteRawValue(ReadOnlySpan<byte> utf8Value);
+		void WriteRawValue(ReadOnlySpan<char> value);
+		ValueTask WriteRawValueAsync(ReadOnlyMemory<byte> utf8Value);
+		ValueTask WriteRawValueAsync(ReadOnlyMemory<char> value);
+		void WriteRaw(string propertyName, ReadOnlySpan<byte> utf8Value);
+		void WriteRaw(string propertyName, ReadOnlySpan<char> value);
+		ValueTask WriteRawAsync(string propertyName, ReadOnlyMemory<byte> utf8Value);
+		ValueTask WriteRawAsync(string propertyName, ReadOnlyMemory<char> value);
 #endif
 	}
 
