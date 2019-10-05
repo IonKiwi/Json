@@ -26,38 +26,51 @@ namespace IonKiwi.Json.Utilities {
 		private static readonly UTF8Encoding _utf8Encoding = new UTF8Encoding(false, true);
 
 		public static IJsonReader CreateReader(string json) {
+			if (string.IsNullOrEmpty(json)) {
+				throw new ArgumentNullException(nameof(json));
+			}
 			var sr = new StringReader(json);
 			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
 		}
 
+		public static IJsonReader CreateReader(byte[] json) {
+			if (json == null || json.Length == 0) {
+				throw new ArgumentNullException(nameof(json));
+			}
+			var sr = new StringReader(_utf8Encoding.GetString(json));
+			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
+		}
+
 		public static IJsonReader CreateReader(Stream stream) {
+			if (stream == null) {
+				throw new ArgumentNullException(nameof(stream));
+			}
 			var sr = new StreamReader(stream, _utf8Encoding, true, 0x400, true);
 			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
 		}
 
 #if !NET472
 		public static IJsonReader CreateReader(ReadOnlySpan<char> json) {
+			if (json.Length == 0) {
+				throw new ArgumentNullException(nameof(json));
+			}
 			var sr = new StringReader(json.ToString());
 			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
 		}
 
-		public static IJsonReader CreateReader(ReadOnlyMemory<char> json) {
-			var sr = new StringReader(json.Span.ToString());
-			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
-		}
-
 		public static IJsonReader CreateReader(ReadOnlySpan<byte> json) {
+			if (json.Length == 0) {
+				throw new ArgumentNullException(nameof(json));
+			}
 			var sr = new StringReader(_utf8Encoding.GetString(json));
-			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
-		}
-
-		public static IJsonReader CreateReader(ReadOnlyMemory<byte> json) {
-			var sr = new StringReader(_utf8Encoding.GetString(json.Span));
 			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
 		}
 #endif
 
 		public static IJsonWriter CreateWriter(Stream stream, JsonWriterSettings writerSettings = null) {
+			if (stream == null) {
+				throw new ArgumentNullException(nameof(stream));
+			}
 			var tw = new StreamWriter(stream, _utf8Encoding, 0x400, true);
 			return new JsonWriterWrapper(new JsonWriter(tw, writerSettings), () => tw.Dispose());
 		}
@@ -133,6 +146,9 @@ namespace IonKiwi.Json.Utilities {
 #if NETCOREAPP3_0
 		public static class System {
 			public static IJsonReader CreateReader(string json) {
+				if (string.IsNullOrEmpty(json)) {
+					throw new ArgumentNullException(nameof(json));
+				}
 				var l = GetUtf8ByteCount(json);
 				var b = ArrayPool<byte>.Shared.Rent(l);
 				var t = TextToUtf8(json, b);
@@ -141,10 +157,16 @@ namespace IonKiwi.Json.Utilities {
 			}
 
 			public static IJsonReader CreateReader(Stream stream) {
+				if (stream == null) {
+					throw new ArgumentNullException(nameof(stream));
+				}
 				return new SystemJsonReader(stream);
 			}
 
 			public static IJsonReader CreateReader(ReadOnlySpan<char> json) {
+				if (json.Length == 0) {
+					throw new ArgumentNullException(nameof(json));
+				}
 				var l = GetUtf8ByteCount(json);
 				var b = ArrayPool<byte>.Shared.Rent(l);
 				var t = TextToUtf8(json, b);
@@ -152,26 +174,20 @@ namespace IonKiwi.Json.Utilities {
 				return new JsonReaderWrapper(r, () => ArrayPool<byte>.Shared.Return(b));
 			}
 
-			public static IJsonReader CreateReader(ReadOnlyMemory<char> json) {
-				var l = GetUtf8ByteCount(json.Span);
-				var b = ArrayPool<byte>.Shared.Rent(l);
-				var t = TextToUtf8(json.Span, b);
-				var r = new SystemJsonReader(b.AsMemory(0, t));
-				return new JsonReaderWrapper(r, () => ArrayPool<byte>.Shared.Return(b));
-			}
-
 			public static IJsonReader CreateReader(ReadOnlySpan<byte> json) {
+				if (json.Length == 0) {
+					throw new ArgumentNullException(nameof(json));
+				}
 				var b = ArrayPool<byte>.Shared.Rent(json.Length);
 				json.CopyTo(b);
 				var r = new SystemJsonReader(b.AsMemory());
 				return new JsonReaderWrapper(r, () => ArrayPool<byte>.Shared.Return(b));
 			}
 
-			public static IJsonReader CreateReader(ReadOnlyMemory<byte> json) {
-				return new SystemJsonReader(json);
-			}
-
 			public static IJsonWriter CreateWriter(Stream stream, JsonWriterSettings writerSettings = null, JsonWriterOptions? options = null) {
+				if (stream == null) {
+					throw new ArgumentNullException(nameof(stream));
+				}
 				return new SystemJsonWriter(stream, writerSettings, options);
 			}
 
