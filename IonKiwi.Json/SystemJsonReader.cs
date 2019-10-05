@@ -410,6 +410,7 @@ namespace IonKiwi.Json {
 				_stack.Push(item);
 			}
 			_token = item.Token;
+			_data = item.Data;
 			return _token;
 		}
 
@@ -1161,6 +1162,7 @@ namespace IonKiwi.Json {
 				if (item.Token != JsonReader.JsonToken.Comment) {
 					_stack.Push(item);
 				}
+				_data = item.Data;
 				_token = item.Token;
 			}
 			while (_rewindState.Count > 0);
