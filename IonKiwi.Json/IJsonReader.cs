@@ -14,6 +14,7 @@ namespace IonKiwi.Json {
 
 		JsonToken Token { get; }
 		int Depth { get; }
+		string GetPath();
 		string GetValue();
 		string ReadRaw(JsonWriteMode writeMode = JsonWriteMode.Json);
 		JsonToken Read();

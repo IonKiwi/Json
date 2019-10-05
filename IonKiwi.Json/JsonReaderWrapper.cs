@@ -34,6 +34,10 @@ namespace IonKiwi.Json {
 			return _reader.GetValue();
 		}
 
+		string IJsonReader.GetPath() {
+			return _reader.GetPath();
+		}
+
 		JsonReader.JsonToken IJsonReader.Read() {
 			return _reader.Read();
 		}

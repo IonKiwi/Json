@@ -77,6 +77,43 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		public string GetPath() {
+			if (_stack.Count == 0) {
+				return string.Empty;
+			}
+
+			StringBuilder sb = new StringBuilder();
+			int l = _stack.Count;
+			bool prevIsItem = false;
+			using (var e = _stack.GetEnumerator()) {
+				while (e.MoveNext()) {
+					var current = e.Current;
+					switch (current.Token) {
+						case JsonReader.JsonToken.None:
+						case JsonReader.JsonToken.Comment:
+							prevIsItem = true;
+							break;
+						case JsonReader.JsonToken.ArrayStart when prevIsItem:
+							var itemCount = current.ItemCount;
+							if (itemCount == -1) {
+								itemCount = 0;
+							}
+							sb.Insert(0, "[" + itemCount.ToString(CultureInfo.InvariantCulture) + "]");
+							prevIsItem = false;
+							break;
+						case JsonReader.JsonToken.ObjectProperty:
+							sb.Insert(0, '.' + current.Data);
+							prevIsItem = false;
+							break;
+						default:
+							prevIsItem = false;
+							break;
+					}
+				}
+			}
+			return sb.ToString();
+		}
+
 		public string GetValue() {
 			return _data;
 		}
@@ -490,7 +527,11 @@ namespace IonKiwi.Json {
 
 				if (token == JsonReader.JsonToken.ObjectProperty) {
 					_data = reader.GetString();
-					_stack.Peek().ItemCount++;
+					var objectInfo = _stack.Peek();
+					if (objectInfo.ItemCount == -1) {
+						objectInfo.ItemCount = 0;
+					}
+					objectInfo.ItemCount++;
 				}
 				else if (token == JsonReader.JsonToken.String) {
 					_data = reader.GetString();
@@ -1215,7 +1256,7 @@ namespace IonKiwi.Json {
 		private sealed class StackInformation {
 			public JsonReader.JsonToken Token;
 			public string Data;
-			public int ItemCount;
+			public int ItemCount = -1;
 			public List<string> CommentsBeforeFirstToken;
 		}
 
