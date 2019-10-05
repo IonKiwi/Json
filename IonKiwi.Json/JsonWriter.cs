@@ -140,8 +140,8 @@ namespace IonKiwi.Json {
 		}
 
 		private void WriteEnumValue(JsonTypeInfo typeInfo, Enum enumValue) {
-			ValidateValuePosition();
 			if (_settings.EnumValuesAsString) {
+				ValidateValuePosition();
 				if (!typeInfo.IsFlagsEnum) {
 					var name = Enum.GetName(typeInfo.RootType, enumValue);
 					var encoded = JsonUtility.JavaScriptStringEncode(name,
@@ -209,8 +209,8 @@ namespace IonKiwi.Json {
 		}
 
 		private async PlatformTask WriteEnumValueAsync(JsonTypeInfo typeInfo, Enum enumValue) {
-			ValidateValuePosition();
 			if (_settings.EnumValuesAsString) {
+				ValidateValuePosition();
 				if (!typeInfo.IsFlagsEnum) {
 					var name = Enum.GetName(typeInfo.RootType, enumValue);
 					var encoded = JsonUtility.JavaScriptStringEncode(name,
