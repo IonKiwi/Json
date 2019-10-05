@@ -30,6 +30,11 @@ namespace IonKiwi.Json.Utilities {
 			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
 		}
 
+		public static IJsonReader CreateReader(Stream stream) {
+			var sr = new StreamReader(stream, _utf8Encoding, true, 0x400, true);
+			return new JsonReaderWrapper(new JsonReader(sr), () => sr.Dispose());
+		}
+
 #if !NET472
 		public static IJsonReader CreateReader(ReadOnlySpan<char> json) {
 			var sr = new StringReader(json.ToString());
@@ -133,6 +138,10 @@ namespace IonKiwi.Json.Utilities {
 				var t = TextToUtf8(json, b);
 				var r = new SystemJsonReader(b.AsMemory(0, t));
 				return new JsonReaderWrapper(r, () => ArrayPool<byte>.Shared.Return(b));
+			}
+
+			public static IJsonReader CreateReader(Stream stream) {
+				return new SystemJsonReader(stream);
 			}
 
 			public static IJsonReader CreateReader(ReadOnlySpan<char> json) {
