@@ -1058,7 +1058,7 @@ namespace IonKiwi.Json {
 				if (state.Token != JsonReader.JsonToken.ArrayStart) {
 					ThrowInternalStateCorruption();
 				}
-				else if (state.ItemCount != 1) {
+				else if (state.ItemCount != 0) {
 					ThowInvalidPositionForResetReaderPositionForVisitor();
 				}
 
@@ -1093,7 +1093,7 @@ namespace IonKiwi.Json {
 				if (state.Token != JsonReader.JsonToken.ArrayStart) {
 					ThrowInternalStateCorruption();
 				}
-				else if (state.ItemCount != 1) {
+				else if (state.ItemCount != 0) {
 					ThowInvalidPositionForResetReaderPositionForVisitor();
 				}
 
@@ -1177,7 +1177,7 @@ namespace IonKiwi.Json {
 					if (state.Token != JsonReader.JsonToken.ArrayStart) {
 						ThrowInternalStateCorruption();
 					}
-					else if (state.ItemCount != 1) {
+					else if (state.ItemCount != 0) {
 						ThowInvalidPositionForResetReaderPositionForVisitor();
 					}
 
