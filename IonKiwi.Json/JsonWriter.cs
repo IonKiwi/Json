@@ -150,9 +150,7 @@ namespace IonKiwi.Json {
 					if (_requireSeparator) {
 						_output.Write(',');
 					}
-					_output.Write('"');
 					_output.Write(encoded);
-					_output.Write('"');
 					_requireSeparator = true;
 				}
 				else {
@@ -163,9 +161,7 @@ namespace IonKiwi.Json {
 					if (_requireSeparator) {
 						_output.Write(',');
 					}
-					_output.Write('"');
 					_output.Write(encoded);
-					_output.Write('"');
 					_requireSeparator = true;
 				}
 			}
@@ -223,9 +219,7 @@ namespace IonKiwi.Json {
 					if (_requireSeparator) {
 						await _output.WriteAsync(',').NoSync();
 					}
-					await _output.WriteAsync('"').NoSync();
 					await _output.WriteAsync(encoded).NoSync();
-					await _output.WriteAsync('"').NoSync();
 					_requireSeparator = true;
 				}
 				else {
@@ -236,9 +230,7 @@ namespace IonKiwi.Json {
 					if (_requireSeparator) {
 						await _output.WriteAsync(',').NoSync();
 					}
-					await _output.WriteAsync('"').NoSync();
 					await _output.WriteAsync(encoded).NoSync();
-					await _output.WriteAsync('"').NoSync();
 					_requireSeparator = true;
 				}
 			}
