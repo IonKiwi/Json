@@ -999,7 +999,7 @@ namespace IonKiwi.Json {
 				if (state.Token != JsonReader.JsonToken.ObjectStart) {
 					ThrowInternalStateCorruption();
 				}
-				else if (state.ItemCount != 0) {
+				else if (state.ItemCount != -1) {
 					ThowInvalidPositionForResetReaderPositionForVisitor();
 				}
 
@@ -1026,7 +1026,7 @@ namespace IonKiwi.Json {
 				if (state.Token != JsonReader.JsonToken.ArrayStart) {
 					ThrowInternalStateCorruption();
 				}
-				else if (state.ItemCount != 0) {
+				else if (state.ItemCount != -1) {
 					ThowInvalidPositionForResetReaderPositionForVisitor();
 				}
 
