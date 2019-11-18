@@ -404,6 +404,7 @@ namespace IonKiwi.Json {
 
 			private JsonSerializerToken HandleValue(JsonSerializerInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
 
+				bool? typeName = null;
 				if (!state.WriteValueCallbackCalled && _serializerSettings.WriteValueCallback != null) {
 					JsonWriterWriteValueCallbackArgs e = new JsonWriterWriteValueCallbackArgs();
 					IJsonWriterWriteValueCallbackArgs e2 = e;
@@ -422,6 +423,8 @@ namespace IonKiwi.Json {
 						typeInfo = newTypeInfo;
 						tupleContext = newTypeInfo.TupleContext != null ? new TupleContextInfoWrapper(newTypeInfo.TupleContext, null) : null;
 					}
+
+					typeName = e2.TypeName;
 				}
 
 				if (object.ReferenceEquals(null, value)) {
@@ -456,18 +459,23 @@ namespace IonKiwi.Json {
 							}
 
 							bool emitType = false;
-							if (typeInfo.OriginalType != objectType) {
-								emitType = true;
-								if (typeInfo.OriginalType.IsValueType && typeInfo.IsNullable && typeInfo.ItemType == objectType) {
-									emitType = false;
-								}
+							if (typeName.HasValue) {
+								emitType = typeName.Value;
 							}
-							if (state is JsonSerializerObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
-								if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
+							else {
+								if (typeInfo.OriginalType != objectType) {
 									emitType = true;
+									if (typeInfo.OriginalType.IsValueType && typeInfo.IsNullable && typeInfo.ItemType == objectType) {
+										emitType = false;
+									}
 								}
-								else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
-									emitType = false;
+								if (state is JsonSerializerObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+									if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
+										emitType = true;
+									}
+									else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
+										emitType = false;
+									}
 								}
 							}
 							objectState.EmitType = emitType;
@@ -505,13 +513,19 @@ namespace IonKiwi.Json {
 								return JsonSerializerToken.None;
 							}
 
-							bool emitType = typeInfo.OriginalType != objectType;
-							if (propertyState != null && propertyState.PropertyInfo != null) {
-								if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
-									emitType = true;
-								}
-								else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
-									emitType = false;
+							bool emitType = false;
+							if (typeName.HasValue) {
+								emitType = typeName.Value;
+							}
+							else {
+								emitType = typeInfo.OriginalType != objectType;
+								if (propertyState != null && propertyState.PropertyInfo != null) {
+									if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
+										emitType = true;
+									}
+									else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
+										emitType = false;
+									}
 								}
 							}
 							arrayState.EmitType = emitType;
@@ -533,13 +547,19 @@ namespace IonKiwi.Json {
 									cb(value);
 								}
 
-								bool emitType = typeInfo.OriginalType != objectType;
-								if (state is JsonSerializerObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
-									if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
-										emitType = true;
-									}
-									else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
-										emitType = false;
+								bool emitType = false;
+								if (typeName.HasValue) {
+									emitType = typeName.Value;
+								}
+								else {
+									emitType = typeInfo.OriginalType != objectType;
+									if (state is JsonSerializerObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+										if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
+											emitType = true;
+										}
+										else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
+											emitType = false;
+										}
 									}
 								}
 								objectState.EmitType = emitType;
@@ -559,13 +579,19 @@ namespace IonKiwi.Json {
 									cb(value);
 								}
 
-								bool emitType = typeInfo.OriginalType != objectType;
-								if (state is JsonSerializerObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
-									if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
-										emitType = true;
-									}
-									else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
-										emitType = false;
+								bool emitType = false;
+								if (typeName.HasValue) {
+									emitType = typeName.Value;
+								}
+								else {
+									emitType = typeInfo.OriginalType != objectType;
+									if (state is JsonSerializerObjectPropertyState propertyState && propertyState.PropertyInfo != null) {
+										if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.Always) {
+											emitType = true;
+										}
+										else if (propertyState.PropertyInfo.EmitTypeName == JsonEmitTypeName.None) {
+											emitType = false;
+										}
 									}
 								}
 								arrayState.EmitType = emitType;

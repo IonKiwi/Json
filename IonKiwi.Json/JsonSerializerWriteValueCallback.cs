@@ -12,6 +12,7 @@ namespace IonKiwi.Json {
 		Type InputType { get; set; }
 		object Value { get; set; }
 		bool ReplaceValue { get; }
+		bool? TypeName { get; }
 	}
 
 	public sealed class JsonWriterWriteValueCallbackArgs : IJsonWriterWriteValueCallbackArgs {
@@ -35,6 +36,11 @@ namespace IonKiwi.Json {
 				_value = value;
 				_replaceValue = true;
 			}
+		}
+
+		public bool? TypeName {
+			get;
+			set;
 		}
 
 		Type IJsonWriterWriteValueCallbackArgs.InputType { get => _inputType; set => _inputType = value; }
