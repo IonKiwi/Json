@@ -79,6 +79,15 @@ namespace IonKiwi.Json {
 			return CommonUtility.GetHexadecimalString(name.GetPublicKeyToken(), false);
 		}
 
+		private TimeZoneInfo _timeZone;
+		public TimeZoneInfo TimeZone {
+			get => _timeZone;
+			set {
+				EnsureUnlocked();
+				_timeZone = value;
+			}
+		}
+
 		private DateTimeHandling _dateTimeHandling;
 		public DateTimeHandling DateTimeHandling {
 			get => _dateTimeHandling;
@@ -123,6 +132,7 @@ namespace IonKiwi.Json {
 
 		public JsonParserSettings Clone() {
 			JsonParserSettings clone = new JsonParserSettings();
+			clone.TimeZone = this.TimeZone;
 			clone.DateTimeHandling = this.DateTimeHandling;
 			clone.UnspecifiedDateTimeHandling = this.UnspecifiedDateTimeHandling;
 			clone.DefaultAssemblyName = this.DefaultAssemblyName;

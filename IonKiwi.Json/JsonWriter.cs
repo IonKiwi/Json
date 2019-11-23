@@ -103,9 +103,10 @@ namespace IonKiwi.Json {
 
 		public void WriteDateTimeValue(DateTime dateTime) {
 			ValidateValuePosition();
-			var v = JsonUtility.EnsureDateTime(dateTime, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
+			var v = JsonUtility.EnsureDateTime(dateTime, _settings.TimeZone, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
 			char[] chars = new char[64];
-			int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, v, null, v.Kind);
+			// Unspecified => TimeZoneInfo.ConvertTime
+			int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, _settings.TimeZone, v, v.Kind == DateTimeKind.Unspecified ? DateTimeKind.Local : v.Kind);
 			//int pos = JsonDateTimeUtility.WriteMicrosoftDateTimeString(chars, 0, value, null, value.Kind);
 			if (_requireSeparator) {
 				_output.Write(',');
@@ -118,9 +119,10 @@ namespace IonKiwi.Json {
 
 		public async PlatformTask WriteDateTimeValueAsync(DateTime dateTime) {
 			ValidateValuePosition();
-			var v = JsonUtility.EnsureDateTime(dateTime, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
+			var v = JsonUtility.EnsureDateTime(dateTime, _settings.TimeZone, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
 			char[] chars = new char[64];
-			int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, v, null, v.Kind);
+			// Unspecified => TimeZoneInfo.ConvertTime
+			int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, _settings.TimeZone, v, v.Kind == DateTimeKind.Unspecified ? DateTimeKind.Local : v.Kind);
 			//int pos = JsonDateTimeUtility.WriteMicrosoftDateTimeString(chars, 0, value, null, value.Kind);
 			if (_requireSeparator) {
 				await _output.WriteAsync(',').NoSync();

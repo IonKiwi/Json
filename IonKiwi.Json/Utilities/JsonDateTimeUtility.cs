@@ -46,10 +46,10 @@ namespace IonKiwi.Json.Utilities {
 		private static readonly int[] DaysToMonth365 = new[] { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
 		private static readonly int[] DaysToMonth366 = new[] { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 };
 
-		public static int WriteMicrosoftDateTimeString(char[] chars, int start, DateTime value, TimeSpan? offset, DateTimeKind kind) {
+		public static int WriteMicrosoftDateTimeString(char[] chars, int start, TimeZoneInfo timeZone, DateTime value, DateTimeKind kind) {
 			int pos = start;
 
-			TimeSpan o = offset ?? GetUtcOffset(value);
+			TimeSpan o = GetUtcOffset(timeZone ?? TimeZoneInfo.Local, value);
 			long javaScriptTicks = ConvertDateTimeToJavaScriptTicks(value, o);
 
 			@"\/Date(".CopyTo(0, chars, pos, 7);
@@ -76,34 +76,36 @@ namespace IonKiwi.Json.Utilities {
 			return pos;
 		}
 
-		public static int WriteIsoDateTimeString(char[] chars, int start, DateTime value, TimeSpan? offset, DateTimeKind kind) {
+		public static int WriteIsoDateTimeString(char[] chars, int start, TimeZoneInfo timeZone, DateTime value, DateTimeKind kind) {
 			int pos = start;
 			pos = WriteDefaultIsoDate(chars, pos, value);
 
 			switch (kind) {
 				case DateTimeKind.Local:
-					pos = WriteDateTimeOffset(chars, pos, offset ?? GetUtcOffset(value), true);
+					pos = WriteDateTimeOffset(chars, pos, GetUtcOffset(timeZone ?? TimeZoneInfo.Local, value), true);
 					break;
 				case DateTimeKind.Utc:
 					chars[pos++] = 'Z';
 					break;
+				case DateTimeKind.Unspecified:
+					throw new InvalidOperationException();
 			}
 
 			return pos;
 		}
 
-		public static bool TryParseDateTime(string s, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling, out DateTime dt) {
+		public static bool TryParseDateTime(string s, TimeZoneInfo timeZone, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling, out DateTime dt) {
 			if (s.Length > 0) {
 				if (s[0] == '/') {
 					if (s.Length >= 9 && s.StartsWith("/Date(", StringComparison.Ordinal) && s.EndsWith(")/", StringComparison.Ordinal)) {
-						if (TryParseDateTimeMicrosoft(s, dateTimeHandling, unspecifiedDateTimeHandling, out dt)) {
+						if (TryParseDateTimeMicrosoft(s, timeZone, dateTimeHandling, unspecifiedDateTimeHandling, out dt)) {
 							return true;
 						}
 					}
 				}
 				else if (s.Length >= 19 && s.Length <= 40 && char.IsDigit(s[0]) && s[10] == 'T') {
 					if (DateTime.TryParseExact(s, IsoDateFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dt)) {
-						dt = JsonUtility.EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
+						dt = JsonUtility.EnsureDateTime(dt, timeZone, dateTimeHandling, unspecifiedDateTimeHandling);
 						return true;
 					}
 				}
@@ -113,7 +115,7 @@ namespace IonKiwi.Json.Utilities {
 			return false;
 		}
 
-		private static bool TryParseDateTimeMicrosoft(string text, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling, out DateTime dt) {
+		private static bool TryParseDateTimeMicrosoft(string text, TimeZoneInfo timeZone, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling, out DateTime dt) {
 			long ticks;
 			TimeSpan offset;
 			DateTimeKind kind;
@@ -137,7 +139,7 @@ namespace IonKiwi.Json.Utilities {
 					break;
 			}
 
-			dt = JsonUtility.EnsureDateTime(dt, dateTimeHandling, unspecifiedDateTimeHandling);
+			dt = JsonUtility.EnsureDateTime(dt, timeZone, dateTimeHandling, unspecifiedDateTimeHandling);
 			return true;
 		}
 
@@ -193,7 +195,6 @@ namespace IonKiwi.Json.Utilities {
 
 		private static DateTime ConvertJavaScriptTicksToDateTime(long javaScriptTicks) {
 			DateTime dateTime = new DateTime((javaScriptTicks * 10000) + InitialJavaScriptDateTicks, DateTimeKind.Utc);
-
 			return dateTime;
 		}
 
@@ -310,8 +311,8 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-		private static TimeSpan GetUtcOffset(DateTime d) {
-			return TimeZoneInfo.Local.GetUtcOffset(d);
+		private static TimeSpan GetUtcOffset(TimeZoneInfo timeZone, DateTime d) {
+			return timeZone.GetUtcOffset(d);
 		}
 
 		private static long ConvertDateTimeToJavaScriptTicks(DateTime dateTime, TimeSpan offset) {

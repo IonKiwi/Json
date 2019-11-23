@@ -241,7 +241,7 @@ namespace IonKiwi.Json {
 				}
 
 				string v = reader.GetValue();
-				if (!JsonDateTimeUtility.TryParseDateTime(v, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling, out var dt)) {
+				if (!JsonDateTimeUtility.TryParseDateTime(v, _settings.TimeZone, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling, out var dt)) {
 					ThrowDataDoesNotMatchTypeRequested(v, typeof(DateTime));
 				}
 
@@ -258,7 +258,7 @@ namespace IonKiwi.Json {
 				}
 
 				string v = reader.GetValue();
-				if (!JsonDateTimeUtility.TryParseDateTime(v, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling, out var dt)) {
+				if (!JsonDateTimeUtility.TryParseDateTime(v, _settings.TimeZone, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling, out var dt)) {
 					ThrowDataDoesNotMatchTypeRequested(v, typeof(DateTime?));
 				}
 

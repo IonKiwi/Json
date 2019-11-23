@@ -106,14 +106,32 @@ namespace IonKiwi.Json {
 
 		public void WriteDateTimeValue(DateTime dateTime) {
 			WriteSeparatorForRaw();
-			_output.WriteStringValue(dateTime);
+			//_output.WriteStringValue(dateTime);
+
+			var v = JsonUtility.EnsureDateTime(dateTime, _settings.TimeZone, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
+			char[] chars = new char[64];
+			// Unspecified => TimeZoneInfo.ConvertTime
+			int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, _settings.TimeZone, v, v.Kind == DateTimeKind.Unspecified ? DateTimeKind.Local : v.Kind);
+
+			ReadOnlySpan<char> span = chars;
+			_output.WriteStringValue(span.Slice(0, pos));
+
 			_requireSeparator = true;
 		}
 
 		public ValueTask WriteDateTimeValueAsync(DateTime dateTime) {
 			var t = WriteSeparatorForRawAsync();
 			if (t.IsCompletedSuccessfully) {
-				_output.WriteStringValue(dateTime);
+				//_output.WriteStringValue(dateTime);
+
+				var v = JsonUtility.EnsureDateTime(dateTime, _settings.TimeZone, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
+				char[] chars = new char[64];
+				// Unspecified => TimeZoneInfo.ConvertTime
+				int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, _settings.TimeZone, v, v.Kind == DateTimeKind.Unspecified ? DateTimeKind.Local : v.Kind);
+
+				ReadOnlySpan<char> span = chars;
+				_output.WriteStringValue(span.Slice(0, pos));
+
 				_requireSeparator = true;
 				return default;
 			}
@@ -122,7 +140,16 @@ namespace IonKiwi.Json {
 
 		private async ValueTask WriteDateTimeValueAsync(ValueTask t, DateTime dateTime) {
 			await t.NoSync();
-			_output.WriteStringValue(dateTime);
+			//_output.WriteStringValue(dateTime);
+
+			var v = JsonUtility.EnsureDateTime(dateTime, _settings.TimeZone, _settings.DateTimeHandling, _settings.UnspecifiedDateTimeHandling);
+			char[] chars = new char[64];
+			// Unspecified => TimeZoneInfo.ConvertTime
+			int pos = JsonDateTimeUtility.WriteIsoDateTimeString(chars, 0, _settings.TimeZone, v, v.Kind == DateTimeKind.Unspecified ? DateTimeKind.Local : v.Kind);
+
+			ReadOnlyMemory<char> span = chars;
+			_output.WriteStringValue(span.Span.Slice(0, pos));
+
 			_requireSeparator = true;
 			return;
 		}

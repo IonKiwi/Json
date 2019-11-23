@@ -419,15 +419,42 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static DateTime EnsureDateTime(DateTime value, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling) {
+			return EnsureDateTime(value, null, dateTimeHandling, unspecifiedDateTimeHandling);
+		}
+
+		public static DateTime EnsureDateTime(DateTime value, TimeZoneInfo timeZone, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling) {
 			if (dateTimeHandling == DateTimeHandling.Utc) {
-				return SwitchToUtcTime(value, unspecifiedDateTimeHandling);
+				if (timeZone == null) {
+					return SwitchToUtcTime(value, unspecifiedDateTimeHandling);
+				}
+				return SwitchToUtcTime(value, timeZone, unspecifiedDateTimeHandling);
 			}
 			else if (dateTimeHandling == DateTimeHandling.Local) {
-				return SwitchToLocalTime(value, unspecifiedDateTimeHandling);
+				if (timeZone == null) {
+					return SwitchToLocalTime(value, unspecifiedDateTimeHandling);
+				}
+				return SwitchToLocalTime(value, timeZone, unspecifiedDateTimeHandling);
 			}
 			else {
 				throw new NotSupportedException(dateTimeHandling.ToString());
 			}
+		}
+
+		private static DateTime SwitchToLocalTime(DateTime value, TimeZoneInfo timeZone, UnspecifiedDateTimeHandling dateTimeHandling) {
+			switch (value.Kind) {
+				case DateTimeKind.Unspecified:
+					if (dateTimeHandling == UnspecifiedDateTimeHandling.AssumeLocal)
+						return (timeZone == TimeZoneInfo.Local ? new DateTime(value.Ticks, DateTimeKind.Local) : value);
+					else
+						return TimeZoneInfo.ConvertTimeFromUtc(new DateTime(value.Ticks, DateTimeKind.Utc), timeZone);
+
+				case DateTimeKind.Utc:
+					return TimeZoneInfo.ConvertTimeFromUtc(value, timeZone);
+
+				case DateTimeKind.Local:
+					return TimeZoneInfo.ConvertTime(value, timeZone);
+			}
+			return value;
 		}
 
 		private static DateTime SwitchToLocalTime(DateTime value, UnspecifiedDateTimeHandling dateTimeHandling) {
@@ -443,6 +470,23 @@ namespace IonKiwi.Json.Utilities {
 
 				case DateTimeKind.Local:
 					return value;
+			}
+			return value;
+		}
+
+		private static DateTime SwitchToUtcTime(DateTime value, TimeZoneInfo timeZone, UnspecifiedDateTimeHandling dateTimeHandling) {
+			switch (value.Kind) {
+				case DateTimeKind.Unspecified:
+					if (dateTimeHandling == UnspecifiedDateTimeHandling.AssumeUtc)
+						return new DateTime(value.Ticks, DateTimeKind.Utc);
+					else
+						return TimeZoneInfo.ConvertTimeToUtc(value, timeZone);
+
+				case DateTimeKind.Utc:
+					return value;
+
+				case DateTimeKind.Local:
+					return value.ToUniversalTime();
 			}
 			return value;
 		}

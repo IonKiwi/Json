@@ -33,6 +33,15 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		private TimeZoneInfo _timeZone;
+		public TimeZoneInfo TimeZone {
+			get => _timeZone;
+			set {
+				EnsureUnlocked();
+				_timeZone = value;
+			}
+		}
+
 		private DateTimeHandling _dateTimeHandling;
 		public DateTimeHandling DateTimeHandling {
 			get => _dateTimeHandling;
@@ -87,6 +96,7 @@ namespace IonKiwi.Json {
 		public JsonWriterSettings Clone() {
 			var clone = new JsonWriterSettings();
 			clone.JsonWriteMode = this.JsonWriteMode;
+			clone.TimeZone = this.TimeZone;
 			clone.DateTimeHandling = this.DateTimeHandling;
 			clone.UnspecifiedDateTimeHandling = this.UnspecifiedDateTimeHandling;
 			clone.EnumValuesAsString = this.EnumValuesAsString;
