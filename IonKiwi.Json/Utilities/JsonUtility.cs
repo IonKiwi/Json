@@ -444,7 +444,7 @@ namespace IonKiwi.Json.Utilities {
 			switch (value.Kind) {
 				case DateTimeKind.Unspecified:
 					if (dateTimeHandling == UnspecifiedDateTimeHandling.AssumeLocal)
-						return (timeZone == TimeZoneInfo.Local ? new DateTime(value.Ticks, DateTimeKind.Local) : value);
+						return (string.Equals(timeZone.Id, TimeZoneInfo.Local.Id, StringComparison.Ordinal) ? new DateTime(value.Ticks, DateTimeKind.Local) : value);
 					else
 						return TimeZoneInfo.ConvertTimeFromUtc(new DateTime(value.Ticks, DateTimeKind.Utc), timeZone);
 
