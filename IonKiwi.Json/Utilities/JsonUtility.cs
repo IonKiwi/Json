@@ -422,6 +422,10 @@ namespace IonKiwi.Json.Utilities {
 			return EnsureDateTime(value, null, dateTimeHandling, unspecifiedDateTimeHandling);
 		}
 
+		private static void ThrowUnsupportedOption(string option) {
+			throw new NotSupportedException(option);
+		}
+
 		public static DateTime EnsureDateTime(DateTime value, TimeZoneInfo timeZone, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling) {
 			if (dateTimeHandling == DateTimeHandling.Utc) {
 				if (timeZone == null) {
@@ -435,8 +439,29 @@ namespace IonKiwi.Json.Utilities {
 				}
 				return SwitchToLocalTime(value, timeZone, unspecifiedDateTimeHandling);
 			}
+			else if (dateTimeHandling == DateTimeHandling.Current) {
+				if (value.Kind == DateTimeKind.Utc) {
+					return EnsureDateTime(value, timeZone, DateTimeHandling.Utc, unspecifiedDateTimeHandling);
+				}
+				else if (value.Kind == DateTimeKind.Local) {
+					return EnsureDateTime(value, timeZone, DateTimeHandling.Local, unspecifiedDateTimeHandling);
+				}
+				else {
+					if (unspecifiedDateTimeHandling == UnspecifiedDateTimeHandling.AssumeUtc) {
+						return EnsureDateTime(value, timeZone, DateTimeHandling.Utc, unspecifiedDateTimeHandling);
+					}
+					else if (unspecifiedDateTimeHandling == UnspecifiedDateTimeHandling.AssumeLocal) {
+						return EnsureDateTime(value, timeZone, DateTimeHandling.Local, unspecifiedDateTimeHandling);
+					}
+					else {
+						ThrowUnsupportedOption(unspecifiedDateTimeHandling.ToString());
+						return value;
+					}
+				}
+			}
 			else {
-				throw new NotSupportedException(dateTimeHandling.ToString());
+				ThrowUnsupportedOption(dateTimeHandling.ToString());
+				return value;
 			}
 		}
 

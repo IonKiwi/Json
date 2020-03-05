@@ -114,5 +114,101 @@ namespace IonKiwi.Json.Test {
 			Assert.Equal(02, dt.Minute);
 			Assert.Equal(10, dt.Second);
 		}
+
+		private static void AssertUTCTime(DateTime dt) {
+			Assert.Equal(2019, dt.Year);
+			Assert.Equal(11, dt.Month);
+			Assert.Equal(23, dt.Day);
+			Assert.Equal(13, dt.Hour);
+			Assert.Equal(02, dt.Minute);
+			Assert.Equal(10, dt.Second);
+		}
+
+		private DateTimeKind GetLocalDateTimeKind(TimeZoneInfo tz) {
+			if (string.Equals(tz.Id, TimeZoneInfo.Local.Id, StringComparison.Ordinal)) {
+				return DateTimeKind.Local;
+			}
+			return DateTimeKind.Unspecified;
+		}
+
+		[Fact]
+		public void TestDateTimeHandling() {
+			string utcDTs = "\"2019-11-23T13:02:10.1047128Z\"";
+			string localDTs = "\"2019-11-23T08:02:10.1047128-05:00\"";
+
+			var parserSettings = JsonParser.DefaultSettings.Clone();
+			parserSettings.UnspecifiedDateTimeHandling = UnspecifiedDateTimeHandling.AssumeLocal;
+			parserSettings.TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+
+			var writerSettings = JsonWriter.DefaultSettings.Clone();
+			writerSettings.UnspecifiedDateTimeHandling = UnspecifiedDateTimeHandling.AssumeLocal;
+			writerSettings.TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+
+			// parse
+
+			// UTC input
+
+			parserSettings.DateTimeHandling = DateTimeHandling.Local;
+			var localDT = JsonUtility.Parse<DateTime>(utcDTs, parserSettings: parserSettings);
+			Assert.Equal(GetLocalDateTimeKind(parserSettings.TimeZone), localDT.Kind);
+			AssertUSTime(localDT);
+
+			parserSettings.DateTimeHandling = DateTimeHandling.Utc;
+			var utcDT = JsonUtility.Parse<DateTime>(utcDTs, parserSettings: parserSettings);
+			Assert.Equal(DateTimeKind.Utc, utcDT.Kind);
+			AssertUTCTime(utcDT);
+
+			parserSettings.DateTimeHandling = DateTimeHandling.Current;
+			utcDT = JsonUtility.Parse<DateTime>(utcDTs, parserSettings: parserSettings);
+			Assert.Equal(DateTimeKind.Utc, utcDT.Kind);
+			AssertUTCTime(utcDT);
+
+			// local input
+
+			parserSettings.DateTimeHandling = DateTimeHandling.Local;
+			localDT = JsonUtility.Parse<DateTime>(localDTs, parserSettings: parserSettings);
+			Assert.Equal(GetLocalDateTimeKind(parserSettings.TimeZone), localDT.Kind);
+			AssertUSTime(localDT);
+
+			parserSettings.DateTimeHandling = DateTimeHandling.Utc;
+			utcDT = JsonUtility.Parse<DateTime>(localDTs, parserSettings: parserSettings);
+			Assert.Equal(DateTimeKind.Utc, utcDT.Kind);
+			AssertUTCTime(utcDT);
+
+			parserSettings.DateTimeHandling = DateTimeHandling.Current;
+			localDT = JsonUtility.Parse<DateTime>(localDTs, parserSettings: parserSettings);
+			Assert.Equal(GetLocalDateTimeKind(parserSettings.TimeZone), localDT.Kind);
+			AssertUSTime(localDT);
+
+			// serialize
+
+			// UTC input
+
+			writerSettings.DateTimeHandling = DateTimeHandling.Local;
+			var newLocal = JsonUtility.Serialize<DateTime>(utcDT, writerSettings: writerSettings);
+			Assert.Equal(localDTs, newLocal);
+
+			writerSettings.DateTimeHandling = DateTimeHandling.Utc;
+			var newUTC = JsonUtility.Serialize<DateTime>(utcDT, writerSettings: writerSettings);
+			Assert.Equal(utcDTs, newUTC);
+
+			writerSettings.DateTimeHandling = DateTimeHandling.Current;
+			newUTC = JsonUtility.Serialize<DateTime>(utcDT, writerSettings: writerSettings);
+			Assert.Equal(utcDTs, newUTC);
+
+			// local input
+
+			writerSettings.DateTimeHandling = DateTimeHandling.Local;
+			newLocal = JsonUtility.Serialize<DateTime>(localDT, writerSettings: writerSettings);
+			Assert.Equal(localDTs, newLocal);
+
+			writerSettings.DateTimeHandling = DateTimeHandling.Utc;
+			newUTC = JsonUtility.Serialize<DateTime>(localDT, writerSettings: writerSettings);
+			Assert.Equal(utcDTs, newUTC);
+
+			writerSettings.DateTimeHandling = DateTimeHandling.Current;
+			newLocal = JsonUtility.Serialize<DateTime>(localDT, writerSettings: writerSettings);
+			Assert.Equal(localDTs, newLocal);
+		}
 	}
 }
