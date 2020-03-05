@@ -3,7 +3,7 @@
 // https://github.com/IonKiwi/Json/blob/master/LICENSE
 #endregion
 
-#if NETCOREAPP3_0
+#if NETCOREAPP3_1
 using IonKiwi.Extenions;
 using System;
 using System.Buffers;
