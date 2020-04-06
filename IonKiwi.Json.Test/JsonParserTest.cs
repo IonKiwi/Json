@@ -140,7 +140,7 @@ namespace IonKiwi.Json.Test {
 		}
 
 		[JsonCollection(IsSingleOrArrayValue = true)]
-		private sealed class SingleOrArrayValue2 : List<int> {
+		private sealed class SingleOrArrayValue2<T> : List<T> {
 
 		}
 
@@ -148,7 +148,7 @@ namespace IonKiwi.Json.Test {
 		public void TestSingleOrArrayValue2() {
 			string json = "42";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.Parse<SingleOrArrayValue2>(new JsonReader(r));
+				var v = JsonParser.Parse<SingleOrArrayValue2<int>>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.Single(v);
 				Assert.Equal(42, v[0]);
@@ -156,13 +156,93 @@ namespace IonKiwi.Json.Test {
 
 			json = "[42,43]";
 			using (var r = new StringReader(json)) {
-				var v = JsonParser.Parse<SingleOrArrayValue2>(new JsonReader(r));
+				var v = JsonParser.Parse<SingleOrArrayValue2<int>>(new JsonReader(r));
 				Assert.NotNull(v);
 				Assert.Equal(2, v.Count);
 				Assert.Equal(42, v[0]);
 				Assert.Equal(43, v[1]);
 			}
 
+			return;
+		}
+
+		[Fact]
+		public void TestSingleOrArrayValue3() {
+			string json = "[0,1,2]";
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.Parse<List<SingleOrArrayValue2<int>>>(new JsonReader(r));
+				Assert.NotNull(v);
+				Assert.Equal(3, v.Count);
+				Assert.Single(v[0]);
+				Assert.Single(v[1]);
+				Assert.Single(v[2]);
+				Assert.Equal(0, v[0][0]);
+				Assert.Equal(1, v[1][0]);
+				Assert.Equal(2, v[2][0]);
+			}
+
+			json = "[[0],1,2]";
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.Parse<List<SingleOrArrayValue2<int>>>(new JsonReader(r));
+				Assert.NotNull(v);
+				Assert.Equal(3, v.Count);
+				Assert.Single(v[0]);
+				Assert.Single(v[1]);
+				Assert.Single(v[2]);
+				Assert.Equal(0, v[0][0]);
+				Assert.Equal(1, v[1][0]);
+				Assert.Equal(2, v[2][0]);
+			}
+
+			json = "[0,[1],2]";
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.Parse<List<SingleOrArrayValue2<int>>>(new JsonReader(r));
+				Assert.NotNull(v);
+				Assert.Equal(3, v.Count);
+				Assert.Single(v[0]);
+				Assert.Single(v[1]);
+				Assert.Single(v[2]);
+				Assert.Equal(0, v[0][0]);
+				Assert.Equal(1, v[1][0]);
+				Assert.Equal(2, v[2][0]);
+			}
+			json = "[[0,1],null,2]";
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.Parse<List<SingleOrArrayValue2<int>>>(new JsonReader(r));
+				Assert.NotNull(v);
+				Assert.Equal(3, v.Count);
+				Assert.Equal(2, v[0].Count);
+				Assert.Null(v[1]);
+				Assert.Single(v[2]);
+				Assert.Equal(0, v[0][0]);
+				Assert.Equal(1, v[0][1]);
+				Assert.Equal(2, v[2][0]);
+			}
+			json = "[[0,1],null,2]";
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.Parse<List<SingleOrArrayValue2<int?>>>(new JsonReader(r));
+				Assert.NotNull(v);
+				Assert.Equal(3, v.Count);
+				Assert.Equal(2, v[0].Count);
+				Assert.Null(v[1]);
+				Assert.Single(v[2]);
+				Assert.Equal(0, v[0][0]);
+				Assert.Equal(1, v[0][1]);
+				Assert.Equal(2, v[2][0]);
+			}
+			json = "[[0,1],[null],2]";
+			using (var r = new StringReader(json)) {
+				var v = JsonParser.Parse<List<SingleOrArrayValue2<int?>>>(new JsonReader(r));
+				Assert.NotNull(v);
+				Assert.Equal(3, v.Count);
+				Assert.Equal(2, v[0].Count);
+				Assert.Single(v[1]);
+				Assert.Single(v[2]);
+				Assert.Equal(0, v[0][0]);
+				Assert.Null(v[1][0]);
+				Assert.Equal(1, v[0][1]);
+				Assert.Equal(2, v[2][0]);
+			}
 			return;
 		}
 

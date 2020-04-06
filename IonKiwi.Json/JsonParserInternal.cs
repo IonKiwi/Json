@@ -705,7 +705,7 @@ namespace IonKiwi.Json {
 				//objectState.StartDepth = reader.Depth;
 				_currentState.Push(itemState);
 
-				return HandleValueState(itemState, reader, itemState.TypeInfo, itemState.TupleContext, arrayState.IsSingleOrArrayValue);
+				return HandleValueState(itemState, reader, itemState.TypeInfo, itemState.TupleContext, itemState.TypeInfo.IsSingleOrArrayValue);
 			}
 
 			private HandleStateResult HandlePropertyState(JsonParserObjectPropertyState propertyState, IJsonReader reader) {
