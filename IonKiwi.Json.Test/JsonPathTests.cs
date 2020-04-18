@@ -139,7 +139,7 @@ namespace IonKiwi.Json.Test {
 
 			for (int i = 0; i < query.Length; i++) {
 				using (var r = new StringReader(json)) {
-					var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), JsonUtility.CreateReader, new(string path, Type type)[] { query[i] });
+					var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), JsonUtility.CreateReader, new (string path, Type type)[] { query[i] });
 					Assert.Equal(expectedResult[i], result[0]);
 				}
 			}
@@ -186,7 +186,80 @@ namespace IonKiwi.Json.Test {
 
 			for (int i = 0; i < query.Length; i++) {
 				using (var r = new StringReader(json)) {
-					var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), JsonUtility.CreateReader, new(string path, Type type)[] { query[i] });
+					var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), JsonUtility.CreateReader, new (string path, Type type)[] { query[i] });
+					Assert.Equal(expectedResult[i], result[0]);
+				}
+			}
+		}
+
+		[Fact]
+		public void TestPath4() {
+			string json = @"{
+""http://ionkiwi.nl/claims/identity/a1"": { a: 1 },
+'http://ionkiwi.nl/claims/identity/a2': { a: 2 },
+
+""http://ionkiwi.nl/claims/identity/a\u{27}3\u{27}"": { a: 3 },
+'http://ionkiwi.nl/claims/identity/a\u{22}4\u{22}': { a: 4 },
+
+""http://ionkiwi.nl/claims/identity/a\u{22}5\u{22}"": { a: 5 },
+'http://ionkiwi.nl/claims/identity/a\u{27}6\u{27}': { a: 6 },
+}";
+			var query = new (string path, Type type)[] {
+				(".'http://ionkiwi.nl/claims/identity/a1'.a", typeof(int)),
+				(".'http://ionkiwi.nl/claims/identity/a2'.a", typeof(int)),
+				(".'http://ionkiwi.nl/claims/identity/a\\'3\\''.a", typeof(int)),
+				(".'http://ionkiwi.nl/claims/identity/a\"4\"'.a", typeof(int)),
+				(".'http://ionkiwi.nl/claims/identity/a\"5\"'.a", typeof(int)),
+				(".'http://ionkiwi.nl/claims/identity/a\\'6\\''.a", typeof(int)),
+			};
+			var expectedResult = new object[] {
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+			};
+			using (var r = new StringReader(json)) {
+				var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), JsonUtility.CreateReader, query);
+				for (int i = 0; i < expectedResult.Length; i++) {
+					Assert.Equal(expectedResult[i], result[i]);
+				}
+			}
+
+			for (int i = 0; i < query.Length; i++) {
+				using (var r = new StringReader(json)) {
+					var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), JsonUtility.CreateReader, new (string path, Type type)[] { query[i] });
+					Assert.Equal(expectedResult[i], result[0]);
+				}
+			}
+
+			query = new (string path, Type type)[] {
+				(".\"http://ionkiwi.nl/claims/identity/a1\".a", typeof(int)),
+				(".\"http://ionkiwi.nl/claims/identity/a2\".a", typeof(int)),
+				(".\"http://ionkiwi.nl/claims/identity/a'3'\".a", typeof(int)),
+				(".\"http://ionkiwi.nl/claims/identity/a\\\"4\\\"\".a", typeof(int)),
+				(".\"http://ionkiwi.nl/claims/identity/a\\\"5\\\"\".a", typeof(int)),
+				(".\"http://ionkiwi.nl/claims/identity/a'6'\".a", typeof(int)),
+			};
+			expectedResult = new object[] {
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+			};
+			using (var r = new StringReader(json)) {
+				var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), JsonUtility.CreateReader, query);
+				for (int i = 0; i < expectedResult.Length; i++) {
+					Assert.Equal(expectedResult[i], result[i]);
+				}
+			}
+
+			for (int i = 0; i < query.Length; i++) {
+				using (var r = new StringReader(json)) {
+					var result = JsonUtility.TryGetValuesByJsonPath(new JsonReader(r), JsonUtility.CreateReader, new (string path, Type type)[] { query[i] });
 					Assert.Equal(expectedResult[i], result[0]);
 				}
 			}

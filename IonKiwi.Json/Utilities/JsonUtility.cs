@@ -898,29 +898,65 @@ namespace IonKiwi.Json.Utilities {
 			return root;
 		}
 
-		private static void ParsePathInternal(Dictionary<string, JsonPath> currentParts, string path, int queryIndex, (string path, Type type) query) {
+		private static bool ParsePathInternal(Dictionary<string, JsonPath> currentParts, string path, int queryIndex, (string path, Type type) query) {
 			if (string.IsNullOrEmpty(path)) {
 				ThrowInvalidPath(path);
+				return false;
 			}
 			else if (path[0] == '.') {
-				int next1 = path.IndexOf('.', 1);
-				int next2 = path.IndexOf('[', 1);
-				string property;
+
+				var next = path[1];
+				if (char.IsWhiteSpace(next)) {
+					ThrowInvalidPath(path);
+					return false;
+				}
+
 				int end = -1;
-				if (next1 < 0 && next2 < 0) {
-					property = path.Substring(1);
-				}
-				else if (next1 < 0) {
-					end = next2;
-					property = path.Substring(1, next2 - 1);
-				}
-				else if (next2 < 0) {
-					end = next1;
-					property = path.Substring(1, next1 - 1);
+				string property;
+				if (next == '\'' || next == '"') {
+					var target = next;
+					int c = 2, pl = path.Length;
+					while (c < pl) {
+						c = path.IndexOf(target, c);
+						if (c < 0) {
+							ThrowInvalidPath(path);
+							return false;
+						}
+						if (path[c - 1] != '\\') {
+							end = c + 1;
+							break;
+						}
+						else {
+							c++;
+						}
+					}
+					if (end == -1) {
+						ThrowInvalidPath(path);
+						return false;
+					}
+					else if (end == pl) {
+						end = -1;
+					}
+					property = path.Substring(2, end - 3).Replace($"\\{target}", $"{target}");
 				}
 				else {
-					end = Math.Min(next1, next2);
-					property = path.Substring(1, end - 1);
+					int next1 = path.IndexOf('.', 1);
+					int next2 = path.IndexOf('[', 1);
+					if (next1 < 0 && next2 < 0) {
+						property = path.Substring(1);
+					}
+					else if (next1 < 0) {
+						end = next2;
+						property = path.Substring(1, next2 - 1);
+					}
+					else if (next2 < 0) {
+						end = next1;
+						property = path.Substring(1, next1 - 1);
+					}
+					else {
+						end = Math.Min(next1, next2);
+						property = path.Substring(1, end - 1);
+					}
 				}
 
 				if (!currentParts.TryGetValue(property, out var part)) {
@@ -934,13 +970,15 @@ namespace IonKiwi.Json.Utilities {
 				if (end < 0) {
 					if (part.QueryIndex.HasValue) {
 						ThrowMultiplePaths();
+						return false;
 					}
 					part.QueryIndex = queryIndex;
 					part.RequestedType = query.type;
+					return true;
 				}
 				else {
 					// remaining path
-					ParsePathInternal(part.SubPath, path.Substring(end), queryIndex, query);
+					return ParsePathInternal(part.SubPath, path.Substring(end), queryIndex, query);
 				}
 			}
 			else if (path[0] == '[') {
@@ -965,17 +1003,20 @@ namespace IonKiwi.Json.Utilities {
 				if (next == path.Length - 1) {
 					if (part.QueryIndex.HasValue) {
 						ThrowMultiplePaths();
+						return false;
 					}
 					part.QueryIndex = queryIndex;
 					part.RequestedType = query.type;
+					return true;
 				}
 				else {
 					// remaining path
-					ParsePathInternal(part.SubPath, path.Substring(next + 1), queryIndex, query);
+					return ParsePathInternal(part.SubPath, path.Substring(next + 1), queryIndex, query);
 				}
 			}
 			else {
 				ThrowInvalidPath(path);
+				return false;
 			}
 		}
 

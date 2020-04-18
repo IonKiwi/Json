@@ -1303,7 +1303,15 @@ namespace IonKiwi.Json {
 					continue;
 				}
 				else if (c == '/') {
-					state.IsForwardSlash = isForwardSlash = true;
+					switch (currentToken) {
+						case JsonInternalObjectToken.SingleQuotedIdentifier:
+						case JsonInternalObjectToken.DoubleQuotedIdentifier:
+							state.CurrentProperty.Append(c);
+							break;
+						default:
+							state.IsForwardSlash = isForwardSlash = true;
+							break;
+					}
 					continue;
 				}
 				else if (expectUnicodeEscapeSequence) {
@@ -1410,7 +1418,7 @@ namespace IonKiwi.Json {
 						}
 					case JsonInternalObjectToken.AfterIdentifier when c == ' ' || c == '\t' || c == '\v' || c == '\f' || c == '\u00A0':
 						continue;
-					case JsonInternalObjectToken.SingleQuotedIdentifier when c == '\'':
+					case JsonInternalObjectToken.SingleQuotedIdentifier when c == '\'' && !isEscapeSequence:
 						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
 						continue;
 					case JsonInternalObjectToken.SingleQuotedIdentifier when c == '\\':
@@ -1419,7 +1427,7 @@ namespace IonKiwi.Json {
 					case JsonInternalObjectToken.SingleQuotedIdentifier:
 						state.CurrentProperty.Append(c);
 						continue;
-					case JsonInternalObjectToken.DoubleQuotedIdentifier when c == '"':
+					case JsonInternalObjectToken.DoubleQuotedIdentifier when c == '"' && !isEscapeSequence:
 						state.Token = currentToken = JsonInternalObjectToken.AfterIdentifier;
 						continue;
 					case JsonInternalObjectToken.DoubleQuotedIdentifier when c == '\\':
@@ -1477,6 +1485,9 @@ namespace IonKiwi.Json {
 							token = JsonToken.None;
 							return false;
 						}
+					default:
+						ThrowUnexpectedDataException();
+						break;
 				}
 			}
 
