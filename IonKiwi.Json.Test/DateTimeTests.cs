@@ -210,5 +210,22 @@ namespace IonKiwi.Json.Test {
 			newLocal = JsonUtility.Serialize<DateTime>(localDT, writerSettings: writerSettings);
 			Assert.Equal(localDTs, newLocal);
 		}
+
+		[Fact]
+		public void TestLocalTime() {
+
+			var tz1 = TimeZoneInfo.Local;
+			var tz2 = TimeZoneInfo.CreateCustomTimeZone(tz1.Id, tz1.BaseUtcOffset, tz1.DisplayName, tz1.StandardName);
+
+			var dt = new DateTime(2020, 01, 01, 19, 58, 0, DateTimeKind.Local);
+			var dt2 = JsonUtility.EnsureDateTime(dt, tz2, DateTimeHandling.Local, UnspecifiedDateTimeHandling.AssumeLocal);
+			Assert.Equal(DateTimeKind.Local, dt2.Kind);
+			Assert.Equal(2020, dt2.Year);
+			Assert.Equal(01, dt2.Month);
+			Assert.Equal(01, dt2.Day);
+			Assert.Equal(19, dt2.Hour);
+			Assert.Equal(58, dt2.Minute);
+			Assert.Equal(0, dt2.Second);
+		}
 	}
 }

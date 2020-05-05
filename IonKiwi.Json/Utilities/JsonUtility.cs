@@ -469,15 +469,22 @@ namespace IonKiwi.Json.Utilities {
 			switch (value.Kind) {
 				case DateTimeKind.Unspecified:
 					if (dateTimeHandling == UnspecifiedDateTimeHandling.AssumeLocal)
-						return (string.Equals(timeZone.Id, TimeZoneInfo.Local.Id, StringComparison.Ordinal) ? new DateTime(value.Ticks, DateTimeKind.Local) : value);
+						return AssertLocal(value, timeZone);
 					else
-						return TimeZoneInfo.ConvertTimeFromUtc(new DateTime(value.Ticks, DateTimeKind.Utc), timeZone);
+						return AssertLocal(TimeZoneInfo.ConvertTimeFromUtc(new DateTime(value.Ticks, DateTimeKind.Utc), timeZone), timeZone);
 
 				case DateTimeKind.Utc:
-					return TimeZoneInfo.ConvertTimeFromUtc(value, timeZone);
+					return AssertLocal(TimeZoneInfo.ConvertTimeFromUtc(value, timeZone), timeZone);
 
 				case DateTimeKind.Local:
-					return TimeZoneInfo.ConvertTime(value, timeZone);
+					return AssertLocal(TimeZoneInfo.ConvertTime(value, timeZone), timeZone);
+			}
+			return value;
+		}
+
+		private static DateTime AssertLocal(DateTime value, TimeZoneInfo timeZone) {
+			if (value.Kind == DateTimeKind.Unspecified && string.Equals(timeZone.Id, TimeZoneInfo.Local.Id, StringComparison.Ordinal)) {
+				return new DateTime(value.Ticks, DateTimeKind.Local);
 			}
 			return value;
 		}
