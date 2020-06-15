@@ -60,6 +60,10 @@ namespace IonKiwi.Json {
 			throw new InvalidOperationException("Visitor left the reader at an invalid position");
 		}
 
+		private static void ThrowProvideMemberInvalidPosition() {
+			throw new InvalidOperationException("Provide member left the reader at an invalid position");
+		}
+
 		private static void ThrowMissingRequiredProperties(HashSet<string> missingProperties) {
 			throw new RequiredPropertiesMissingException("Missing required properties: " + string.Join(",", missingProperties));
 		}

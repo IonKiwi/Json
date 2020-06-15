@@ -1,9 +1,11 @@
 ﻿using IonKiwi.Json.MetaData;
+using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace IonKiwi.Json.Test {
@@ -388,6 +390,295 @@ namespace IonKiwi.Json.Test {
 				Assert.Single(v.Value);
 				Assert.Equal(1, v.Value[0]);
 			}
+		}
+
+		[DataContract]
+		private sealed class TestMemberComplexObject {
+			[DataMember]
+			public string Value1 { get; set; }
+		}
+
+		[DataContract]
+		private sealed class TestMemberObject : IJsonReadMemberProvider {
+			[DataMember(IsRequired = true)]
+			public string Value1 { get; set; }
+
+			[DataMember(IsRequired = true)]
+			public int Value2 { get; set; }
+
+			[DataMember(IsRequired = true)]
+			public TestMemberComplexObject Value3 { get; set; }
+
+			public bool ReadMember(JsonReadMemberProviderContext context) {
+				return false;
+			}
+
+			public ValueTask<bool> ReadMemberAsync(JsonReadMemberProviderContext context) {
+				return new ValueTask<bool>(false);
+			}
+		}
+
+		[DataContract]
+		private sealed class TestMemberObject2 : IJsonReadMemberProvider {
+			[DataMember(IsRequired = true)]
+			public string Value1 { get; set; }
+
+			[DataMember(IsRequired = true)]
+			public int Value2 { get; set; }
+
+			[DataMember(IsRequired = true)]
+			public TestMemberComplexObject Value3 { get; set; }
+
+			public bool ReadMember(JsonReadMemberProviderContext context) {
+				if (string.Equals("Value1", context.PropertyName, StringComparison.Ordinal)) {
+					Value1 = context.Parse<string>(context.Reader);
+					return true;
+				}
+				else if (string.Equals("Value2", context.PropertyName, StringComparison.Ordinal)) {
+					Value2 = context.Parse<int>(context.Reader);
+					return true;
+				}
+				else if (string.Equals("Value3", context.PropertyName, StringComparison.Ordinal)) {
+					Value3 = context.Parse<TestMemberComplexObject>(context.Reader);
+					return true;
+				}
+				return false;
+			}
+
+			public async ValueTask<bool> ReadMemberAsync(JsonReadMemberProviderContext context) {
+				if (string.Equals("Value1", context.PropertyName, StringComparison.Ordinal)) {
+					Value1 = await context.ParseAsync<string>(context.Reader);
+					return true;
+				}
+				else if (string.Equals("Value2", context.PropertyName, StringComparison.Ordinal)) {
+					Value2 = await context.ParseAsync<int>(context.Reader);
+					return true;
+				}
+				else if (string.Equals("Value3", context.PropertyName, StringComparison.Ordinal)) {
+					Value3 = await context.ParseAsync<TestMemberComplexObject>(context.Reader);
+					return true;
+				}
+				return false;
+			}
+		}
+
+		[DataContract]
+		private sealed class TestMemberObject3 : IJsonReadMemberProvider {
+
+			[DataMember(IsRequired = true)]
+			public int Value { get; set; } = -1;
+
+			public string ValueKey { get; set; }
+
+			public bool ReadMember(JsonReadMemberProviderContext context) {
+				if (string.Equals("Value", context.PropertyName, StringComparison.Ordinal)) {
+					context.MoveToValue();
+					if (context.Reader.Token == JsonReader.JsonToken.Number) {
+						Value = context.Parse<int>(context.Reader);
+					}
+					else if (context.Reader.Token == JsonReader.JsonToken.String) {
+						ValueKey = context.Parse<string>(context.Reader);
+					}
+					else {
+						throw new Exception("Unexpected token: " + context.Reader.Token);
+					}
+					return true;
+				}
+				return false;
+			}
+
+			public async ValueTask<bool> ReadMemberAsync(JsonReadMemberProviderContext context) {
+				if (string.Equals("Value", context.PropertyName, StringComparison.Ordinal)) {
+					await context.MoveToValueAsync();
+					if (context.Reader.Token == JsonReader.JsonToken.Number) {
+						Value = await context.ParseAsync<int>(context.Reader);
+					}
+					else if (context.Reader.Token == JsonReader.JsonToken.String) {
+						ValueKey = await context.ParseAsync<string>(context.Reader);
+					}
+					else {
+						throw new Exception("Unexpected token: " + context.Reader.Token);
+					}
+					return true;
+				}
+				return false;
+			}
+		}
+
+		[Fact]
+		public void TestMemberProvider1() {
+
+			string json = @"{
+""Value1"": ""value1"",
+""Value2"": 42,
+""Value3"": {
+		""Value1"": ""test""
+	}
+}
+";
+			TestMemberObject v = JsonUtility.Parse<TestMemberObject>(json);
+			Assert.NotNull(v);
+			Assert.Equal("value1", v.Value1);
+			Assert.Equal(42, v.Value2);
+			Assert.NotNull(v.Value3);
+			Assert.Equal("test", v.Value3.Value1);
+		}
+
+		[Fact]
+		public void TestMemberProvider2() {
+
+			string json = @"{
+""Value1"": /* test */ ""value1"",
+""Value2"": /* test */ 42,
+""Value3"": /* test */ {
+		""Value1"": ""test""
+	}
+}
+";
+			TestMemberObject v = JsonUtility.Parse<TestMemberObject>(json);
+			Assert.NotNull(v);
+			Assert.Equal("value1", v.Value1);
+			Assert.Equal(42, v.Value2);
+			Assert.NotNull(v.Value3);
+			Assert.Equal("test", v.Value3.Value1);
+		}
+
+		[Fact]
+		public void TestMemberProvider3() {
+
+			string json = @"{
+""Value1"": ""value1"",
+""Value2"": 42,
+""Value3"": {
+		""Value1"": ""test""
+	}
+}
+";
+			TestMemberObject2 v = JsonUtility.Parse<TestMemberObject2>(json);
+			Assert.NotNull(v);
+			Assert.Equal("value1", v.Value1);
+			Assert.Equal(42, v.Value2);
+			Assert.NotNull(v.Value3);
+			Assert.Equal("test", v.Value3.Value1);
+		}
+
+		[Fact]
+		public void TestMemberProvider4() {
+
+			string json = @"{
+""Value1"": /* test */ ""value1"",
+""Value2"": /* test */ 42,
+""Value3"": /* test */ {
+		""Value1"": ""test""
+	}
+}
+";
+			TestMemberObject2 v = JsonUtility.Parse<TestMemberObject2>(json);
+			Assert.NotNull(v);
+			Assert.Equal("value1", v.Value1);
+			Assert.Equal(42, v.Value2);
+			Assert.NotNull(v.Value3);
+			Assert.Equal("test", v.Value3.Value1);
+		}
+
+		[Fact]
+		public void TestMemberProvider5() {
+
+			var json1 = @"{""Value"":""ValueKey""}";
+			var v1 = JsonUtility.Parse<TestMemberObject3>(json1);
+			Assert.NotNull(v1);
+			Assert.Equal("ValueKey", v1.ValueKey);
+			Assert.Equal(-1, v1.Value);
+
+			var json2 = @"{""Value"":42}";
+			var v2 = JsonUtility.Parse<TestMemberObject3>(json2);
+			Assert.NotNull(v2);
+			Assert.Null(v2.ValueKey);
+			Assert.Equal(42, v2.Value);
+		}
+
+		[DataContract]
+		private sealed class TestMemberObject4 : IJsonWriteMemberProvider {
+
+			[DataMember(IsRequired = true)]
+			public int Value { get; set; } = -1;
+
+			public string ValueKey { get; set; }
+
+			public bool WriteMember(JsonWriteMemberProviderContext context) {
+				return false;
+			}
+
+			public ValueTask<bool> WriteMemberAsync(JsonWriteMemberProviderContext context) {
+				return new ValueTask<bool>(false);
+			}
+		}
+
+		[DataContract]
+		private sealed class TestMemberObject5 : IJsonWriteMemberProvider {
+
+			[DataMember(IsRequired = true)]
+			public int Value { get; set; } = -1;
+
+			public string ValueKey { get; set; }
+
+			public bool WriteMember(JsonWriteMemberProviderContext context) {
+				if (string.Equals("Value", context.PropertyName, StringComparison.Ordinal)) {
+					if (string.IsNullOrEmpty(ValueKey)) {
+						context.Serialize("Value", Value);
+					}
+					else {
+						context.Serialize("Value", ValueKey);
+					}
+					return true;
+				}
+				return false;
+			}
+
+			public async ValueTask<bool> WriteMemberAsync(JsonWriteMemberProviderContext context) {
+				if (string.Equals("Value", context.PropertyName, StringComparison.Ordinal)) {
+					if (string.IsNullOrEmpty(ValueKey)) {
+						await context.SerializeAsync("Value", Value);
+					}
+					else {
+						await context.SerializeAsync("Value", ValueKey);
+					}
+					return true;
+				}
+				return false;
+			}
+		}
+
+		[Fact]
+		public void TestMemberProvider6() {
+
+			var v1 = new TestMemberObject4();
+			v1.Value = 42;
+
+			string json1 = JsonUtility.Serialize(v1);
+			Assert.Equal("{\"Value\":42}", json1);
+
+			var v2 = new TestMemberObject4();
+			v2.ValueKey = "ValueKey";
+
+			string json2 = JsonUtility.Serialize(v2);
+			Assert.Equal("{\"Value\":-1}", json2);
+		}
+
+		[Fact]
+		public void TestMemberProvider7() {
+
+			var v1 = new TestMemberObject5();
+			v1.Value = 42;
+
+			string json1 = JsonUtility.Serialize(v1);
+			Assert.Equal("{\"Value\":42}", json1);
+
+			var v2 = new TestMemberObject5();
+			v2.ValueKey = "ValueKey";
+
+			string json2 = JsonUtility.Serialize(v2);
+			Assert.Equal("{\"Value\":\"ValueKey\"}", json2);
 		}
 	}
 }

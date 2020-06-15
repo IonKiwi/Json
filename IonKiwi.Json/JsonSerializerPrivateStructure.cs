@@ -26,7 +26,8 @@ namespace IonKiwi.Json {
 				ArrayEnd,
 				Value,
 				Raw,
-				EmptyArray
+				EmptyArray,
+				HandleMemberProvider
 			}
 
 			private abstract class JsonSerializerInternalState {

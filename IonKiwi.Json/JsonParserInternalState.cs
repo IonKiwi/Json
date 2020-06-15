@@ -23,6 +23,7 @@ namespace IonKiwi.Json {
 				Raw,
 				UntypedObject,
 				UntypedArray,
+				HandleMemberProvider
 			}
 
 			private abstract class JsonParserInternalState {
@@ -83,6 +84,7 @@ namespace IonKiwi.Json {
 				public JsonTypeInfo TypeInfo;
 				public TupleContextInfoWrapper TupleContext;
 				public JsonPropertyInfo PropertyInfo;
+				public bool IsMemberProvider;
 			}
 
 			private sealed class JsonConstructorContext : IJsonConstructorContext {

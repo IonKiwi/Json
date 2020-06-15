@@ -38,6 +38,17 @@ namespace IonKiwi.Json {
 			visitor?.Initialize(parserSettings);
 
 			var currentToken = reader.Token;
+			if (currentToken == JsonToken.Comment) {
+				parser.HandleToken(reader);
+				currentToken = await reader.ReadAsync(async (token2) => {
+					if (token2 == JsonToken.Comment) {
+						await parser.HandleTokenAsync(reader).NoSync();
+						return true;
+					}
+					return false;
+				}).NoSync();
+			}
+
 			if (currentToken == JsonToken.ObjectProperty) {
 				currentToken = await reader.ReadAsync().NoSync();
 			}
@@ -118,6 +129,17 @@ namespace IonKiwi.Json {
 			visitor?.Initialize(parserSettings);
 
 			var currentToken = reader.Token;
+			if (currentToken == JsonToken.Comment) {
+				parser.HandleToken(reader);
+				currentToken = reader.Read((token2) => {
+					if (token2 == JsonToken.Comment) {
+						parser.HandleToken(reader);
+						return true;
+					}
+					return false;
+				});
+			}
+
 			if (currentToken == JsonToken.ObjectProperty) {
 				currentToken = reader.Read();
 			}

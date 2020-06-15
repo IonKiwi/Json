@@ -87,6 +87,14 @@ namespace IonKiwi.Json {
 						await writer.WriteArrayStartAsync().NoSync();
 						await writer.WriteArrayEndAsync().NoSync();
 					}
+					else if (token == JsonSerializerToken.HandleMemberProvider) {
+						var propState = (JsonSerializerObjectPropertyState)_currentState.Peek();
+						var objectState = (JsonSerializerObjectState)propState.Parent;
+						var provider = (IJsonWriteMemberProvider)objectState.Value;
+						if (await provider.WriteMemberAsync(new JsonWriteMemberProviderContext(propState.PropertyName, writer, _serializerSettings, _writerSettings)).NoSync()) {
+							_currentState.Pop();
+						}
+					}
 				}
 				while (_currentState.Count > 1);
 			}
@@ -142,6 +150,14 @@ namespace IonKiwi.Json {
 						WriteProperty(writer, _currentState.Peek());
 						writer.WriteArrayStart();
 						writer.WriteArrayEnd();
+					}
+					else if (token == JsonSerializerToken.HandleMemberProvider) {
+						var propState = (JsonSerializerObjectPropertyState)_currentState.Peek();
+						var objectState = (JsonSerializerObjectState)propState.Parent;
+						var provider = (IJsonWriteMemberProvider)objectState.Value;
+						if (provider.WriteMember(new JsonWriteMemberProviderContext(propState.PropertyName, writer, _serializerSettings, _writerSettings))) {
+							_currentState.Pop();
+						}
 					}
 				}
 				while (_currentState.Count > 1);
@@ -219,7 +235,7 @@ namespace IonKiwi.Json {
 				}
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
-				return JsonSerializerToken.None;
+				return state.Value is IJsonWriteMemberProvider ? JsonSerializerToken.HandleMemberProvider : JsonSerializerToken.None;
 			}
 
 			private JsonSerializerToken HandleObjectProperty(JsonSerializerObjectPropertyState state) {

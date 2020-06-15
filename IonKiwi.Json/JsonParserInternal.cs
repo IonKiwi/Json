@@ -74,6 +74,9 @@ namespace IonKiwi.Json {
 					case HandleStateResult.UntypedArray:
 						await HandleUntypedArrayAsync(reader).NoSync();
 						break;
+					case HandleStateResult.HandleMemberProvider:
+						await HandleMemberTypeAsync(reader).NoSync();
+						break;
 				}
 			}
 
@@ -120,6 +123,9 @@ namespace IonKiwi.Json {
 						break;
 					case HandleStateResult.UntypedArray:
 						HandleUntypedArray(reader);
+						break;
+					case HandleStateResult.HandleMemberProvider:
+						HandleMemberType(reader);
 						break;
 				}
 			}
@@ -196,6 +202,66 @@ namespace IonKiwi.Json {
 					ThrowNotProperty();
 				}
 				HandleUntypedObjectInternal(typeValue.Substring("$type:".Length), true);
+			}
+
+#if !NET472
+			private async ValueTask HandleMemberTypeAsync(IJsonReader reader) {
+#else
+			private async Task HandleMemberTypeAsync(IJsonReader reader) {
+#endif
+				var propState = (JsonParserObjectPropertyState)_currentState.Peek();
+				var objectState = (JsonParserObjectState)propState.Parent;
+				var memberProvider = (IJsonReadMemberProvider)objectState.Value;
+
+				var context = new JsonReadMemberProviderContext(propState.PropertyInfo.Name, reader, _settings);
+
+				var startDepth = reader.Depth;
+				if (await memberProvider.ReadMemberAsync(context).NoSync()) {
+
+					var token = reader.Token;
+					if (reader.Depth != startDepth || token == JsonToken.ArrayStart || token == JsonToken.ObjectStart) {
+						ThrowProvideMemberInvalidPosition();
+					}
+
+					_currentState.Pop();
+				}
+				else {
+					var token = reader.Token;
+					if (reader.Depth != startDepth || token == JsonToken.ArrayEnd || token == JsonToken.ObjectEnd) {
+						ThrowProvideMemberInvalidPosition();
+					}
+
+					propState.IsMemberProvider = false;
+					HandleToken(reader);
+				}
+			}
+
+			private void HandleMemberType(IJsonReader reader) {
+				var propState = (JsonParserObjectPropertyState)_currentState.Peek();
+				var objectState = (JsonParserObjectState)propState.Parent;
+				var memberProvider = (IJsonReadMemberProvider)objectState.Value;
+
+				var context = new JsonReadMemberProviderContext(propState.PropertyInfo.Name, reader, _settings);
+
+				var startDepth = reader.Depth;
+				if (memberProvider.ReadMember(context)) {
+
+					var token = reader.Token;
+					if (reader.Depth != startDepth || token == JsonToken.ArrayStart || token == JsonToken.ObjectStart) {
+						ThrowProvideMemberInvalidPosition();
+					}
+
+					_currentState.Pop();
+				}
+				else {
+					var token = reader.Token;
+					if (reader.Depth != startDepth || token == JsonToken.ArrayEnd || token == JsonToken.ObjectEnd) {
+						ThrowProvideMemberInvalidPosition();
+					}
+
+					propState.IsMemberProvider = false;
+					HandleToken(reader);
+				}
 			}
 
 			private void HandleUntypedObjectInternal(string typeValue, bool isArray) {
@@ -623,6 +689,9 @@ namespace IonKiwi.Json {
 			}
 
 			private HandleStateResult HandleDictionaryState(JsonParserDictionaryState dictionaryState, IJsonReader reader) {
+				if (reader.Token == JsonToken.Comment) {
+					return HandleStateResult.None;
+				}
 				EnsureNotComplete(dictionaryState);
 				if (dictionaryState.IsStringDictionary) {
 					var token = reader.Token;
@@ -680,6 +749,9 @@ namespace IonKiwi.Json {
 			}
 
 			private HandleStateResult HandleArrayState(JsonParserArrayState arrayState, IJsonReader reader) {
+				if (reader.Token == JsonToken.Comment) {
+					return HandleStateResult.None;
+				}
 				EnsureNotComplete(arrayState);
 				if (reader.Token == JsonToken.ArrayEnd) {
 					return CompleteArray(arrayState);
@@ -709,16 +781,30 @@ namespace IonKiwi.Json {
 			}
 
 			private HandleStateResult HandlePropertyState(JsonParserObjectPropertyState propertyState, IJsonReader reader) {
+				if (propertyState.IsMemberProvider) {
+					EnsureNotComplete(propertyState);
+					return HandleStateResult.HandleMemberProvider;
+				}
+				else if (reader.Token == JsonToken.Comment) {
+					return HandleStateResult.None;
+				}
 				EnsureNotComplete(propertyState);
 				return HandleValueState(propertyState, reader, propertyState.TypeInfo, propertyState.TupleContext, propertyState.TypeInfo.IsSingleOrArrayValue || propertyState.PropertyInfo.IsSingleOrArrayValue);
 			}
 
 			private HandleStateResult HandleDictionaryValueState(JsonParserDictionaryValueState valueState, IJsonReader reader) {
+				if (reader.Token == JsonToken.Comment) {
+					return HandleStateResult.None;
+				}
 				EnsureNotComplete(valueState);
 				return HandleValueState(valueState, reader, valueState.TypeInfo, valueState.TupleContext, valueState.TypeInfo.IsSingleOrArrayValue);
 			}
 
 			private HandleStateResult HandleObjectState(JsonParserObjectState objectState, IJsonReader reader) {
+				if (reader.Token == JsonToken.Comment) {
+					return HandleStateResult.None;
+				}
+				EnsureNotComplete(objectState);
 				var token = reader.Token;
 				switch (token) {
 					case JsonToken.ObjectProperty: {
@@ -756,6 +842,7 @@ namespace IonKiwi.Json {
 								propertyState.TypeInfo = JsonReflection.GetTypeInfo(newType);
 								propertyState.TupleContext = GetNewContext(objectState.TupleContext, propertyInfo.OriginalName, propertyState.TypeInfo);
 								propertyState.PropertyInfo = propertyInfo;
+								propertyState.IsMemberProvider = objectState.Value is IJsonReadMemberProvider;
 								_currentState.Push(propertyState);
 
 								objectState.Properties.Add(propertyName);
@@ -955,6 +1042,9 @@ namespace IonKiwi.Json {
 			}
 
 			private HandleStateResult HandleRootState(JsonParserRootState rootState, IJsonReader reader) {
+				if (reader.Token == JsonToken.Comment) {
+					return HandleStateResult.None;
+				}
 				EnsureNotComplete(rootState);
 				return HandleValueState(rootState, reader, rootState.TypeInfo, rootState.TupleContext, rootState.TypeInfo.IsSingleOrArrayValue);
 			}
