@@ -680,5 +680,63 @@ namespace IonKiwi.Json.Test {
 			string json2 = JsonUtility.Serialize(v2);
 			Assert.Equal("{\"Value\":\"ValueKey\"}", json2);
 		}
+
+		[DataContract]
+		private sealed class TestMemberObject6 : IJsonReadMemberProvider {
+
+			public int Value { get; set; } = -1;
+
+			public string ValueKey { get; set; }
+
+			public bool ReadMember(JsonReadMemberProviderContext context) {
+				if (string.Equals("Value", context.PropertyName, StringComparison.Ordinal)) {
+					context.MoveToValue();
+					if (context.Reader.Token == JsonReader.JsonToken.Number) {
+						Value = context.Parse<int>(context.Reader);
+					}
+					else if (context.Reader.Token == JsonReader.JsonToken.String) {
+						ValueKey = context.Parse<string>(context.Reader);
+					}
+					else {
+						throw new Exception("Unexpected token: " + context.Reader.Token);
+					}
+					return true;
+				}
+				return false;
+			}
+
+			public async ValueTask<bool> ReadMemberAsync(JsonReadMemberProviderContext context) {
+				if (string.Equals("Value", context.PropertyName, StringComparison.Ordinal)) {
+					await context.MoveToValueAsync();
+					if (context.Reader.Token == JsonReader.JsonToken.Number) {
+						Value = await context.ParseAsync<int>(context.Reader);
+					}
+					else if (context.Reader.Token == JsonReader.JsonToken.String) {
+						ValueKey = await context.ParseAsync<string>(context.Reader);
+					}
+					else {
+						throw new Exception("Unexpected token: " + context.Reader.Token);
+					}
+					return true;
+				}
+				return false;
+			}
+		}
+
+		[Fact]
+		public void TestMemberProvider8() {
+
+			var json1 = @"{""Value"":""ValueKey"",""Extra"":-1}";
+			var v1 = JsonUtility.Parse<TestMemberObject6>(json1);
+			Assert.NotNull(v1);
+			Assert.Equal("ValueKey", v1.ValueKey);
+			Assert.Equal(-1, v1.Value);
+
+			var json2 = @"{""Value"":42,""Extra"":-1}";
+			var v2 = JsonUtility.Parse<TestMemberObject6>(json2);
+			Assert.NotNull(v2);
+			Assert.Null(v2.ValueKey);
+			Assert.Equal(42, v2.Value);
+		}
 	}
 }

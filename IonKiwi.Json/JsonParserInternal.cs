@@ -225,6 +225,10 @@ namespace IonKiwi.Json {
 
 					_currentState.Pop();
 				}
+				else if (propState.IsOptional) {
+					await reader.SkipAsync().NoSync();
+					_currentState.Pop();
+				}
 				else {
 					var token = reader.Token;
 					if (reader.Depth != startDepth || token == JsonToken.ArrayEnd || token == JsonToken.ObjectEnd) {
@@ -251,6 +255,10 @@ namespace IonKiwi.Json {
 						ThrowProvideMemberInvalidPosition();
 					}
 
+					_currentState.Pop();
+				}
+				else if (propState.IsOptional) {
+					reader.Skip();
 					_currentState.Pop();
 				}
 				else {
@@ -824,10 +832,18 @@ namespace IonKiwi.Json {
 							}
 
 							if (!objectState.TypeInfo.Properties.TryGetValue(propertyName, out var propertyInfo)) {
+								if (objectState.Value is IJsonReadMemberProvider) {
+									JsonParserObjectPropertyState propertyState = new JsonParserObjectPropertyState();
+									propertyState.Parent = objectState;
+									propertyState.IsMemberProvider = true;
+									propertyState.IsOptional = true;
+									propertyState.PropertyInfo = new JsonPropertyInfo() { Name = propertyName };
+									_currentState.Push(propertyState);
+									break;
+								}
 								return HandleStateResult.Skip;
 							}
 							else {
-
 								Type newType = null;
 								if (objectState.Value is IJsonCustomMemberTypeProvider typeProvider) {
 									newType = typeProvider.ProvideMemberType(propertyName);

@@ -85,6 +85,7 @@ namespace IonKiwi.Json {
 				public TupleContextInfoWrapper TupleContext;
 				public JsonPropertyInfo PropertyInfo;
 				public bool IsMemberProvider;
+				public bool IsOptional;
 			}
 
 			private sealed class JsonConstructorContext : IJsonConstructorContext {
