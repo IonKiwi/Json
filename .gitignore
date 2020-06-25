@@ -345,3 +345,4 @@ healthchecksdb
 # Exclude Release
 /export
 /Keys
+/build.ps1

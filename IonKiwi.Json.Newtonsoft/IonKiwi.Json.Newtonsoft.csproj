@@ -2,7 +2,25 @@
 
   <PropertyGroup>
 		<TargetFrameworks>netcoreapp2.1;netcoreapp3.1;net472</TargetFrameworks>
+		<SignAssembly Condition="'$(Signed)'=='1'">true</SignAssembly>
+		<DelaySign Condition="'$(Signed)'=='1'">true</DelaySign>
+		<AssemblyOriginatorKeyFile Condition="'$(Signed)'=='1'">235_p384.snk</AssemblyOriginatorKeyFile>
+		<FileVersion>1.0.14.0</FileVersion>
+		<Version>1.0.14</Version>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<Authors>Ewout van der Linden</Authors>
+		<Company>IonKiwi</Company>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<Copyright>Ewout van der Linden</Copyright>
+		<PackageProjectUrl>https://github.com/IonKiwi/Json</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/IonKiwi/Json</RepositoryUrl>
+		<PackageTags>json ECMAScript parser writer tuples async</PackageTags>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
+
+	<PropertyGroup>
+		<DefineConstants Condition="'$(Signed)'=='1'">$(DefineConstants);SIGNED</DefineConstants>
+	</PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
