@@ -1,35 +1,54 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1;netcoreapp3.1;net472</TargetFrameworks>
-		<SignAssembly Condition="'$(Signed)'=='1'">true</SignAssembly>
-		<DelaySign Condition="'$(Signed)'=='1'">true</DelaySign>
-		<AssemblyOriginatorKeyFile Condition="'$(Signed)'=='1'">235_p384.snk</AssemblyOriginatorKeyFile>
-    <FileVersion>1.0.14.0</FileVersion>
-    <Version>1.0.14</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/IonKiwi/Json</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/IonKiwi/Json</RepositoryUrl>
-    <PackageTags>json ECMAScript parser writer tuples async</PackageTags>
-    <Copyright>Ewout van der Linden</Copyright>
-    <Authors>Ewout van der Linden</Authors>
-    <Company>IonKiwi</Company>
-  </PropertyGroup>
-
 	<PropertyGroup>
-		<DefineConstants Condition="'$(Signed)'=='1'">$(DefineConstants);SIGNED</DefineConstants>
+		<TargetFrameworks>netcoreapp2.1;netcoreapp3.1;net472</TargetFrameworks>
+		<SignAssembly Condition="'$(Signed)' == 'true'">true</SignAssembly>
+		<DelaySign Condition="'$(Signed)' == 'true'">true</DelaySign>
+		<AssemblyOriginatorKeyFile Condition="'$(Signed)' == 'true'">235_p384.snk</AssemblyOriginatorKeyFile>
+		<FileVersion>1.0.14.0</FileVersion>
+		<Version>1.0.14</Version>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<Authors>Ewout van der Linden</Authors>
+		<Company>IonKiwi</Company>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<Copyright>Ewout van der Linden</Copyright>
+		<PackageProjectUrl>https://github.com/IonKiwi/Json</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/IonKiwi/Json</RepositoryUrl>
+		<PackageTags>json ECMAScript parser writer tuples async</PackageTags>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<ContinuousIntegrationBuild Condition="'$(CI_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
+		<SN>"C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\sn.exe"</SN>
+		<!--<EmbedUntrackedSources>true</EmbedUntrackedSources>-->
 	</PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="Resources\ID_Continue.bin" />
-    <None Remove="Resources\ID_Start.bin" />
-  </ItemGroup>
+	<ItemGroup>
+		<EmbeddedFiles Include="$(GeneratedAssemblyInfoFile)" />
+		<EmbeddedFiles Include="$(TargetFrameworkMonikerAssemblyAttributesPath)" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\ID_Continue.bin" />
-    <EmbeddedResource Include="Resources\ID_Start.bin" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<DefineConstants Condition="'$(Signed)' == 'true'">$(DefineConstants);SIGNED</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Remove="Resources\ID_Continue.bin" />
+		<None Remove="Resources\ID_Start.bin" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Resources\ID_Continue.bin" />
+		<EmbeddedResource Include="Resources\ID_Start.bin" />
+	</ItemGroup>
+
+	<Target Name="ReSignAfterBuild" AfterTargets="AfterBuild" Condition="'$(Signed)' == 'true'">
+		<Exec Command="$(SN) -R $(TargetPath) $(ProjectDir)..\..\..\Keys\Public\235_priv.snk" />
+	</Target>
 
 </Project>

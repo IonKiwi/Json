@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
+	<PropertyGroup>
 		<TargetFrameworks>netcoreapp2.1;netcoreapp3.1;net472</TargetFrameworks>
-		<SignAssembly Condition="'$(Signed)'=='1'">true</SignAssembly>
-		<DelaySign Condition="'$(Signed)'=='1'">true</DelaySign>
-		<AssemblyOriginatorKeyFile Condition="'$(Signed)'=='1'">235_p384.snk</AssemblyOriginatorKeyFile>
+		<SignAssembly Condition="'$(Signed)' == 'true'">true</SignAssembly>
+		<DelaySign Condition="'$(Signed)' == 'true'">true</DelaySign>
+		<AssemblyOriginatorKeyFile Condition="'$(Signed)' == 'true'">235_p384.snk</AssemblyOriginatorKeyFile>
 		<FileVersion>1.0.14.0</FileVersion>
 		<Version>1.0.14</Version>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
@@ -16,18 +16,37 @@
 		<RepositoryUrl>https://github.com/IonKiwi/Json</RepositoryUrl>
 		<PackageTags>json ECMAScript parser writer tuples async</PackageTags>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-  </PropertyGroup>
-
-	<PropertyGroup>
-		<DefineConstants Condition="'$(Signed)'=='1'">$(DefineConstants);SIGNED</DefineConstants>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<ContinuousIntegrationBuild Condition="'$(CI_BUILD)' == 'true'">true</ContinuousIntegrationBuild>
+		<SN>"C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\sn.exe"</SN>
+		<!--<EmbedUntrackedSources>true</EmbedUntrackedSources>-->
 	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-  </ItemGroup>
+	<ItemGroup>
+		<EmbeddedFiles Include="$(GeneratedAssemblyInfoFile)" />
+		<EmbeddedFiles Include="$(TargetFrameworkMonikerAssemblyAttributesPath)" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\IonKiwi.Json\IonKiwi.Json.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<DefineConstants Condition="'$(Signed)' == 'true'">$(DefineConstants);SIGNED</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\IonKiwi.Json\IonKiwi.Json.csproj" />
+	</ItemGroup>
+
+	<Target Name="ReSignAfterBuild" AfterTargets="AfterBuild" Condition="'$(Signed)' == 'true'">
+		<Exec Command="$(SN) -R $(TargetPath) $(ProjectDir)..\..\..\Keys\Public\235_priv.snk" />
+	</Target>
 
 </Project>
