@@ -19,7 +19,7 @@ namespace IonKiwi.Json.Utilities {
 		#region Parameterless cache
 
 		private static class InternalCache<TInstance> {
-			internal static Func<TInstance> _instantiator;
+			internal static Func<TInstance>? _instantiator;
 		}
 
 		private static class InternalInterfaceCache<TInstanceInterface> {
@@ -35,7 +35,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static class InternalCache<TParameter1, TInstance> {
-			internal static Func<TParameter1, TInstance> _instantiator;
+			internal static Func<TParameter1, TInstance>? _instantiator;
 		}
 
 		#endregion
@@ -47,7 +47,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static class InternalCache<TParameter1, TParameter2, TInstance> {
-			internal static Func<TParameter1, TParameter2, TInstance> _instantiator;
+			internal static Func<TParameter1, TParameter2, TInstance>? _instantiator;
 		}
 
 		#endregion
@@ -59,7 +59,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static class InternalCache<TParameter1, TParameter2, TParameter3, TInstance> {
-			internal static Func<TParameter1, TParameter2, TParameter3, TInstance> _instantiator;
+			internal static Func<TParameter1, TParameter2, TParameter3, TInstance>? _instantiator;
 		}
 
 		#endregion
@@ -71,7 +71,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static class InternalCache<TParameter1, TParameter2, TParameter3, TParameter4, TInstance> {
-			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TInstance> _instantiator;
+			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TInstance>? _instantiator;
 		}
 
 		#endregion
@@ -83,7 +83,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static class InternalCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TInstance> {
-			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TInstance> _instantiator;
+			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TInstance>? _instantiator;
 		}
 
 		#endregion
@@ -95,7 +95,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static class InternalCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TInstance> {
-			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TInstance> _instantiator;
+			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TInstance>? _instantiator;
 		}
 
 		#endregion
@@ -107,7 +107,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static class InternalCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TInstance> {
-			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TInstance> _instantiator;
+			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TInstance>? _instantiator;
 		}
 
 		#endregion
@@ -119,7 +119,7 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static class InternalCache<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TParameter8, TInstance> {
-			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TParameter8, TInstance> _instantiator;
+			internal static Func<TParameter1, TParameter2, TParameter3, TParameter4, TParameter5, TParameter6, TParameter7, TParameter8, TInstance>? _instantiator;
 		}
 
 		#endregion

@@ -23,18 +23,19 @@ namespace IonKiwi.Json {
 			.Seal();
 
 #if !NET472
-		public static async ValueTask<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static async ValueTask<T?> ParseAsync<T>(IJsonReader reader, Type? objectType = null, string[]? tupleNames = null, JsonParserSettings? parserSettings = null) {
 #else
-		public static async Task<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static async Task<T?> ParseAsync<T>(IJsonReader reader, Type? objectType = null, string[]? tupleNames = null, JsonParserSettings? parserSettings = null) {
 #endif
 
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
 
-			var parser = new JsonInternalParser(parserSettings ?? DefaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			parserSettings ??= DefaultSettings;
+			var parser = new JsonInternalParser(parserSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
 
-			IJsonParserVisitor visitor = parserSettings?.Visitor;
+			IJsonParserVisitor? visitor = parserSettings.Visitor;
 			visitor?.Initialize(parserSettings);
 
 			var currentToken = reader.Token;
@@ -117,15 +118,16 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public static T Parse<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null, JsonParserSettings parserSettings = null) {
+		public static T? Parse<T>(IJsonReader reader, Type? objectType = null, string[]? tupleNames = null, JsonParserSettings? parserSettings = null) {
 
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
 
-			var parser = new JsonInternalParser(parserSettings ?? DefaultSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
+			parserSettings ??= DefaultSettings;
+			var parser = new JsonInternalParser(parserSettings, JsonReflection.GetTypeInfo(objectType), tupleNames);
 
-			IJsonParserVisitor visitor = parserSettings?.Visitor;
+			IJsonParserVisitor? visitor = parserSettings.Visitor;
 			visitor?.Initialize(parserSettings);
 
 			var currentToken = reader.Token;

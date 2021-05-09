@@ -6,6 +6,7 @@
 using IonKiwi.Json.MetaData;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -43,7 +44,7 @@ namespace IonKiwi.Json.Utilities {
 			return false;
 		}
 
-		internal static bool HasInterface(Type t, Type interfaceType, out Type actualInterface) {
+		internal static bool HasInterface(Type t, Type interfaceType, [NotNullWhen(true)] out Type? actualInterface) {
 			if (t == null) {
 				throw new ArgumentNullException(nameof(t));
 			}
@@ -146,7 +147,7 @@ namespace IonKiwi.Json.Utilities {
 
 		private static Dictionary<Type, Tuple<Dictionary<string, Enum>, Dictionary<string, Enum>, Dictionary<string, ulong>, Dictionary<string, ulong>, Tuple<ulong, Enum>[]>> _enumValues = new Dictionary<Type, Tuple<Dictionary<string, Enum>, Dictionary<string, Enum>, Dictionary<string, ulong>, Dictionary<string, ulong>, Tuple<ulong, Enum>[]>>();
 		private static Tuple<Dictionary<string, Enum>, Dictionary<string, Enum>, Dictionary<string, ulong>, Dictionary<string, ulong>, Tuple<ulong, Enum>[]> GetEnumValues(Type enumType) {
-			Tuple<Dictionary<string, Enum>, Dictionary<string, Enum>, Dictionary<string, ulong>, Dictionary<string, ulong>, Tuple<ulong, Enum>[]> r;
+			Tuple<Dictionary<string, Enum>, Dictionary<string, Enum>, Dictionary<string, ulong>, Dictionary<string, ulong>, Tuple<ulong, Enum>[]>? r;
 			if (!_enumValues.TryGetValue(enumType, out r)) {
 				lock (_globalLock) {
 					if (!_enumValues.TryGetValue(enumType, out r)) {
@@ -170,7 +171,7 @@ namespace IonKiwi.Json.Utilities {
 
 		public static bool TryParseEnum<T>(string stringValue, bool ignoreCase, out T enumValue) where T : struct {
 			Type t = typeof(T);
-			Enum v;
+			Enum? v;
 			if (TryParseEnum(t, stringValue, ignoreCase, out v)) {
 				enumValue = (T)(object)v;
 				return true;
@@ -179,7 +180,7 @@ namespace IonKiwi.Json.Utilities {
 			return false;
 		}
 
-		internal static bool TryParseEnum(Type enumType, string stringValue, bool ignoreCase, out Enum enumValue) {
+		internal static bool TryParseEnum(Type enumType, string stringValue, bool ignoreCase, [NotNullWhen(true)] out Enum? enumValue) {
 			if (string.IsNullOrEmpty(stringValue)) {
 				enumValue = default(Enum);
 				return false;
@@ -219,7 +220,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-		private static Func<object, object, bool> _hasEnumFlag;
+		private static Func<object, object, bool>? _hasEnumFlag;
 		private static Dictionary<Type, object> _allEnumValues = new Dictionary<Type, object>();
 		public static bool HasEnumFlag(Type t, object enumValue) {
 			if (_hasEnumFlag != null && _allEnumValues.TryGetValue(t, out var allEnumValues)) {
@@ -245,8 +246,8 @@ namespace IonKiwi.Json.Utilities {
 
 					ulong totalValue = 0;
 					var allValues = Enum.GetValues(t);
-					foreach (object ev in allValues) {
-						ulong nev = (ulong)Convert.ChangeType(ev, typeof(ulong));
+					foreach (var ev in allValues) {
+						ulong nev = (ulong)Convert.ChangeType(ev!, typeof(ulong));
 						totalValue |= nev;
 					}
 
@@ -295,7 +296,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 		}
 
-		public static Func<TIn, TOut> CreatePropertyGetter<TIn, TOut>(PropertyInfo pi) {
+		public static Func<TIn, TOut?> CreatePropertyGetter<TIn, TOut>(PropertyInfo pi) {
 			var m = pi.GetGetMethod(true);
 			if (m == null) {
 				throw new Exception("Json property without getter");
@@ -322,11 +323,11 @@ namespace IonKiwi.Json.Utilities {
 				targetExpression = methodCall;
 			}
 
-			var methodLambda = Expression.Lambda<Func<TIn, TOut>>(targetExpression, p1);
+			var methodLambda = Expression.Lambda<Func<TIn, TOut?>>(targetExpression, p1);
 			return methodLambda.Compile();
 		}
 
-		public static Func<TIn, TOut> CreateFieldGetter<TIn, TOut>(FieldInfo fi) {
+		public static Func<TIn, TOut?> CreateFieldGetter<TIn, TOut>(FieldInfo fi) {
 			Type inType = typeof(TIn);
 			Type outType = typeof(TOut);
 
@@ -349,14 +350,17 @@ namespace IonKiwi.Json.Utilities {
 				x = fieldExpression;
 			}
 
-			var lambdaExpression = Expression.Lambda<Func<TIn, TOut>>(x, p1);
+			var lambdaExpression = Expression.Lambda<Func<TIn, TOut?>>(x, p1);
 			return lambdaExpression.Compile();
 		}
 
-		public static Action<TType, TValue> CreatePropertySetterAction<TType, TValue>(PropertyInfo property) {
+		public static Action<TType, TValue?> CreatePropertySetterAction<TType, TValue>(PropertyInfo property) {
 			var t = typeof(TType);
 			var v = typeof(TValue);
 			var d = property.DeclaringType;
+			if (d == null) {
+				throw new InvalidOperationException("Property without declaring type");
+			}
 
 			var p1 = Expression.Parameter(t, "p1");
 			var p2 = Expression.Parameter(v, "p2");
@@ -376,14 +380,17 @@ namespace IonKiwi.Json.Utilities {
 				value = p2;
 			}
 			var callExpr = Expression.Call(instance, property.GetSetMethod(true), value);
-			var callLambda = Expression.Lambda<Action<TType, TValue>>(callExpr, p1, p2).Compile();
+			var callLambda = Expression.Lambda<Action<TType, TValue?>>(callExpr, p1, p2).Compile();
 			return callLambda;
 		}
 
-		public static Func<TType, TValue, TType> CreatePropertySetterFunc<TType, TValue>(PropertyInfo property) {
+		public static Func<TType, TValue?, TType> CreatePropertySetterFunc<TType, TValue>(PropertyInfo property) {
 			var t = typeof(TType);
 			var v = typeof(TValue);
 			var d = property.DeclaringType;
+			if (d == null) {
+				throw new InvalidOperationException("Property without declaring type");
+			}
 
 			var p1 = Expression.Parameter(t, "p1");
 			var p2 = Expression.Parameter(v, "p2");
@@ -409,14 +416,17 @@ namespace IonKiwi.Json.Utilities {
 			var callExpr = Expression.Call(var, property.GetSetMethod(true), value);
 			var resultExpr = d != t ? (Expression)Expression.Convert(var, t) : var;
 			var blockExpr = Expression.Block(new List<ParameterExpression>() { var }, varValue, callExpr, resultExpr);
-			var callLambda = Expression.Lambda<Func<TType, TValue, TType>>(blockExpr, p1, p2).Compile();
+			var callLambda = Expression.Lambda<Func<TType, TValue?, TType>>(blockExpr, p1, p2).Compile();
 			return callLambda;
 		}
 
-		public static Action<TType, TValue> CreateFieldSetterAction<TType, TValue>(FieldInfo field) {
+		public static Action<TType, TValue?> CreateFieldSetterAction<TType, TValue>(FieldInfo field) {
 			var t = typeof(TType);
 			var v = typeof(TValue);
 			var d = field.DeclaringType;
+			if (d == null) {
+				throw new InvalidOperationException("Field without declaring type");
+			}
 
 			var p1 = Expression.Parameter(t, "p1");
 			var p2 = Expression.Parameter(v, "p2");
@@ -438,14 +448,17 @@ namespace IonKiwi.Json.Utilities {
 
 			var fieldExpr = Expression.Field(instance, field);
 			var callExpr = Expression.Assign(fieldExpr, value);
-			var callLambda = Expression.Lambda<Action<TType, TValue>>(callExpr, p1, p2).Compile();
+			var callLambda = Expression.Lambda<Action<TType, TValue?>>(callExpr, p1, p2).Compile();
 			return callLambda;
 		}
 
-		public static Func<TType, TValue, TType> CreateFieldSetterFunc<TType, TValue>(FieldInfo field) {
+		public static Func<TType, TValue?, TType> CreateFieldSetterFunc<TType, TValue>(FieldInfo field) {
 			var t = typeof(TType);
 			var v = typeof(TValue);
 			var d = field.DeclaringType;
+			if (d == null) {
+				throw new InvalidOperationException("Field without declaring type");
+			}
 
 			var p1 = Expression.Parameter(t, "p1");
 			var p2 = Expression.Parameter(v, "p2");
@@ -472,12 +485,15 @@ namespace IonKiwi.Json.Utilities {
 			var callExpr = Expression.Assign(fieldExpr, value);
 			var resultExpr = d != t ? (Expression)Expression.Convert(var, t) : var;
 			var blockExpr = Expression.Block(new List<ParameterExpression>() { var }, varValue, callExpr, resultExpr);
-			var callLambda = Expression.Lambda<Func<TType, TValue, TType>>(blockExpr, p1, p2).Compile();
+			var callLambda = Expression.Lambda<Func<TType, TValue?, TType>>(blockExpr, p1, p2).Compile();
 			return callLambda;
 		}
 
-		public static Action<TIn, TValue> CreateCollectionAdd<TIn, TValue>(Type listType, Type valueType) {
+		public static Action<TIn, TValue?> CreateCollectionAdd<TIn, TValue>(Type listType, Type valueType) {
 			var mi = listType.GetMethod("Add", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { valueType }, null);
+			if (mi == null) {
+				throw new InvalidOperationException($"List type '{ReflectionUtility.GetTypeName(listType)}' without Add method.");
+			}
 			var p = mi.GetParameters();
 			if (p.Length != 1) {
 				throw new Exception("Expected 1 parameter for Add method");
@@ -505,7 +521,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 
 			MethodCallExpression methodCall = Expression.Call(p2, mi, p4);
-			var methodLambda = Expression.Lambda<Action<TIn, TValue>>(methodCall, p1, p3);
+			var methodLambda = Expression.Lambda<Action<TIn, TValue?>>(methodCall, p1, p3);
 			return methodLambda.Compile();
 		}
 
@@ -514,6 +530,9 @@ namespace IonKiwi.Json.Utilities {
 			Type outType = typeof(TOut);
 
 			var mi = listType.GetMethod("ToArray", BindingFlags.Public | BindingFlags.Instance, null, Type.EmptyTypes, null);
+			if (mi == null) {
+				throw new InvalidOperationException($"List type '{ReflectionUtility.GetTypeName(listType)}' without ToArray method.");
+			}
 
 			ParameterExpression p1 = Expression.Parameter(inType, "p1");
 			Expression p2;
@@ -537,8 +556,11 @@ namespace IonKiwi.Json.Utilities {
 			return methodLambda.Compile();
 		}
 
-		public static Action<TIn, TValue1, TValue2> CreateDictionaryAdd<TIn, TValue1, TValue2>(Type dictionaryType, Type keyType, Type valueType) {
+		public static Action<TIn, TValue1, TValue2?> CreateDictionaryAdd<TIn, TValue1, TValue2>(Type dictionaryType, Type keyType, Type valueType) {
 			var mi = dictionaryType.GetMethod("Add", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { keyType, valueType }, null);
+			if (mi == null) {
+				throw new InvalidOperationException($"Dictionary type '{ReflectionUtility.GetTypeName(dictionaryType)}' without Add method.");
+			}
 			var p = mi.GetParameters();
 			if (p.Length != 2) {
 				throw new Exception("Expected 2 parameters for Dictionary Add method");
@@ -576,7 +598,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 
 			MethodCallExpression methodCall = Expression.Call(p2, mi, p4, p6);
-			var methodLambda = Expression.Lambda<Action<TIn, TValue1, TValue2>>(methodCall, p1, p3, p5);
+			var methodLambda = Expression.Lambda<Action<TIn, TValue1, TValue2?>>(methodCall, p1, p3, p5);
 			return methodLambda.Compile();
 		}
 
@@ -589,6 +611,9 @@ namespace IonKiwi.Json.Utilities {
 				throw new InvalidOperationException($"Type '{ReflectionUtility.GetTypeName(dictionaryType)}' is not an ICollection<KeyValuePair<,>>.");
 			}
 			var mi = itemInterface.GetMethod("Add", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, new Type[] { typeof(KeyValuePair<,>).MakeGenericType(keyType, valueType) }, null);
+			if (mi == null) {
+				throw new InvalidOperationException($"Dictionary type '{ReflectionUtility.GetTypeName(dictionaryType)}' without Add method.");
+			}
 			var p = mi.GetParameters();
 			if (p.Length != 1) {
 				throw new Exception("Expected 1 parameter for Dictionary Add method");
@@ -622,7 +647,13 @@ namespace IonKiwi.Json.Utilities {
 
 		public static (Func<object, TKey> key, Func<object, TValue> value) CreateKeyValuePairGetter<TKey, TValue>(Type keyValuePair) {
 			var k = keyValuePair.GetProperty("Key", BindingFlags.Instance | BindingFlags.Public);
+			if (k == null) {
+				throw new InvalidOperationException($"KeyValuePair type '{ReflectionUtility.GetTypeName(keyValuePair)}' without Key property.");
+			}
 			var v = keyValuePair.GetProperty("Value", BindingFlags.Instance | BindingFlags.Public);
+			if (v == null) {
+				throw new InvalidOperationException($"KeyValuePair type '{ReflectionUtility.GetTypeName(keyValuePair)}' without Value property.");
+			}
 
 			var p1 = Expression.Parameter(typeof(object), "p1");
 			var p2 = Expression.Convert(p1, keyValuePair);
@@ -673,7 +704,7 @@ namespace IonKiwi.Json.Utilities {
 
 		private static Dictionary<Type, object> _defaultTypeValues = new Dictionary<Type, object>();
 		public static object GetDefaultTypeValue(Type t) {
-			object v;
+			object? v;
 			if (!_defaultTypeValues.TryGetValue(t, out v)) {
 				lock (_globalLock) {
 					if (!_defaultTypeValues.TryGetValue(t, out v)) {
@@ -761,6 +792,9 @@ namespace IonKiwi.Json.Utilities {
 
 		private static bool IsInDefaultAssemblyName(Type t, JsonSerializerSettings settings) {
 			var asmName = t.Assembly.GetName(false);
+			if (asmName.Name == null) {
+				throw new InvalidOperationException("AssemblyName.Name is null");
+			}
 			if (settings.DefaultAssemblyNames.TryGetValue(asmName.Name, out var partialName)) {
 				return (asmName.Version == partialName.Version && CommonUtility.AreByteArraysEqual(asmName.GetPublicKeyToken(), partialName.GetPublicKeyToken()));
 			}
@@ -775,7 +809,7 @@ namespace IonKiwi.Json.Utilities {
 			StringBuilder sb = new StringBuilder();
 			BuildTypeInternal(typeName, sb, typeName, settings);
 			string assemblyQualifiedName = sb.ToString();
-			Type t = Type.GetType(assemblyQualifiedName, true);
+			Type t = Type.GetType(assemblyQualifiedName, true)!;
 			return t;
 		}
 

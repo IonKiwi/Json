@@ -15,7 +15,7 @@ namespace IonKiwi.Extenions {
 			}
 		}
 
-		public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, IEnumerable<KeyValuePair<TKey, TValue>> range) {
+		public static void AddRange<TKey, TValue>(this Dictionary<TKey, TValue?> dictionary, IEnumerable<KeyValuePair<TKey, TValue?>>? range) where TKey: notnull {
 			if (dictionary == null) { throw new ArgumentNullException(nameof(dictionary)); }
 			else if (range == null) { return; }
 
@@ -24,7 +24,7 @@ namespace IonKiwi.Extenions {
 			}
 		}
 
-		public static void AddOrUpdate<T>(this Dictionary<string, T> dictionary, string key, T value) {
+		public static void AddOrUpdate<T>(this Dictionary<string, T?> dictionary, string key, T? value) {
 			if (!dictionary.ContainsKey(key)) {
 				dictionary.Add(key, value);
 			}
@@ -34,6 +34,25 @@ namespace IonKiwi.Extenions {
 		}
 
 		public static T MaxElement<T>(this IEnumerable<T> enumerable, Func<T, int> maxFunc) {
+			using (var enumerator = enumerable.GetEnumerator()) {
+				if (!enumerator.MoveNext()) {
+					throw new InvalidOperationException("Sequence is empty");
+				}
+				var lastMax = enumerator.Current;
+				int max = maxFunc(lastMax);
+				while (enumerator.MoveNext()) {
+					var item = enumerator.Current;
+					int max2 = maxFunc(item);
+					if (max2 > max) {
+						lastMax = item;
+						max = max2;
+					}
+				}
+				return lastMax;
+			}
+		}
+
+		public static T? MaxElementOrDefault<T>(this IEnumerable<T> enumerable, Func<T, int> maxFunc) {
 			using (var enumerator = enumerable.GetEnumerator()) {
 				if (!enumerator.MoveNext()) {
 					return default(T);
@@ -98,6 +117,25 @@ namespace IonKiwi.Extenions {
 		}
 
 		public static T MinElement<T>(this IEnumerable<T> enumerable, Func<T, int> minFunc) {
+			using (var enumerator = enumerable.GetEnumerator()) {
+				if (!enumerator.MoveNext()) {
+					throw new InvalidOperationException("Sequence is empty");
+				}
+				var lastMin = enumerator.Current;
+				int min = minFunc(lastMin);
+				while (enumerator.MoveNext()) {
+					var item = enumerator.Current;
+					int min2 = minFunc(item);
+					if (min2 < min) {
+						lastMin = item;
+						min = min2;
+					}
+				}
+				return lastMin;
+			}
+		}
+
+		public static T? MinElementOrDefault<T>(this IEnumerable<T> enumerable, Func<T, int> minFunc) {
 			using (var enumerator = enumerable.GetEnumerator()) {
 				if (!enumerator.MoveNext()) {
 					return default(T);

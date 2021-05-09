@@ -21,7 +21,7 @@ namespace IonKiwi.Json {
 
 		internal IReadOnlyDictionary<string, string> DefaultAssemblyNames => _defaultAssemblyNames;
 
-		internal string DefaultAssemblyName {
+		internal string? DefaultAssemblyName {
 			get;
 			private set;
 		}
@@ -31,8 +31,8 @@ namespace IonKiwi.Json {
 			private set;
 		}
 
-		private Func<Type, bool> _typeAllowedCallback;
-		public Func<Type, bool> TypeAllowedCallback {
+		private Func<Type, bool>? _typeAllowedCallback;
+		public Func<Type, bool>? TypeAllowedCallback {
 			get => _typeAllowedCallback;
 			set {
 				EnsureUnlocked();
@@ -40,8 +40,8 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		private JsonParserVisitor _visitor;
-		public JsonParserVisitor Visitor {
+		private JsonParserVisitor? _visitor;
+		public JsonParserVisitor? Visitor {
 			get => _visitor;
 			set {
 				EnsureUnlocked();
@@ -53,6 +53,9 @@ namespace IonKiwi.Json {
 			EnsureUnlocked();
 
 			var key = name.Name;
+			if (key == null) {
+				throw new InvalidOperationException("AssemblyName.Name is null");
+			}
 			var value = ", Version=" + name.Version + ", Culture=neutral, PublicKeyToken=" + GetPublicKeyToken(name);
 
 			if (_defaultAssemblyNames.ContainsKey(key)) {
@@ -76,11 +79,11 @@ namespace IonKiwi.Json {
 			if (token == null || token.Length == 0) {
 				return "null";
 			}
-			return CommonUtility.GetHexadecimalString(name.GetPublicKeyToken(), false);
+			return CommonUtility.GetHexadecimalString(token, false);
 		}
 
-		private TimeZoneInfo _timeZone;
-		public TimeZoneInfo TimeZone {
+		private TimeZoneInfo? _timeZone;
+		public TimeZoneInfo? TimeZone {
 			get => _timeZone;
 			set {
 				EnsureUnlocked();

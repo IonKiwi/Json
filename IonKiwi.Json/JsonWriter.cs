@@ -8,6 +8,7 @@ using IonKiwi.Json.MetaData;
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -43,7 +44,7 @@ namespace IonKiwi.Json {
 			Array,
 		}
 
-		public JsonWriter(TextWriter textWriter, JsonWriterSettings settings = null) {
+		public JsonWriter(TextWriter textWriter, JsonWriterSettings? settings = null) {
 			_output = textWriter;
 			_settings = settings ?? DefaultSettings;
 			_stack.Push(WriterType.None);
@@ -986,34 +987,42 @@ namespace IonKiwi.Json {
 			return input;
 		}
 
+		[DoesNotReturn]
 		private static void ThowNotSupportedIntPtrSize() {
 			throw new NotSupportedException("IntPtr size " + IntPtr.Size.ToString(CultureInfo.InvariantCulture));
 		}
 
-		private static void ThrowNotSupportedEnumType(Type typeName) {
-			throw new NotSupportedException("Unsupported underlying type: " + ReflectionUtility.GetTypeName(typeName));
+		[DoesNotReturn]
+		private static void ThrowNotSupportedEnumType(Type? typeName) {
+			throw new NotSupportedException("Unsupported underlying type: " + (typeName == null ? "null" : ReflectionUtility.GetTypeName(typeName)));
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidObjectStart() {
 			throw new InvalidOperationException("Invalid object start at this position");
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidObjectProperty() {
 			throw new InvalidOperationException("Invalid object property at this position");
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidObjectEnd() {
 			throw new InvalidOperationException("Invalid object end at this position");
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidArrayStart() {
 			throw new InvalidOperationException("Invalid array start at this position");
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidArrayEnd() {
 			throw new InvalidOperationException("Invalid array end at this position");
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidValue() {
 			throw new InvalidOperationException("Invalid value at this position");
 		}

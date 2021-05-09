@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 
@@ -25,6 +26,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		[DoesNotReturn]
 		private static void ThrowResourceNotFound(string resourceName) {
 			throw new InvalidOperationException($"Resource '{resourceName}' not found.");
 		}
@@ -58,10 +60,12 @@ namespace IonKiwi.Json {
 			return _ID_Start.Contains(c);
 		}
 
+		[DoesNotReturn]
 		private static void ThrowArgumentNullException(string argument) {
 			throw new ArgumentNullException(argument);
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidOperationException() {
 			throw new InvalidOperationException();
 		}

@@ -33,8 +33,8 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		private TimeZoneInfo _timeZone;
-		public TimeZoneInfo TimeZone {
+		private TimeZoneInfo? _timeZone;
+		public TimeZoneInfo? TimeZone {
 			get => _timeZone;
 			set {
 				EnsureUnlocked();

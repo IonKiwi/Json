@@ -76,7 +76,7 @@ namespace IonKiwi.Json.Utilities {
 			return pos;
 		}
 
-		public static int WriteIsoDateTimeString(char[] chars, int start, TimeZoneInfo timeZone, DateTime value, DateTimeKind kind) {
+		public static int WriteIsoDateTimeString(char[] chars, int start, TimeZoneInfo? timeZone, DateTime value, DateTimeKind kind) {
 			int pos = start;
 			pos = WriteDefaultIsoDate(chars, pos, value);
 
@@ -94,7 +94,7 @@ namespace IonKiwi.Json.Utilities {
 			return pos;
 		}
 
-		public static bool TryParseDateTime(string s, TimeZoneInfo timeZone, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling, out DateTime dt) {
+		public static bool TryParseDateTime(string s, TimeZoneInfo? timeZone, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling, out DateTime dt) {
 			if (s.Length > 0) {
 				if (s[0] == '/') {
 					if (s.Length >= 9 && s.StartsWith("/Date(", StringComparison.Ordinal) && s.EndsWith(")/", StringComparison.Ordinal)) {
@@ -115,7 +115,7 @@ namespace IonKiwi.Json.Utilities {
 			return false;
 		}
 
-		private static bool TryParseDateTimeMicrosoft(string text, TimeZoneInfo timeZone, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling, out DateTime dt) {
+		private static bool TryParseDateTimeMicrosoft(string text, TimeZoneInfo? timeZone, DateTimeHandling dateTimeHandling, UnspecifiedDateTimeHandling unspecifiedDateTimeHandling, out DateTime dt) {
 			long ticks;
 			TimeSpan offset;
 			DateTimeKind kind;

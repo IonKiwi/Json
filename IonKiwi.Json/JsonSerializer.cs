@@ -8,6 +8,7 @@ using IonKiwi.Json.MetaData;
 using IonKiwi.Json.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -20,9 +21,9 @@ namespace IonKiwi.Json {
 			.Seal();
 
 #if !NET472
-		public static async ValueTask SerializeAsync<T>(IJsonWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null) {
+		public static async ValueTask SerializeAsync<T>(IJsonWriter writer, T? value, Type? objectType = null, string[]? tupleNames = null, JsonSerializerSettings? serializerSettings = null, JsonWriterSettings? writerSettings = null) {
 #else
-		public static async Task SerializeAsync<T>(IJsonWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null) {
+		public static async Task SerializeAsync<T>(IJsonWriter writer, T? value, Type? objectType = null, string[]? tupleNames = null, JsonSerializerSettings? serializerSettings = null, JsonWriterSettings? writerSettings = null) {
 #endif
 			if (objectType == null) {
 				objectType = typeof(T);
@@ -32,7 +33,7 @@ namespace IonKiwi.Json {
 			await jsonWriter.SerializeAsync(writer).NoSync();
 		}
 
-		public static void Serialize<T>(IJsonWriter writer, T value, Type objectType = null, string[] tupleNames = null, JsonSerializerSettings serializerSettings = null, JsonWriterSettings writerSettings = null) {
+		public static void Serialize<T>(IJsonWriter writer, T? value, Type? objectType = null, string[]? tupleNames = null, JsonSerializerSettings? serializerSettings = null, JsonWriterSettings? writerSettings = null) {
 			if (objectType == null) {
 				objectType = typeof(T);
 			}
@@ -55,7 +56,7 @@ namespace IonKiwi.Json {
 			return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 		}
 
-		private static bool IsUnicodeEscapeSequence(string input, int offset, out int length, out char[] chars) {
+		private static bool IsUnicodeEscapeSequence(string input, int offset, out int length, [NotNullWhen(true)] out char[]? chars) {
 			length = 0;
 			chars = null;
 			int v;

@@ -9,6 +9,7 @@ using IonKiwi.Json.Utilities;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -24,12 +25,12 @@ namespace IonKiwi.Json {
 		private readonly JavaScriptEncoder _encoder;
 		private readonly JsonWriterSettings _settings;
 		private readonly Utf8JsonWriter _output;
-		private readonly Stream _stream;
-		private IBufferWriter<byte> _writer;
+		private readonly Stream? _stream;
+		private IBufferWriter<byte>? _writer;
 		private bool _requireSeparator;
 		private bool _requireRawSeparator;
 
-		public SystemJsonWriter(Stream stream, JsonWriterSettings settings = null, JsonWriterOptions? options = null) {
+		public SystemJsonWriter(Stream stream, JsonWriterSettings? settings = null, JsonWriterOptions? options = null) {
 			var option2 = EnsureDefaultOptions(options ?? CreateDefaultOptions());
 			_encoder = option2.Encoder;
 			_output = new Utf8JsonWriter(stream, option2);
@@ -37,7 +38,7 @@ namespace IonKiwi.Json {
 			_settings = settings ?? JsonWriter.DefaultSettings;
 		}
 
-		public SystemJsonWriter(IBufferWriter<byte> writer, JsonWriterSettings settings = null, JsonWriterOptions? options = null) {
+		public SystemJsonWriter(IBufferWriter<byte> writer, JsonWriterSettings? settings = null, JsonWriterOptions? options = null) {
 			var option2 = EnsureDefaultOptions(options ?? CreateDefaultOptions());
 			_encoder = option2.Encoder;
 			_output = new Utf8JsonWriter(writer, option2);
@@ -209,7 +210,7 @@ namespace IonKiwi.Json {
 			var typeInfo = JsonReflection.GetTypeInfo(enumType);
 			if (_settings.EnumValuesAsString) {
 				if (!typeInfo.IsFlagsEnum) {
-					var name = Enum.GetName(typeInfo.RootType, enumValue);
+					var name = Enum.GetName(typeInfo.RootType, enumValue)!;
 					var t = WriteSeparatorForRawAsync();
 					if (t.IsCompletedSuccessfully) {
 						_output.WriteStringValue(name);
@@ -1546,22 +1547,27 @@ namespace IonKiwi.Json {
 			return _output.DisposeAsync();
 		}
 
+		[DoesNotReturn]
 		private static void ThrowNotImplemented() {
 			throw new NotImplementedException();
 		}
 
+		[DoesNotReturn]
 		private static void ThowNotSupportedIntPtrSize() {
 			throw new NotSupportedException("IntPtr size " + IntPtr.Size.ToString(CultureInfo.InvariantCulture));
 		}
 
-		private static void ThrowNotSupportedEnumType(Type typeName) {
-			throw new NotSupportedException("Unsupported underlying type: " + ReflectionUtility.GetTypeName(typeName));
+		[DoesNotReturn]
+		private static void ThrowNotSupportedEnumType(Type? typeName) {
+			throw new NotSupportedException("Unsupported underlying type: " + (typeName == null ? "null" : ReflectionUtility.GetTypeName(typeName)));
 		}
 
+		[DoesNotReturn]
 		private static void ThrowNotSupportedType(Type t) {
 			throw new NotSupportedException($"Type '{ReflectionUtility.GetTypeName(t)}' is not supported");
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidUtf8() {
 			throw new InvalidOperationException();
 		}

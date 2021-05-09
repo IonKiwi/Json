@@ -8,17 +8,16 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace IonKiwi.Json {
-	internal interface IJsonWriterWriteValueCallbackArgs {
-		Type InputType { get; set; }
-		object Value { get; set; }
-		bool ReplaceValue { get; }
-		bool? TypeName { get; }
-	}
 
-	public sealed class JsonWriterWriteValueCallbackArgs : IJsonWriterWriteValueCallbackArgs {
-		private Type _inputType = null;
-		private object _value;
+	public sealed class JsonWriterWriteValueCallbackArgs {
+		private Type _inputType;
+		private object? _value;
 		private bool _replaceValue = false;
+
+		public JsonWriterWriteValueCallbackArgs(Type inputType, object? value) {
+			_inputType = inputType;
+			_value = value;
+		}
 
 		public Type ValueType {
 			get => _inputType;
@@ -30,7 +29,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
-		public object Value {
+		public object? Value {
 			get => _value;
 			set {
 				_value = value;
@@ -43,10 +42,6 @@ namespace IonKiwi.Json {
 			set;
 		}
 
-		Type IJsonWriterWriteValueCallbackArgs.InputType { get => _inputType; set => _inputType = value; }
-
-		object IJsonWriterWriteValueCallbackArgs.Value { get => _value; set => _value = value; }
-
-		bool IJsonWriterWriteValueCallbackArgs.ReplaceValue => _replaceValue;
+		internal bool ReplaceValue => _replaceValue;
 	}
 }

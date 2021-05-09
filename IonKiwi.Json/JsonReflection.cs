@@ -4,6 +4,7 @@
 #endregion
 
 using IonKiwi.Extenions;
+using IonKiwi.Json.Extenions;
 using IonKiwi.Json.MetaData;
 using IonKiwi.Json.Utilities;
 using System;
@@ -80,11 +81,17 @@ namespace IonKiwi.Json {
 		}
 
 		internal sealed class JsonTypeInfo {
+
+			public JsonTypeInfo(Type originalType, Type rootType) {
+				OriginalType = originalType;
+				RootType = rootType;
+			}
+
 			public Type OriginalType;
 			public Type RootType;
-			public Type KeyType;
-			public Type ValueType;
-			public Type ItemType;
+			public Type? KeyType;
+			public Type? ValueType;
+			public Type? ItemType;
 			public bool IsSimpleValue;
 			public SimpleValueType SimpleValueType;
 			public bool IsTuple;
@@ -95,15 +102,15 @@ namespace IonKiwi.Json {
 			public JsonObjectType ObjectType;
 			public readonly Dictionary<string, JsonPropertyInfo> Properties = new Dictionary<string, JsonPropertyInfo>(StringComparer.Ordinal);
 			public readonly List<JsonConstructorInfo> JsonConstructors = new List<JsonConstructorInfo>();
-			public Func<IJsonConstructorContext, object> CustomInstantiator;
-			public Func<object, System.Collections.IEnumerator> EnumerateMethod;
-			public Action<object, object> CollectionAddMethod;
-			public Action<object, object, object> DictionaryAddMethod;
-			public Action<object, object> DictionaryAddKeyValueMethod;
-			public Func<object, object> GetKeyFromKeyValuePair;
-			public Func<object, object> GetValueFromKeyValuePair;
-			public Func<object, object> FinalizeAction;
-			public TupleContextInfo TupleContext;
+			public Func<IJsonConstructorContext, object?>? CustomInstantiator;
+			public Func<object, System.Collections.IEnumerator>? EnumerateMethod;
+			public Action<object, object?>? CollectionAddMethod;
+			public Action<object, object, object?>? DictionaryAddMethod;
+			public Action<object, object>? DictionaryAddKeyValueMethod;
+			public Func<object, object>? GetKeyFromKeyValuePair;
+			public Func<object, object?>? GetValueFromKeyValuePair;
+			public Func<object, object>? FinalizeAction;
+			public TupleContextInfo? TupleContext;
 			public readonly List<Action<object>> OnSerialized = new List<Action<object>>();
 			public readonly List<Action<object>> OnSerializing = new List<Action<object>>();
 			public readonly List<Action<object>> OnDeserialized = new List<Action<object>>();
@@ -112,8 +119,13 @@ namespace IonKiwi.Json {
 		}
 
 		internal sealed class JsonConstructorInfo {
-			public Func<object[], object> Instantiator;
-			public readonly List<string> ParameterOrder = new List<string>();
+			public JsonConstructorInfo(Func<object?[], object> instantiator, List<string> parameterOrder) {
+				Instantiator = instantiator;
+				ParameterOrder = parameterOrder;
+			}
+
+			public Func<object?[], object> Instantiator;
+			public readonly List<string> ParameterOrder;
 		}
 
 		internal sealed class JsonPropertyInfo {
@@ -125,11 +137,66 @@ namespace IonKiwi.Json {
 			public bool Required;
 			public JsonEmitTypeName EmitTypeName = JsonEmitTypeName.DifferentType;
 			public bool EmitNullValue = true;
-			public Func<object, object, object> Setter1;
-			public Action<object, object> Setter2;
-			public Func<object, object> Getter;
+			public Func<object, object?, object>? Setter1;
+			public Action<object, object?>? Setter2;
+			public Func<object, object?>? Getter;
 			public bool IsSingleOrArrayValue;
 			public readonly HashSet<Type> KnownTypes = new HashSet<Type>();
+
+			public JsonPropertyInfo(Type propertyType, Func<object, object?, object>? setter1, Func<object, object?>? getter, bool required, int order1, int order2, JsonEmitTypeName emitTypeName, bool emitNullValue, string name, string originalName, bool isSingleOrArrayValue) {
+				PropertyType = propertyType;
+				Setter1 = setter1;
+				Getter = getter;
+				Required = required;
+				Order1 = order1;
+				Order2 = order2;
+				EmitTypeName = emitTypeName;
+				EmitNullValue = emitNullValue;
+				Name = name;
+				OriginalName = originalName;
+				IsSingleOrArrayValue = isSingleOrArrayValue;
+			}
+
+			public JsonPropertyInfo(Type propertyType, Action<object, object?> setter2, Func<object, object?>? getter, bool required, int order1, int order2, JsonEmitTypeName emitTypeName, bool emitNullValue, string name, string originalName, bool isSingleOrArrayValue) {
+				PropertyType = propertyType;
+				Setter2 = setter2;
+				Getter = getter;
+				Required = required;
+				Order1 = order1;
+				Order2 = order2;
+				EmitTypeName = emitTypeName;
+				EmitNullValue = emitNullValue;
+				Name = name;
+				OriginalName = originalName;
+				IsSingleOrArrayValue = isSingleOrArrayValue;
+			}
+
+			public JsonPropertyInfo(Type propertyType, Func<object, object?>? getter, bool required, int order1, int order2, JsonEmitTypeName emitTypeName, bool emitNullValue, string name, string originalName, bool isSingleOrArrayValue) {
+				PropertyType = propertyType;
+				Getter = getter;
+				Required = required;
+				Order1 = order1;
+				Order2 = order2;
+				EmitTypeName = emitTypeName;
+				EmitNullValue = emitNullValue;
+				Name = name;
+				OriginalName = originalName;
+				IsSingleOrArrayValue = isSingleOrArrayValue;
+			}
+
+			public JsonPropertyInfo(Type propertyType, Action<object, object?> setter2, Func<object, object?>? getter, string name) {
+				PropertyType = propertyType;
+				Setter2 = setter2;
+				Getter = getter;
+				Name = name;
+				OriginalName = name;
+			}
+
+			public JsonPropertyInfo(string name) {
+				PropertyType = typeof(void);
+				Name = name;
+				OriginalName = name;
+			}
 		}
 
 		public static JsonTypeInfo GetTypeInfo(Type t) {
@@ -270,9 +337,7 @@ namespace IonKiwi.Json {
 		}
 
 		private static JsonTypeInfo CreateTypeInfo(Type t) {
-			var ti = new JsonTypeInfo();
-			ti.RootType = t;
-			ti.OriginalType = t;
+			var ti = new JsonTypeInfo(t, t);
 			ti.IsSimpleValue = IsSimpleValue(t, out var isNullable, out var simpleType);
 			ti.SimpleValueType = simpleType;
 
@@ -293,11 +358,14 @@ namespace IonKiwi.Json {
 			var collectionInfo = t.GetCustomAttribute<JsonCollectionAttribute>(false);
 			var dictInfo = t.GetCustomAttribute<JsonDictionaryAttribute>(false);
 
-			JsonMetaDataEventArgs md = null;
+			JsonMetaDataEventArgs? md = null;
 
 			if (t.IsArray) {
 				ti.ObjectType = JsonObjectType.Array;
 				ti.ItemType = t.GetElementType();
+				if (ti.ItemType == null) {
+					throw new InvalidOperationException("ItemType is null");
+				}
 				ti.RootType = typeof(List<>).MakeGenericType(ti.ItemType);
 				ti.CollectionAddMethod = ReflectionUtility.CreateCollectionAdd<object, object>(ti.RootType, ti.ItemType);
 				var getEnumerator = t.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
@@ -334,7 +402,7 @@ namespace IonKiwi.Json {
 				ti.RootType = placeHolderType;
 				ti.ObjectType = JsonObjectType.Object;
 
-				var realType = isNullable ? ti.ItemType : t;
+				var realType = isNullable ? ti.ItemType! : t;
 				var finalizeMethodParameter = Expression.Parameter(typeof(object), "p1");
 				var finalizeMethodExprCall = Expression.Call(Expression.Convert(finalizeMethodParameter, placeHolderType), finalizeMethod);
 				var finalizeMethodExprResult = Expression.Convert(finalizeMethodExprCall, typeof(object));
@@ -342,37 +410,35 @@ namespace IonKiwi.Json {
 
 				var properties = placeHolderType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
 				foreach (PropertyInfo p in properties) {
-					var pi = new JsonPropertyInfo();
-					pi.Name = p.Name;
-					pi.OriginalName = p.Name;
-					pi.PropertyType = p.PropertyType;
-					pi.Setter2 = ReflectionUtility.CreatePropertySetterAction<object, object>(p);
-					var realProperty = realType.GetProperty(p.Name, BindingFlags.Instance | BindingFlags.Public);
-					if (realProperty != null) {
-						pi.Getter = ReflectionUtility.CreatePropertyGetter<object, object>(realProperty);
+
+					PropertyInfo? realProperty = realType.GetProperty(p.Name, BindingFlags.Instance | BindingFlags.Public);
+					FieldInfo? realField = realProperty != null ? null : realType.GetField(p.Name, BindingFlags.Instance | BindingFlags.Public);
+					if (realField == null) {
+						throw new InvalidOperationException("property & field is null");
 					}
-					else {
-						var realField = realType.GetField(p.Name, BindingFlags.Instance | BindingFlags.Public);
-						pi.Getter = ReflectionUtility.CreateFieldGetter<object, object>(realField);
-					}
+					var pi = new JsonPropertyInfo(
+						p.PropertyType,
+						ReflectionUtility.CreatePropertySetterAction<object, object>(p),
+						realProperty != null ? ReflectionUtility.CreatePropertyGetter<object, object>(realProperty) : ReflectionUtility.CreateFieldGetter<object, object>(realField),
+						p.Name);
+
 					ti.Properties.Add(pi.Name, pi);
 				}
 
 				var fields = placeHolderType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
 				foreach (FieldInfo f in fields) {
-					var pi = new JsonPropertyInfo();
-					pi.Name = f.Name;
-					pi.OriginalName = f.Name;
-					pi.PropertyType = f.FieldType;
-					pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
-					var realProperty = realType.GetProperty(f.Name, BindingFlags.Instance | BindingFlags.Public);
-					if (realProperty != null) {
-						pi.Getter = ReflectionUtility.CreatePropertyGetter<object, object>(realProperty);
+
+					PropertyInfo? realProperty = realType.GetProperty(f.Name, BindingFlags.Instance | BindingFlags.Public);
+					FieldInfo? realField = realProperty != null ? null : realType.GetField(f.Name, BindingFlags.Instance | BindingFlags.Public);
+					if (realField == null) {
+						throw new InvalidOperationException("property & field is null");
 					}
-					else {
-						var realField = realType.GetField(f.Name, BindingFlags.Instance | BindingFlags.Public);
-						pi.Getter = ReflectionUtility.CreateFieldGetter<object, object>(realField);
-					}
+					var pi = new JsonPropertyInfo(
+						f.FieldType,
+						ReflectionUtility.CreateFieldSetterAction<object, object>(f),
+						realProperty != null ? ReflectionUtility.CreatePropertyGetter<object, object>(realProperty) : ReflectionUtility.CreateFieldGetter<object, object>(realField),
+						f.Name);
+
 					ti.Properties.Add(pi.Name, pi);
 				}
 
@@ -403,7 +469,7 @@ namespace IonKiwi.Json {
 					}
 
 					if (t.IsInterface) {
-						ti.KnownTypes.AddRange(md.KnownTypes);
+						ti.KnownTypes.AddRange(md!.KnownTypes);
 						ti.ObjectType = JsonObjectType.Untyped;
 						return ti;
 					}
@@ -423,7 +489,7 @@ namespace IonKiwi.Json {
 			if (dictInfo != null) {
 				ti.ObjectType = JsonObjectType.Dictionary;
 
-				Type dictionaryInterface = dictInfo.DictionaryInterface;
+				var dictionaryInterface = dictInfo.DictionaryInterface;
 				if (dictionaryInterface != null) {
 					if (!dictionaryInterface.IsInterface || !dictionaryInterface.IsGenericType || dictionaryInterface.GetGenericTypeDefinition() != typeof(IDictionary<,>)) {
 						throw new InvalidOperationException("JsonDictionaryAttribute.DictionaryInterface '" + ReflectionUtility.GetTypeName(dictionaryInterface) + "' is not a dictionary interface.");
@@ -448,7 +514,9 @@ namespace IonKiwi.Json {
 				ti.DictionaryAddMethod = ReflectionUtility.CreateDictionaryAdd<object, object, object>(t, ti.KeyType, ti.ValueType);
 				ti.DictionaryAddKeyValueMethod = ReflectionUtility.CreateDictionaryAddKeyValue<object, object>(t, ti.KeyType, ti.ValueType);
 
-				ReflectionUtility.HasInterface(dictionaryInterface, typeof(IEnumerable<>), out var dictionaryEnumerableInterface);
+				if (!ReflectionUtility.HasInterface(dictionaryInterface, typeof(IEnumerable<>), out var dictionaryEnumerableInterface)) {
+					throw new InvalidOperationException("Dictionary without IEnumerable<>");
+				}
 				var getEnumerator = dictionaryEnumerableInterface.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
 				var p1 = Expression.Parameter(typeof(object), "p1");
 				var getEnumeratorCall = Expression.Call(Expression.Convert(p1, dictionaryEnumerableInterface), getEnumerator);
@@ -461,7 +529,7 @@ namespace IonKiwi.Json {
 			}
 			else if (collectionInfo != null) {
 
-				Type collectionInterface = collectionInfo.CollectionInterface;
+				var collectionInterface = collectionInfo.CollectionInterface;
 				if (collectionInterface != null) {
 					if (!collectionInterface.IsInterface || !collectionInterface.IsGenericType || collectionInterface.GetGenericTypeDefinition() != typeof(IEnumerable<>)) {
 						throw new InvalidOperationException("JsonCollectionAttribute.CollectionInterface '" + ReflectionUtility.GetTypeName(collectionInterface) + "' is not a collection interface.");
@@ -491,24 +559,23 @@ namespace IonKiwi.Json {
 
 				if (md != null) {
 					foreach (var cp in md.Properties) {
-						var pix = new JsonPropertyInfo() {
-							PropertyType = cp.Value.PropertyType,
-							Setter1 = cp.Value.Setter,
-							Getter = cp.Value.Getter,
-							Required = cp.Value.Required,
-							Order1 = cp.Value.Order,
-							Order2 = ti.Properties.Count + 1,
-							EmitTypeName = cp.Value.EmitTypeName,
-							EmitNullValue = cp.Value.EmitNullValue,
-							Name = cp.Key,
-							OriginalName = cp.Value.OriginalName,
-							IsSingleOrArrayValue = cp.Value.IsSingleOrArrayValue,
-						};
+						var pix = new JsonPropertyInfo(
+							cp.Value.PropertyType,
+							cp.Value.Setter,
+							cp.Value.Getter,
+							cp.Value.Required,
+							cp.Value.Order,
+							ti.Properties.Count + 1,
+							cp.Value.EmitTypeName,
+							cp.Value.EmitNullValue,
+							cp.Key,
+							cp.Value.OriginalName,
+							cp.Value.IsSingleOrArrayValue);
 						pix.KnownTypes.AddRange(cp.Value.KnownTypes);
 						ti.Properties.Add(cp.Key, pix);
 					}
 					foreach (var ctor in md.Constructors) {
-						JsonConstructorInfo jsonConstructor = new JsonConstructorInfo();
+						var jsonConstructorParameterOrder = new List<string>();
 
 						var invokeParameter = Expression.Parameter(typeof(object[]), "p1");
 						List<Expression> invokeParameterExpressions = new List<Expression>();
@@ -516,7 +583,7 @@ namespace IonKiwi.Json {
 						var ctorParameters = ctor.Constructor.GetParameters();
 						for (int i = 0; i < ctorParameters.Length; i++) {
 							var ctorParameter = ctorParameters[i];
-							var parameterIndex = jsonConstructor.ParameterOrder.Count;
+							var parameterIndex = jsonConstructorParameterOrder.Count;
 
 							string name = ctor.ParameterOrder[i];
 							if (!ti.Properties.ContainsKey(name)) {
@@ -526,12 +593,11 @@ namespace IonKiwi.Json {
 							var pe = Expression.ArrayAccess(invokeParameter, Expression.Constant(parameterIndex));
 							invokeParameterExpressions.Add(Expression.Convert(pe, ctorParameter.ParameterType));
 
-							jsonConstructor.ParameterOrder.Add(name);
+							jsonConstructorParameterOrder.Add(name);
 						}
 
 						var invokeExpression = Expression.New(ctor.Constructor, invokeParameterExpressions);
-						jsonConstructor.Instantiator = Expression.Lambda<Func<object[], object>>(invokeExpression, invokeParameter).Compile();
-						ti.JsonConstructors.Add(jsonConstructor);
+						ti.JsonConstructors.Add(new JsonConstructorInfo(Expression.Lambda<Func<object?[], object>>(invokeExpression, invokeParameter).Compile(), jsonConstructorParameterOrder));
 					}
 					ti.CustomInstantiator = md.CustomInstantiator;
 				}
@@ -542,32 +608,38 @@ namespace IonKiwi.Json {
 						foreach (var f in currentType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
 							var propInfo = f.GetCustomAttribute<JsonPropertyAttribute>(false);
 							if (propInfo != null) {
-								string name = propInfo.Name;
-								if (string.IsNullOrEmpty(name)) {
-									name = f.Name;
-								}
+								string name = propInfo.Name.WhenNullOrEmpty(f.Name);
 
 								if (propInfo.Required && !propInfo.EmitNullValue) {
 									throw new InvalidOperationException("Required & !EmitNullValue");
 								}
 
-								JsonPropertyInfo pi = new JsonPropertyInfo();
-								pi.Name = name;
-								pi.OriginalName = f.Name;
-								pi.PropertyType = f.FieldType;
-								pi.Required = propInfo.Required;
-								pi.Order1 = propInfo.Order;
-								pi.Order2 = ti.Properties.Count + 1;
-								pi.EmitTypeName = propInfo.EmitTypeName;
-								pi.EmitNullValue = propInfo.EmitNullValue;
-								pi.IsSingleOrArrayValue = propInfo.IsSingleOrArrayValue;
-								if (t.IsValueType) {
-									pi.Setter1 = ReflectionUtility.CreateFieldSetterFunc<object, object>(f);
-								}
-								else {
-									pi.Setter2 = ReflectionUtility.CreateFieldSetterAction<object, object>(f);
-								}
-								pi.Getter = ReflectionUtility.CreateFieldGetter<object, object>(f);
+								JsonPropertyInfo pi = t.IsValueType ?
+									new JsonPropertyInfo(
+										f.FieldType,
+										ReflectionUtility.CreateFieldSetterFunc<object, object>(f),
+										ReflectionUtility.CreateFieldGetter<object, object>(f),
+										propInfo.Required,
+										propInfo.Order,
+										ti.Properties.Count + 1,
+										propInfo.EmitTypeName,
+										propInfo.EmitNullValue,
+										name,
+										f.Name,
+										propInfo.IsSingleOrArrayValue)
+									: new JsonPropertyInfo(
+										f.FieldType,
+										ReflectionUtility.CreateFieldSetterAction<object, object>(f),
+										ReflectionUtility.CreateFieldGetter<object, object>(f),
+										propInfo.Required,
+										propInfo.Order,
+										ti.Properties.Count + 1,
+										propInfo.EmitTypeName,
+										propInfo.EmitNullValue,
+										name,
+										f.Name,
+										propInfo.IsSingleOrArrayValue);
+
 								if (ti.Properties.ContainsKey(name)) {
 									throw new NotSupportedException($"Type hierarchy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
 								}
@@ -583,36 +655,50 @@ namespace IonKiwi.Json {
 						foreach (var p in currentType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)) {
 							var propInfo = p.GetCustomAttribute<JsonPropertyAttribute>(false);
 							if (propInfo != null) {
-								string name = propInfo.Name;
-								if (string.IsNullOrEmpty(name)) {
-									name = p.Name;
-								}
+								string name = propInfo.Name.WhenNullOrEmpty(p.Name);
 
 								if (propInfo.Required && !propInfo.EmitNullValue) {
 									throw new InvalidOperationException("Required & !EmitNullValue");
 								}
 
-								JsonPropertyInfo pi = new JsonPropertyInfo();
-								pi.Name = name;
-								pi.OriginalName = p.Name;
-								pi.PropertyType = p.PropertyType;
-								pi.Required = propInfo.Required;
-								pi.Order1 = propInfo.Order;
-								pi.Order2 = ti.Properties.Count + 1;
-								pi.EmitTypeName = propInfo.EmitTypeName;
-								pi.EmitNullValue = propInfo.EmitNullValue;
-								pi.IsSingleOrArrayValue = propInfo.IsSingleOrArrayValue;
-								if (p.CanWrite) {
-									if (t.IsValueType) {
-										pi.Setter1 = ReflectionUtility.CreatePropertySetterFunc<object, object>(p);
-									}
-									else {
-										pi.Setter2 = ReflectionUtility.CreatePropertySetterAction<object, object>(p);
-									}
-								}
-								if (p.CanRead) {
-									pi.Getter = ReflectionUtility.CreatePropertyGetter<object, object>(p);
-								}
+								JsonPropertyInfo pi = !p.CanWrite ?
+									new JsonPropertyInfo(
+										p.PropertyType,
+										p.CanRead ? ReflectionUtility.CreatePropertyGetter<object, object>(p) : null,
+										propInfo.Required,
+										propInfo.Order,
+										ti.Properties.Count + 1,
+										propInfo.EmitTypeName,
+										propInfo.EmitNullValue,
+										name,
+										p.Name,
+										propInfo.IsSingleOrArrayValue)
+									: (t.IsValueType ?
+									new JsonPropertyInfo(
+										p.PropertyType,
+										ReflectionUtility.CreatePropertySetterFunc<object, object>(p),
+										p.CanRead ? ReflectionUtility.CreatePropertyGetter<object, object>(p) : null,
+										propInfo.Required,
+										propInfo.Order,
+										ti.Properties.Count + 1,
+										propInfo.EmitTypeName,
+										propInfo.EmitNullValue,
+										name,
+										p.Name,
+										propInfo.IsSingleOrArrayValue)
+									: new JsonPropertyInfo(
+										p.PropertyType,
+										ReflectionUtility.CreatePropertySetterAction<object, object>(p),
+										p.CanRead ? ReflectionUtility.CreatePropertyGetter<object, object>(p) : null,
+										propInfo.Required,
+										propInfo.Order,
+										ti.Properties.Count + 1,
+										propInfo.EmitTypeName,
+										propInfo.EmitNullValue,
+										name,
+										p.Name,
+										propInfo.IsSingleOrArrayValue));
+
 								if (ti.Properties.ContainsKey(name)) {
 									throw new NotSupportedException($"Type hierarchy of '{ReflectionUtility.GetTypeName(t)}' contains duplicate property '{name}'.");
 								}
@@ -629,20 +715,21 @@ namespace IonKiwi.Json {
 						foreach (var ctor in t.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
 							var jsonCtor = ctor.GetCustomAttribute<JsonConstructorAttribute>(false);
 							if (jsonCtor != null) {
-								JsonConstructorInfo jsonConstructor = new JsonConstructorInfo();
+								var jsonConstructorParameterOrder = new List<string>();
 
 								var invokeParameter = Expression.Parameter(typeof(object[]), "p1");
 								List<Expression> invokeParameterExpressions = new List<Expression>();
 
 								foreach (var ctorParameter in ctor.GetParameters()) {
-									var parameterIndex = jsonConstructor.ParameterOrder.Count;
+									var parameterIndex = jsonConstructorParameterOrder.Count;
 
-									string name = ctorParameter.Name;
+									var name = ctorParameter.Name;
+									if (name == null) {
+										throw new InvalidOperationException("Name is null");
+									}
 									var ctorParameterInfo = ctorParameter.GetCustomAttribute<JsonParameterAttribute>(false);
 									if (ctorParameterInfo != null) {
-										if (!string.IsNullOrEmpty(ctorParameterInfo.Name)) {
-											name = ctorParameterInfo.Name;
-										}
+										StringHelper.AssignWhenValueNotNullOrEmpty(ref name, ctorParameterInfo.Name);
 									}
 
 									if (!ti.Properties.ContainsKey(name)) {
@@ -652,12 +739,11 @@ namespace IonKiwi.Json {
 									var pe = Expression.ArrayAccess(invokeParameter, Expression.Constant(parameterIndex));
 									invokeParameterExpressions.Add(Expression.Convert(pe, ctorParameter.ParameterType));
 
-									jsonConstructor.ParameterOrder.Add(name);
+									jsonConstructorParameterOrder.Add(name);
 								}
 
 								var invokeExpression = Expression.New(ctor, invokeParameterExpressions);
-								jsonConstructor.Instantiator = Expression.Lambda<Func<object[], object>>(invokeExpression, invokeParameter).Compile();
-								ti.JsonConstructors.Add(jsonConstructor);
+								ti.JsonConstructors.Add(new JsonConstructorInfo(Expression.Lambda<Func<object?[], object>>(invokeExpression, invokeParameter).Compile(), jsonConstructorParameterOrder));
 							}
 						}
 					}

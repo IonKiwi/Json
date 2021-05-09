@@ -30,10 +30,10 @@ namespace IonKiwi.Json {
 			private readonly JsonWriterSettings _writerSettings;
 			private readonly Stack<JsonSerializerInternalState> _currentState = new Stack<JsonSerializerInternalState>();
 
-			public JsonSerializerInternal(JsonSerializerSettings serializerSettings, JsonWriterSettings writerSettings, object value, Type objectType, JsonTypeInfo typeInfo, string[] tupleNames) {
+			public JsonSerializerInternal(JsonSerializerSettings serializerSettings, JsonWriterSettings writerSettings, object? value, Type objectType, JsonTypeInfo typeInfo, string[]? tupleNames) {
 				_serializerSettings = serializerSettings;
 				_writerSettings = writerSettings;
-				_currentState.Push(new JsonSerializerRootState() { TypeInfo = typeInfo, TupleContext = typeInfo.TupleContext != null ? new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames) : null, Value = value, ValueType = objectType });
+				_currentState.Push(new JsonSerializerRootState(objectType, typeInfo, value, typeInfo.TupleContext != null ? new TupleContextInfoWrapper(typeInfo.TupleContext, tupleNames) : null));
 			}
 
 			internal async PlatformTask SerializeAsync(IJsonWriter writer) {
@@ -72,9 +72,14 @@ namespace IonKiwi.Json {
 					else if (token == JsonSerializerToken.Value) {
 						await WriteValueAsync(writer, (JsonSerializerValueState)_currentState.Peek()).NoSync();
 					}
+					else if (token == JsonSerializerToken.NullValue) {
+						await WritePropertyAsync(writer, _currentState.Peek()).NoSync();
+						await writer.WriteNullValueAsync().NoSync();
+						_currentState.Pop();
+					}
 					else if (token == JsonSerializerToken.Raw) {
 						var valueState = _currentState.Peek();
-						var raw = (string)((JsonSerializerValueState)valueState).Value;
+						var raw = ((JsonSerializerRawValueState)valueState).Raw;
 						if (valueState.Parent is JsonSerializerObjectPropertyState propertyState) {
 							await writer.WriteRawAsync(propertyState.PropertyName, raw).NoSync();
 						}
@@ -90,7 +95,7 @@ namespace IonKiwi.Json {
 					else if (token == JsonSerializerToken.HandleMemberProvider) {
 						var propState = (JsonSerializerObjectPropertyState)_currentState.Peek();
 						var objectState = (JsonSerializerObjectState)propState.Parent;
-						var provider = (IJsonWriteMemberProvider)objectState.Value;
+						var provider = (IJsonWriteMemberProvider)objectState.Value!;
 						if (await provider.WriteMemberAsync(new JsonWriteMemberProviderContext(propState.PropertyName, writer, _serializerSettings, _writerSettings)).NoSync()) {
 							_currentState.Pop();
 						}
@@ -135,9 +140,14 @@ namespace IonKiwi.Json {
 					else if (token == JsonSerializerToken.Value) {
 						WriteValue(writer, (JsonSerializerValueState)_currentState.Peek());
 					}
+					else if (token == JsonSerializerToken.NullValue) {
+						WriteProperty(writer, _currentState.Peek());
+						writer.WriteNullValue();
+						_currentState.Pop();
+					}
 					else if (token == JsonSerializerToken.Raw) {
 						var valueState = _currentState.Peek();
-						var raw = (string)((JsonSerializerValueState)valueState).Value;
+						var raw = ((JsonSerializerRawValueState)valueState).Raw;
 						if (valueState.Parent is JsonSerializerObjectPropertyState propertyState) {
 							writer.WriteRaw(propertyState.PropertyName, raw);
 						}
@@ -154,7 +164,7 @@ namespace IonKiwi.Json {
 					else if (token == JsonSerializerToken.HandleMemberProvider) {
 						var propState = (JsonSerializerObjectPropertyState)_currentState.Peek();
 						var objectState = (JsonSerializerObjectState)propState.Parent;
-						var provider = (IJsonWriteMemberProvider)objectState.Value;
+						var provider = (IJsonWriteMemberProvider)objectState.Value!;
 						if (provider.WriteMember(new JsonWriteMemberProviderContext(propState.PropertyName, writer, _serializerSettings, _writerSettings))) {
 							_currentState.Pop();
 						}
@@ -201,14 +211,17 @@ namespace IonKiwi.Json {
 					_currentState.Pop();
 
 					foreach (var cb in state.TypeInfo.OnSerialized) {
-						cb(state.Value);
+						cb(state.Value!);
 					}
 
 					return JsonSerializerToken.ObjectEnd;
 				}
 
 				var currentProperty = state.Properties.Current;
-				var propertyValue = currentProperty.Getter(state.Value);
+				if (currentProperty.Getter == null) {
+					ThrowGetterNull();
+				}
+				var propertyValue = currentProperty.Getter(state.Value!);
 				if (!currentProperty.EmitNullValue && object.ReferenceEquals(null, propertyValue)) {
 					// skip
 					return JsonSerializerToken.None;
@@ -219,15 +232,12 @@ namespace IonKiwi.Json {
 					propertyName = newName;
 				}
 
-				var newState = new JsonSerializerObjectPropertyState();
-				newState.Parent = state;
-				newState.PropertyName = propertyName;
-				newState.PropertyInfo = currentProperty;
-				newState.Value = propertyValue;
-				newState.ValueType = currentProperty.PropertyType;
+				var typeInfo = JsonReflection.GetTypeInfo(currentProperty.PropertyType);
+				var newState = new JsonSerializerObjectPropertyState(
+					state, propertyName, currentProperty.PropertyType, typeInfo, currentProperty,
+					propertyValue,
+					GetNewContext(state.TupleContext, currentProperty.OriginalName, typeInfo));
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
-				newState.TypeInfo = JsonReflection.GetTypeInfo(currentProperty.PropertyType);
-				newState.TupleContext = GetNewContext(state.TupleContext, currentProperty.OriginalName, newState.TypeInfo);
 				if (newState.ValueType != realType && !(newState.TypeInfo.OriginalType.IsValueType && newState.TypeInfo.IsNullable && newState.TypeInfo.ItemType == realType)) {
 					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 					newState.TypeInfo = newTypeInfo;
@@ -256,7 +266,7 @@ namespace IonKiwi.Json {
 					_currentState.Pop();
 
 					foreach (var cb in state.TypeInfo.OnSerialized) {
-						cb(state.Value);
+						cb(state.Value!);
 					}
 
 					if (state.IsSingleOrArrayValue) {
@@ -279,13 +289,14 @@ namespace IonKiwi.Json {
 					}
 				}
 
-				var newState = new JsonSerializerArrayItemState();
-				newState.Parent = state;
-				newState.Value = currentItem;
-				newState.ValueType = state.TypeInfo.ItemType;
+				if (state.TypeInfo.ItemType == null) {
+					ThrowItemTypeNull();
+				}
+				var typeInfo = JsonReflection.GetTypeInfo(state.TypeInfo.ItemType);
+				var newState = new JsonSerializerArrayItemState(
+					state, state.TypeInfo.ItemType, typeInfo,
+					currentItem, GetNewContext(state.TupleContext, "Item", typeInfo));
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
-				newState.TypeInfo = JsonReflection.GetTypeInfo(state.TypeInfo.ItemType);
-				newState.TupleContext = GetNewContext(state.TupleContext, "Item", newState.TypeInfo);
 				if (newState.ValueType != realType && !(newState.TypeInfo.OriginalType.IsValueType && newState.TypeInfo.IsNullable && newState.TypeInfo.ItemType == realType)) {
 					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 					newState.TypeInfo = newTypeInfo;
@@ -318,35 +329,49 @@ namespace IonKiwi.Json {
 					_currentState.Pop();
 
 					foreach (var cb in state.TypeInfo.OnSerialized) {
-						cb(state.Value);
+						cb(state.Value!);
 					}
 
 					return JsonSerializerToken.ObjectEnd;
 				}
 
-				var currentProperty = state.Items.Current;
+				if (state.TypeInfo.GetKeyFromKeyValuePair == null) {
+					ThrowGetKeyFromKeyValuePairNull();
+				}
+				if (state.TypeInfo.GetValueFromKeyValuePair == null) {
+					ThrowGetValueFromKeyValuePairNull();
+				}
+
+				var currentProperty = state.Items.Current!;
 				object key = state.TypeInfo.GetKeyFromKeyValuePair(currentProperty);
-				object value = state.TypeInfo.GetValueFromKeyValuePair(currentProperty);
+				object? value = state.TypeInfo.GetValueFromKeyValuePair(currentProperty);
 				string propertyName;
 				if (!state.TypeInfo.IsEnumDictionary) {
 					propertyName = (string)key;
 				}
 				else {
 					if (!state.TypeInfo.IsFlagsEnum) {
-						propertyName = Enum.GetName(state.TypeInfo.KeyType, key);
+						if (state.TypeInfo.KeyType == null) {
+							ThrowKeyTypeNull();
+						}
+						propertyName = Enum.GetName(state.TypeInfo.KeyType, key)!;
 					}
 					else {
+						if (state.TypeInfo.KeyType == null) {
+							ThrowKeyTypeNull();
+						}
 						propertyName = string.Join(", ", ReflectionUtility.GetUniqueFlags((Enum)key).Select(x => Enum.GetName(state.TypeInfo.KeyType, x)));
 					}
 				}
-				var newState = new JsonSerializerObjectPropertyState();
-				newState.Parent = state;
-				newState.Value = value;
-				newState.PropertyName = propertyName;
-				newState.ValueType = state.TypeInfo.ValueType;
+				if (state.TypeInfo.ValueType == null) {
+					ThrowValueTypeNull();
+				}
+				var typeInfo = JsonReflection.GetTypeInfo(state.TypeInfo.ValueType);
+				var newState = new JsonSerializerObjectPropertyState(
+					state, propertyName, state.TypeInfo.ValueType, typeInfo,
+					value,
+					GetNewContext(state.TupleContext, "Value", typeInfo));
 				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
-				newState.TypeInfo = JsonReflection.GetTypeInfo(state.TypeInfo.ValueType);
-				newState.TupleContext = GetNewContext(state.TupleContext, "Value", newState.TypeInfo);
 				if (newState.ValueType != realType && !(newState.TypeInfo.OriginalType.IsValueType && newState.TypeInfo.IsNullable && newState.TypeInfo.ItemType == realType)) {
 					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 					newState.TypeInfo = newTypeInfo;
@@ -366,7 +391,7 @@ namespace IonKiwi.Json {
 					_currentState.Pop();
 
 					foreach (var cb in state.TypeInfo.OnSerialized) {
-						cb(state.Value);
+						cb(state.Value!);
 					}
 
 					return JsonSerializerToken.ArrayEnd;
@@ -374,13 +399,11 @@ namespace IonKiwi.Json {
 
 				var currentProperty = state.Items.Current;
 
-				var newState = new JsonSerializerArrayItemState();
-				newState.Parent = state;
-				newState.Value = currentProperty;
-				newState.ValueType = state.TypeInfo.ItemType;
-				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
-				newState.TypeInfo = JsonReflection.GetTypeInfo(state.TypeInfo.ItemType);
-				newState.TupleContext = state.TupleContext;
+				if (state.TypeInfo.ItemType == null) {
+					ThrowItemTypeNull();
+				}
+				var newState = new JsonSerializerArrayItemState(state, state.TypeInfo.ItemType, JsonReflection.GetTypeInfo(state.TypeInfo.ItemType), currentProperty, state.TupleContext);
+				//var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
 				newState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 				_currentState.Push(newState);
 				return JsonSerializerToken.None;
@@ -396,18 +419,15 @@ namespace IonKiwi.Json {
 					return JsonSerializerToken.ObjectEnd;
 				}
 
-				var currentProperty = (JsonWriterProperty)state.Items.Current;
+				var currentProperty = (JsonWriterProperty)state.Items.Current!;
 
-				var newState = new JsonSerializerObjectPropertyState();
-				newState.Parent = state;
-				newState.Value = currentProperty.Value;
-				newState.ValueType = currentProperty.ValueType;
-				newState.PropertyName = currentProperty.Name;
-				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
-				newState.TypeInfo = JsonReflection.GetTypeInfo(currentProperty.ValueType);
-				if (newState.TypeInfo.TupleContext != null) {
-					newState.TupleContext = new TupleContextInfoWrapper(newState.TypeInfo.TupleContext, null);
+				if (currentProperty.ValueType == null) {
+					ThrowValueTypeNull();
 				}
+				var typeInfo = JsonReflection.GetTypeInfo(currentProperty.ValueType);
+				var newState = new JsonSerializerObjectPropertyState(state, currentProperty.Name, currentProperty.ValueType, typeInfo, currentProperty.Value,
+					typeInfo.TupleContext == null ? null : new TupleContextInfoWrapper(typeInfo.TupleContext, null));
+				var realType = object.ReferenceEquals(null, newState.Value) ? newState.ValueType : newState.Value.GetType();
 				if (newState.ValueType != realType && !(newState.TypeInfo.OriginalType.IsValueType && newState.TypeInfo.IsNullable && newState.TypeInfo.ItemType == realType)) {
 					var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 					newState.TypeInfo = newTypeInfo;
@@ -418,21 +438,18 @@ namespace IonKiwi.Json {
 				return JsonSerializerToken.None;
 			}
 
-			private JsonSerializerToken HandleValue(JsonSerializerInternalState state, object value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper tupleContext) {
+			private JsonSerializerToken HandleValue(JsonSerializerInternalState state, object? value, Type objectType, JsonTypeInfo typeInfo, TupleContextInfoWrapper? tupleContext) {
 
 				bool? typeName = null;
 				if (!state.WriteValueCallbackCalled && _serializerSettings.WriteValueCallback != null) {
-					JsonWriterWriteValueCallbackArgs e = new JsonWriterWriteValueCallbackArgs();
-					IJsonWriterWriteValueCallbackArgs e2 = e;
-					e2.Value = value;
-					e2.InputType = objectType;
+					JsonWriterWriteValueCallbackArgs e = new JsonWriterWriteValueCallbackArgs(objectType, value);
 					_serializerSettings.WriteValueCallback(e);
 
-					if (e2.ReplaceValue) {
+					if (e.ReplaceValue) {
 						state.WriteValueCallbackCalled = true;
 
-						objectType = e2.InputType;
-						value = e2.Value;
+						objectType = e.ValueType;
+						value = e.Value;
 						var realType = object.ReferenceEquals(null, value) ? objectType : value.GetType();
 						var newTypeInfo = JsonReflection.GetTypeInfo(realType);
 
@@ -440,34 +457,25 @@ namespace IonKiwi.Json {
 						tupleContext = newTypeInfo.TupleContext != null ? new TupleContextInfoWrapper(newTypeInfo.TupleContext, null) : null;
 					}
 
-					typeName = e2.TypeName;
+					typeName = e.TypeName;
 				}
 
 				if (object.ReferenceEquals(null, value)) {
-					JsonSerializerValueState valueState = new JsonSerializerValueState();
-					valueState.Parent = state;
+					var valueState = new JsonSerializerNullValueState(state);
 					valueState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-					valueState.Value = null;
 					_currentState.Push(valueState);
-					return JsonSerializerToken.Value;
+					return JsonSerializerToken.NullValue;
 				}
 
 				switch (typeInfo.ObjectType) {
 					case JsonObjectType.Raw:
-						JsonSerializerValueState valueState = new JsonSerializerValueState();
-						valueState.Parent = state;
-						valueState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-						valueState.Value = ((RawJson)value).Json;
-						_currentState.Push(valueState);
+						var rawState = new JsonSerializerRawValueState(state, ((RawJson)value).Json);
+						rawState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
+						_currentState.Push(rawState);
 						return JsonSerializerToken.Raw;
 					case JsonObjectType.Object: {
-							var objectState = new JsonSerializerObjectState();
-							objectState.Parent = state;
-							objectState.Value = value;
-							objectState.Properties = typeInfo.Properties.Values.OrderBy(z => z.Order1).ThenBy(z => z.Order2).GetEnumerator();
+							var objectState = new JsonSerializerObjectState(state, typeInfo, value, typeInfo.Properties.Values.OrderBy(z => z.Order1).ThenBy(z => z.Order2).GetEnumerator(), tupleContext);
 							objectState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-							objectState.TypeInfo = typeInfo;
-							objectState.TupleContext = tupleContext;
 							_currentState.Push(objectState);
 
 							foreach (var cb in objectState.TypeInfo.OnSerializing) {
@@ -498,10 +506,10 @@ namespace IonKiwi.Json {
 							return JsonSerializerToken.ObjectStart;
 						}
 					case JsonObjectType.Array when typeInfo.ItemType == typeof(JsonWriterProperty): {
-							var customState = new JsonSerializerCustomObjectState();
-							customState.Parent = state;
-							customState.Value = value;
-							customState.Items = typeInfo.EnumerateMethod(value);
+							if (typeInfo.EnumerateMethod == null) {
+								ThrowEnumerateMethodNull();
+							}
+							var customState = new JsonSerializerCustomObjectState(state, value, typeInfo.EnumerateMethod(value));
 							customState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
 							_currentState.Push(customState);
 							return JsonSerializerToken.ObjectStart;
@@ -510,14 +518,12 @@ namespace IonKiwi.Json {
 							var propertyState = state as JsonSerializerObjectPropertyState;
 							var singleOrArrayValue = typeInfo.IsSingleOrArrayValue || (propertyState != null && propertyState.PropertyInfo != null && propertyState.PropertyInfo.IsSingleOrArrayValue);
 
-							var arrayState = new JsonSerializerArrayState();
-							arrayState.Parent = state;
-							arrayState.Value = value;
-							arrayState.Items = typeInfo.EnumerateMethod(value);
+							if (typeInfo.EnumerateMethod == null) {
+								ThrowEnumerateMethodNull();
+							}
+							var arrayState = new JsonSerializerArrayState(state, typeInfo, value, typeInfo.EnumerateMethod(value), tupleContext);
 							arrayState.IsSingleOrArrayValue = singleOrArrayValue;
 							arrayState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-							arrayState.TypeInfo = typeInfo;
-							arrayState.TupleContext = tupleContext;
 							_currentState.Push(arrayState);
 
 							foreach (var cb in arrayState.TypeInfo.OnSerializing) {
@@ -550,13 +556,11 @@ namespace IonKiwi.Json {
 					case JsonObjectType.Dictionary: {
 							bool isStringDictionary = typeInfo.KeyType == typeof(string) || (typeInfo.IsEnumDictionary && _writerSettings.EnumValuesAsString);
 							if (isStringDictionary) {
-								var objectState = new JsonSerializerStringDictionaryState();
-								objectState.Parent = state;
-								objectState.Value = value;
-								objectState.Items = typeInfo.EnumerateMethod(value);
+								if (typeInfo.EnumerateMethod == null) {
+									ThrowEnumerateMethodNull();
+								}
+								var objectState = new JsonSerializerStringDictionaryState(state, typeInfo, value, typeInfo.EnumerateMethod(value), tupleContext);
 								objectState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-								objectState.TypeInfo = typeInfo;
-								objectState.TupleContext = tupleContext;
 								_currentState.Push(objectState);
 
 								foreach (var cb in objectState.TypeInfo.OnSerializing) {
@@ -582,13 +586,11 @@ namespace IonKiwi.Json {
 								return JsonSerializerToken.ObjectStart;
 							}
 							else {
-								var arrayState = new JsonSerializerDictionaryState();
-								arrayState.Parent = state;
-								arrayState.Value = value;
-								arrayState.Items = typeInfo.EnumerateMethod(value);
+								if (typeInfo.EnumerateMethod == null) {
+									ThrowEnumerateMethodNull();
+								}
+								var arrayState = new JsonSerializerDictionaryState(state, typeInfo, value, typeInfo.EnumerateMethod(value), tupleContext);
 								arrayState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-								arrayState.TypeInfo = typeInfo;
-								arrayState.TupleContext = tupleContext;
 								_currentState.Push(arrayState);
 
 								foreach (var cb in arrayState.TypeInfo.OnSerializing) {
@@ -615,11 +617,8 @@ namespace IonKiwi.Json {
 							}
 						}
 					case JsonObjectType.SimpleValue:
-						valueState = new JsonSerializerValueState();
-						valueState.Parent = state;
+						var valueState = new JsonSerializerValueState(state, typeInfo, value);
 						valueState.WriteValueCallbackCalled = state.WriteValueCallbackCalled;
-						valueState.Value = value;
-						valueState.TypeInfo = typeInfo;
 						_currentState.Push(valueState);
 						return JsonSerializerToken.Value;
 					default:
@@ -643,7 +642,7 @@ namespace IonKiwi.Json {
 
 			private async PlatformTask WriteValueAsync(IJsonWriter writer, JsonSerializerValueState state) {
 
-				object value = state.Value;
+				object? value = state.Value;
 				if (object.ReferenceEquals(null, value)) {
 					await WritePropertyAsync(writer, state).NoSync();
 					await writer.WriteNullValueAsync().NoSync();
@@ -782,7 +781,7 @@ namespace IonKiwi.Json {
 
 			private void WriteValue(IJsonWriter writer, JsonSerializerValueState state) {
 
-				object value = state.Value;
+				object? value = state.Value;
 				if (object.ReferenceEquals(null, value)) {
 					WriteProperty(writer, state);
 					writer.WriteNullValue();
@@ -919,7 +918,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private TupleContextInfoWrapper GetNewContext(TupleContextInfoWrapper context, string propertyName, JsonTypeInfo propertyTypeInfo) {
+			private TupleContextInfoWrapper? GetNewContext(TupleContextInfoWrapper? context, string propertyName, JsonTypeInfo propertyTypeInfo) {
 				var newContext = context?.GetPropertyContext(propertyName);
 				if (newContext == null) {
 					if (propertyTypeInfo.TupleContext == null) {
@@ -931,7 +930,7 @@ namespace IonKiwi.Json {
 				return newContext;
 			}
 
-			private TupleContextInfoWrapper GetContextForNewType(TupleContextInfoWrapper context, JsonTypeInfo typeInfo) {
+			private TupleContextInfoWrapper? GetContextForNewType(TupleContextInfoWrapper? context, JsonTypeInfo typeInfo) {
 				if (context == null) {
 					if (typeInfo.TupleContext == null) {
 						return null;

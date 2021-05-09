@@ -7,13 +7,14 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace IonKiwi.Json {
 	internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable {
 
 		private const int MinimumBufferSize = 256;
-		private byte[] _buffer;
+		private byte[]? _buffer;
 		private int _index;
 
 		public ArrayPoolWriter() {
@@ -89,6 +90,7 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidOperationException() {
 			throw new InvalidOperationException();
 		}

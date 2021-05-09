@@ -20,15 +20,15 @@ namespace IonKiwi.Json {
 		public JsonSerializerSettings SerializerSettings { get; }
 		public JsonWriterSettings WriterSettings { get; }
 
-		public void Serialize<T>(string propertyName, T value, Type objectType = null, string[] tupleNames = null) {
+		public void Serialize<T>(string propertyName, T value, Type? objectType = null, string[]? tupleNames = null) {
 			Writer.WritePropertyName(propertyName);
 			JsonSerializer.Serialize<T>(Writer, value, objectType, tupleNames, SerializerSettings, WriterSettings);
 		}
 
 #if !NET472
-		public async ValueTask SerializeAsync<T>(string propertyName, T value, Type objectType = null, string[] tupleNames = null) {
+		public async ValueTask SerializeAsync<T>(string propertyName, T value, Type? objectType = null, string[]? tupleNames = null) {
 #else
-		public async Task SerializeAsync<T>(string propertyName, T value, Type objectType = null, string[] tupleNames = null) {
+		public async Task SerializeAsync<T>(string propertyName, T value, Type? objectType = null, string[]? tupleNames = null) {
 #endif
 			await Writer.WritePropertyNameAsync(propertyName).NoSync();
 			await JsonSerializer.SerializeAsync<T>(Writer, value, objectType, tupleNames, SerializerSettings, WriterSettings).NoSync();

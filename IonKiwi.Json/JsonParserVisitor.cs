@@ -19,18 +19,14 @@ namespace IonKiwi.Json {
 #endif
 	}
 
-	internal interface IJsonParserContext {
-		object CurrentObject { get; set; }
-		Type CurrentType { get; set; }
-	}
+	public sealed class JsonParserContext {
+		public JsonParserContext(Type currentType) {
+			CurrentType = currentType;
+		}
 
-	public sealed class JsonParserContext : IJsonParserContext {
-		public object CurrentObject { get; set; }
+		public object? CurrentObject { get; set; }
 
 		public Type CurrentType { get; private set; }
-
-		object IJsonParserContext.CurrentObject { get => CurrentObject; set => CurrentObject = value; }
-		Type IJsonParserContext.CurrentType { get => CurrentType; set => CurrentType = value; }
 	}
 
 	public abstract class JsonParserVisitor : IJsonParserVisitor {
@@ -38,18 +34,25 @@ namespace IonKiwi.Json {
 
 		}
 
-		private JsonParserSettings _parserSettings;
+		private JsonParserSettings? _parserSettings;
 
-		protected JsonParserSettings ParserSettings => _parserSettings;
+		protected JsonParserSettings ParserSettings {
+			get {
+				if (_parserSettings == null) {
+					throw new InvalidOperationException("Not initialized");
+				}
+				return _parserSettings;
+			}
+		}
 
-		protected T Parse<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		protected T? Parse<T>(IJsonReader reader, Type? objectType = null, string[]? tupleNames = null) {
 			return JsonParser.Parse<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
 		}
 
 #if !NET472
-		protected ValueTask<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		protected ValueTask<T?> ParseAsync<T>(IJsonReader reader, Type? objectType = null, string[]? tupleNames = null) {
 #else
-		protected Task<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		protected Task<T?> ParseAsync<T>(IJsonReader reader, Type? objectType = null, string[]? tupleNames = null) {
 #endif
 			return JsonParser.ParseAsync<T>(reader, objectType, tupleNames, parserSettings: _parserSettings);
 		}
@@ -126,7 +129,7 @@ namespace IonKiwi.Json {
 		protected override Task<bool> ParseObjectAsync(IJsonReader reader, JsonParserContext context) {
 #endif
 			IEnumerator<IJsonParserVisitor> e = _visitors.GetEnumerator();
-			IDisposable d = e;
+			IDisposable? d = e;
 			try {
 				while (e.MoveNext()) {
 					var task = e.Current.ParseObjectAsync(reader, context);

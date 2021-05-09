@@ -19,7 +19,7 @@ namespace IonKiwi.Json {
 	partial class JsonParser {
 		partial class JsonInternalParser {
 
-			private string GetValueAsString(IJsonReader reader, JsonToken token) {
+			private string? GetValueAsString(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -299,7 +299,7 @@ namespace IonKiwi.Json {
 				return new TimeSpan(longValue);
 			}
 
-			private Uri GetValueAsUri(IJsonReader reader, JsonToken token) {
+			private Uri? GetValueAsUri(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -359,7 +359,7 @@ namespace IonKiwi.Json {
 				return guid;
 			}
 
-			private byte[] GetValueAsByteArray(IJsonReader reader, JsonToken token) {
+			private byte[]? GetValueAsByteArray(IJsonReader reader, JsonToken token) {
 				if (token == JsonToken.Null) {
 					return null;
 				}
@@ -450,7 +450,7 @@ namespace IonKiwi.Json {
 					case JsonToken.Number: {
 							var realType = Enum.GetUnderlyingType(enumType);
 							JsonReflection.IsSimpleValue(realType, out _, out var realSimpleType);
-							var enumValue = GetSimpleValue(reader, token, realSimpleType, realType);
+							var enumValue = GetSimpleValue(reader, token, realSimpleType, realType)!;
 							var isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
 
 							if (!isFlags) {
@@ -521,7 +521,7 @@ namespace IonKiwi.Json {
 			//	}
 			//}
 
-			private object GetValueAsNullableEnumUntyped(IJsonReader reader, JsonToken token, Type enumType) {
+			private object? GetValueAsNullableEnumUntyped(IJsonReader reader, JsonToken token, Type enumType) {
 				switch (token) {
 					case JsonToken.Null:
 						return null;
@@ -541,7 +541,7 @@ namespace IonKiwi.Json {
 					case JsonToken.Number: {
 							var realType = Enum.GetUnderlyingType(enumType);
 							JsonReflection.IsSimpleValue(realType, out _, out var realSimpleType);
-							var enumValue = GetSimpleValue(reader, token, realSimpleType, realType);
+							var enumValue = GetSimpleValue(reader, token, realSimpleType, realType)!;
 							var isFlags = enumType.GetCustomAttribute<FlagsAttribute>() != null;
 
 							if (!isFlags) {
@@ -566,7 +566,7 @@ namespace IonKiwi.Json {
 				}
 			}
 
-			private object GetSimpleValue(IJsonReader reader, JsonToken token, SimpleValueType simpleType, Type expectedValueType) {
+			private object? GetSimpleValue(IJsonReader reader, JsonToken token, SimpleValueType simpleType, Type expectedValueType) {
 				if (simpleType == SimpleValueType.Int) {
 					return GetValueAsInt(reader, token);
 				}

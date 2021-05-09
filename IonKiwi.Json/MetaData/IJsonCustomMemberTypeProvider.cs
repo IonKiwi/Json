@@ -9,6 +9,6 @@ using System.Text;
 
 namespace IonKiwi.Json.MetaData {
 	public interface IJsonCustomMemberTypeProvider {
-		Type ProvideMemberType(string member);
+		Type? ProvideMemberType(string member);
 	}
 }

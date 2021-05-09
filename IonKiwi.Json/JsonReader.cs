@@ -29,7 +29,7 @@ namespace IonKiwi.Json {
 		private int _length = 0;
 		private long _lineIndex = 0;
 		private long _lineOffset = 0;
-		private Stack<(JsonToken token, Action action)> _rewindState = null;
+		private Stack<(JsonToken token, Action action)>? _rewindState = null;
 
 		public JsonReader(TextReader dataReader) {
 			_buffer = new char[4096];
@@ -147,7 +147,7 @@ namespace IonKiwi.Json {
 		}
 
 		private JsonToken ReplayState() {
-			var item = _rewindState.Pop();
+			var item = _rewindState!.Pop();
 			if (_rewindState.Count == 0) {
 				_rewindState = null;
 			}
@@ -158,7 +158,7 @@ namespace IonKiwi.Json {
 
 		void IJsonReader.Unwind() {
 			do {
-				var item = _rewindState.Pop();
+				var item = _rewindState!.Pop();
 				item.action();
 				_token = item.token;
 			}
@@ -562,7 +562,7 @@ namespace IonKiwi.Json {
 
 						arrayState.IsComplete = false;
 
-						var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
+						var newState2 = new JsonInternalArrayItemState(arrayState);
 						_currentState.Push(newState2);
 
 						resetState.Push((JsonToken.ArrayEnd, () => { _currentState.Pop(); arrayState.IsComplete = true; }));
@@ -593,7 +593,7 @@ namespace IonKiwi.Json {
 							// remove item
 							_currentState.Pop();
 
-							var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
+							var newState2 = new JsonInternalArrayItemState(arrayState);
 							_currentState.Push(newState2);
 
 							resetState.Push((JsonToken.ObjectStart, () => {
@@ -646,7 +646,7 @@ namespace IonKiwi.Json {
 								// remove item
 								_currentState.Pop();
 
-								var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
+								var newState2 = new JsonInternalArrayItemState(arrayState);
 								_currentState.Push(newState2);
 
 								resetState.Push((JsonToken.ArrayStart, () => {
@@ -772,7 +772,7 @@ namespace IonKiwi.Json {
 							// remove item
 							_currentState.Pop();
 
-							var newState2 = new JsonInternalArrayItemState() { Parent = arrayState };
+							var newState2 = new JsonInternalArrayItemState(arrayState);
 							_currentState.Push(newState2);
 
 							var restoreToken = _token;
@@ -1047,13 +1047,13 @@ namespace IonKiwi.Json {
 					case JsonInternalRootToken.ForwardSlash: {
 							state.Token = currentToken = JsonInternalRootToken.None;
 							if (c == '*') {
-								var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+								var newState = new JsonInternalMultiLineCommentState(state);
 								_currentState.Push(newState);
 								_offset += i + 1;
 								return false;
 							}
 							else if (c == '/') {
-								var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+								var newState = new JsonInternalSingleLineCommentState(state);
 								_currentState.Push(newState);
 								_offset += i + 1;
 								return false;
@@ -1142,13 +1142,13 @@ namespace IonKiwi.Json {
 				else if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
 					if (c == '*') {
-						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						var newState = new JsonInternalMultiLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return;
 					}
 					else if (c == '/') {
-						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						var newState = new JsonInternalSingleLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return;
@@ -1246,13 +1246,13 @@ namespace IonKiwi.Json {
 				else if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
 					if (c == '*') {
-						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						var newState = new JsonInternalMultiLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
 					}
 					else if (c == '/') {
-						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						var newState = new JsonInternalSingleLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
@@ -1409,7 +1409,7 @@ namespace IonKiwi.Json {
 							if (state.PropertyCount == 2) {
 								state.CommentsBeforeFirstProperty = null;
 							}
-							var newState = new JsonInternalObjectPropertyState() { Parent = state, PropertyName = state.CurrentProperty.ToString() };
+							var newState = new JsonInternalObjectPropertyState(state, state.CurrentProperty.ToString());
 							//state.Properties.Add(newState);
 							_currentState.Push(newState);
 							token = JsonToken.ObjectProperty;
@@ -1452,7 +1452,7 @@ namespace IonKiwi.Json {
 							if (state.PropertyCount == 2) {
 								state.CommentsBeforeFirstProperty = null;
 							}
-							var newState = new JsonInternalObjectPropertyState() { Parent = state, PropertyName = state.CurrentProperty.ToString() };
+							var newState = new JsonInternalObjectPropertyState(state, state.CurrentProperty.ToString());
 							//state.Properties.Add(newState);
 							_currentState.Push(newState);
 							token = JsonToken.ObjectProperty;
@@ -1533,13 +1533,13 @@ namespace IonKiwi.Json {
 				else if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
 					if (c == '*') {
-						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						var newState = new JsonInternalMultiLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
 					}
 					else if (c == '/') {
-						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						var newState = new JsonInternalSingleLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
@@ -1646,13 +1646,13 @@ namespace IonKiwi.Json {
 				else if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
 					if (c == '*') {
-						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						var newState = new JsonInternalMultiLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
 					}
 					else if (c == '/') {
-						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						var newState = new JsonInternalSingleLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
@@ -1703,7 +1703,7 @@ namespace IonKiwi.Json {
 					}
 
 					arrayState.CommentsBeforeFirstValue = null;
-					var newState = new JsonInternalArrayItemState() { Parent = arrayState, Index = arrayState.ItemCount++ };
+					var newState = new JsonInternalArrayItemState(arrayState, arrayState.ItemCount++);
 					//arrayState.Items.Add(newState);
 					state.IsComplete = true;
 					_currentState.Pop();
@@ -1997,13 +1997,13 @@ namespace IonKiwi.Json {
 				if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
 					if (c == '*') {
-						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						var newState = new JsonInternalMultiLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
 					}
 					else if (c == '/') {
-						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						var newState = new JsonInternalSingleLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
@@ -2270,13 +2270,13 @@ namespace IonKiwi.Json {
 				if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
 					if (c == '*') {
-						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						var newState = new JsonInternalMultiLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
 					}
 					else if (c == '/') {
-						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						var newState = new JsonInternalSingleLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
@@ -2334,13 +2334,13 @@ namespace IonKiwi.Json {
 				if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
 					if (c == '*') {
-						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						var newState = new JsonInternalMultiLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
 					}
 					else if (c == '/') {
-						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						var newState = new JsonInternalSingleLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
@@ -2398,13 +2398,13 @@ namespace IonKiwi.Json {
 				if (isForwardSlash) {
 					state.IsForwardSlash = isForwardSlash = false;
 					if (c == '*') {
-						var newState = new JsonInternalMultiLineCommentState() { Parent = state };
+						var newState = new JsonInternalMultiLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
 					}
 					else if (c == '/') {
-						var newState = new JsonInternalSingleLineCommentState() { Parent = state };
+						var newState = new JsonInternalSingleLineCommentState(state);
 						_currentState.Push(newState);
 						_offset += i + 1;
 						return false;
@@ -2524,35 +2524,35 @@ namespace IonKiwi.Json {
 				return false;
 			}
 			else if (c == '{') {
-				var newState = new JsonInternalObjectState() { Parent = state };
+				var newState = new JsonInternalObjectState(state);
 				_currentState.Push(newState);
 				token = JsonToken.ObjectStart;
 				return true;
 			}
 			else if (c == '[') {
-				var newState1 = new JsonInternalArrayState() { Parent = state };
+				var newState1 = new JsonInternalArrayState(state);
 				_currentState.Push(newState1);
-				var newState2 = new JsonInternalArrayItemState() { Parent = newState1, Index = newState1.ItemCount++ };
+				var newState2 = new JsonInternalArrayItemState(newState1, newState1.ItemCount++);
 				//newState1.Items.Add(newState2);
 				_currentState.Push(newState2);
 				token = JsonToken.ArrayStart;
 				return true;
 			}
 			else if (c == '\'') {
-				var newState = new JsonInternalSingleQuotedStringState() { Parent = state };
+				var newState = new JsonInternalSingleQuotedStringState(state);
 				_currentState.Push(newState);
 				token = JsonToken.None;
 				return true;
 			}
 			else if (c == '"') {
-				var newState = new JsonInternalDoubleQuotedStringState() { Parent = state };
+				var newState = new JsonInternalDoubleQuotedStringState(state);
 				_currentState.Push(newState);
 				token = JsonToken.None;
 				return true;
 			}
 			// numeric
 			else if (c == '.') {
-				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Dot, AfterDot = true };
+				var newState = new JsonInternalNumberState(state, JsonInternalNumberToken.Dot) { AfterDot = true };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;
@@ -2560,7 +2560,7 @@ namespace IonKiwi.Json {
 			}
 			// numeric
 			else if (c == '0') {
-				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Zero };
+				var newState = new JsonInternalNumberState(state, JsonInternalNumberToken.Zero);
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;
@@ -2568,7 +2568,7 @@ namespace IonKiwi.Json {
 			}
 			// numeric
 			else if (c >= '1' && c <= '9') {
-				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Digit };
+				var newState = new JsonInternalNumberState(state, JsonInternalNumberToken.Digit);
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;
@@ -2576,7 +2576,7 @@ namespace IonKiwi.Json {
 			}
 			// numeric
 			else if (c == '-') {
-				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Negative, Negative = true };
+				var newState = new JsonInternalNumberState(state, JsonInternalNumberToken.Negative) { Negative = true };
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;
@@ -2584,7 +2584,7 @@ namespace IonKiwi.Json {
 			}
 			// numeric
 			else if (c == '+') {
-				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Positive };
+				var newState = new JsonInternalNumberState(state, JsonInternalNumberToken.Positive);
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;
@@ -2592,7 +2592,7 @@ namespace IonKiwi.Json {
 			}
 			// Infinity
 			else if (c == 'I') {
-				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.Infinity };
+				var newState = new JsonInternalNumberState(state, JsonInternalNumberToken.Infinity);
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;
@@ -2600,7 +2600,7 @@ namespace IonKiwi.Json {
 			}
 			// NaN
 			else if (c == 'N') {
-				var newState = new JsonInternalNumberState() { Parent = state, Token = JsonInternalNumberToken.NaN };
+				var newState = new JsonInternalNumberState(state, JsonInternalNumberToken.NaN);
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;
@@ -2608,7 +2608,7 @@ namespace IonKiwi.Json {
 			}
 			// null
 			else if (c == 'n') {
-				var newState = new JsonInternalNullState() { Parent = state };
+				var newState = new JsonInternalNullState(state);
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;
@@ -2616,7 +2616,7 @@ namespace IonKiwi.Json {
 			}
 			// true
 			else if (c == 't') {
-				var newState = new JsonInternalTrueState() { Parent = state };
+				var newState = new JsonInternalTrueState(state);
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;
@@ -2624,7 +2624,7 @@ namespace IonKiwi.Json {
 			}
 			// false
 			else if (c == 'f') {
-				var newState = new JsonInternalFalseState() { Parent = state };
+				var newState = new JsonInternalFalseState(state);
 				newState.Data.Append(c);
 				_currentState.Push(newState);
 				token = JsonToken.None;

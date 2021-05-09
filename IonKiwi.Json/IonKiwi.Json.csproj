@@ -5,6 +5,8 @@
 		<SignAssembly Condition="'$(Signed)' == 'true'">true</SignAssembly>
 		<DelaySign Condition="'$(Signed)' == 'true'">true</DelaySign>
 		<AssemblyOriginatorKeyFile Condition="'$(Signed)' == 'true'">235_p384.snk</AssemblyOriginatorKeyFile>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
 		<FileVersion>1.0.14.0</FileVersion>
 		<Version>1.0.14</Version>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
@@ -23,6 +25,13 @@
 		<SN>"C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\sn.exe"</SN>
 		<!--<EmbedUntrackedSources>true</EmbedUntrackedSources>-->
 	</PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1'">
+    <NoWarn>$(NoWarn);nullable</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net472'">
+    <NoWarn>$(NoWarn);nullable</NoWarn>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<EmbeddedFiles Include="$(GeneratedAssemblyInfoFile)" />

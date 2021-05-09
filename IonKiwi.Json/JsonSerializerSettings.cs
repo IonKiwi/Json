@@ -14,14 +14,17 @@ namespace IonKiwi.Json {
 
 	public sealed class JsonDefaultAssemblyVersion {
 		public JsonDefaultAssemblyVersion(AssemblyName name) {
+			if (name.Version == null) {
+				throw new InvalidOperationException("AssemblyName.Version is null");
+			}
 			Version = name.Version;
 			PublicKeyTokenBytes = name.GetPublicKeyToken();
-			PublicKeyToken = CommonUtility.GetHexadecimalString(PublicKeyTokenBytes, false);
+			PublicKeyToken = PublicKeyTokenBytes == null ? null : CommonUtility.GetHexadecimalString(PublicKeyTokenBytes, false);
 		}
 
 		public Version Version { get; }
-		public string PublicKeyToken { get; }
-		internal byte[] PublicKeyTokenBytes { get; }
+		public string? PublicKeyToken { get; }
+		internal byte[]? PublicKeyTokenBytes { get; }
 	}
 
 	public sealed class JsonSerializerSettings : ISealable {
@@ -32,8 +35,8 @@ namespace IonKiwi.Json {
 
 		}
 
-		private Action<JsonWriterWriteValueCallbackArgs> _writeValueCallback;
-		public Action<JsonWriterWriteValueCallbackArgs> WriteValueCallback {
+		private Action<JsonWriterWriteValueCallbackArgs>? _writeValueCallback;
+		public Action<JsonWriterWriteValueCallbackArgs>? WriteValueCallback {
 			get => _writeValueCallback;
 			set {
 				EnsureUnlocked();
@@ -46,6 +49,10 @@ namespace IonKiwi.Json {
 		public JsonSerializerSettings AddDefaultAssemblyName(AssemblyName name) {
 			EnsureUnlocked();
 
+			if (name.Name == null) {
+				throw new InvalidOperationException("AssemblyName.Name is null");
+			}
+
 			string key = name.Name;
 			if (_defaultAssemblyNames.ContainsKey(key)) {
 				throw new Exception("Duplicate key: " + key);
@@ -55,8 +62,8 @@ namespace IonKiwi.Json {
 			return this;
 		}
 
-		private JsonDefaultAssemblyVersion _defaultAssemblyName;
-		public JsonDefaultAssemblyVersion DefaultAssemblyName {
+		private JsonDefaultAssemblyVersion? _defaultAssemblyName;
+		public JsonDefaultAssemblyVersion? DefaultAssemblyName {
 			get => _defaultAssemblyName;
 			set {
 				EnsureUnlocked();

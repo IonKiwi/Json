@@ -12,7 +12,7 @@ using System.Text;
 namespace IonKiwi.Json.Utilities {
 	internal static class CommonUtility {
 
-		public static bool AreByteArraysEqual(byte[] x, byte[] y) {
+		public static bool AreByteArraysEqual(byte[]? x, byte[]? y) {
 			if (x == null && y == null) {
 				return true;
 			}
@@ -67,11 +67,11 @@ namespace IonKiwi.Json.Utilities {
 
 		public static byte[] GetByteArray(string hexString) {
 			if (string.IsNullOrEmpty(hexString)) {
-				return null;
+				return Array.Empty<byte>();
 			}
 			int strLength = hexString.Length;
 			if (strLength % 2 == 1) {
-				return null;
+				throw new InvalidOperationException("Invalid hex string: " + hexString);
 			}
 			strLength = strLength >> 1;
 			byte[] tmpArray = new byte[strLength];
@@ -79,11 +79,11 @@ namespace IonKiwi.Json.Utilities {
 				bool valid;
 				int z = GetByte(hexString[i << 1], out valid) << 4;
 				if (!valid) {
-					return null;
+					throw new InvalidOperationException("Invalid hex string: " + hexString);
 				}
 				z += GetByte(hexString[(i << 1) + 1], out valid);
 				if (!valid) {
-					return null;
+					throw new InvalidOperationException("Invalid hex string: " + hexString);
 				}
 				tmpArray[i] = (byte)z;
 			}

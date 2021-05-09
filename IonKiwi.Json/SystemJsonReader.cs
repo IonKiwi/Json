@@ -9,6 +9,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -18,16 +19,16 @@ using System.Threading.Tasks;
 namespace IonKiwi.Json {
 	public class SystemJsonReader : IJsonReader, IDisposable {
 
-		private readonly Stream _stream;
+		private readonly Stream? _stream;
 		private readonly ReadOnlyMemory<byte> _memory;
 		private readonly Stack<StackInformation> _stack = new Stack<StackInformation>();
-		private Stack<StackInformation> _rewindState = null;
+		private Stack<StackInformation>? _rewindState = null;
 		private JsonReader.JsonToken _token = JsonReader.JsonToken.None;
 		private JsonReaderState _readerState = new JsonReaderState(new JsonReaderOptions() { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Allow });
-		private byte[] _buffer;
+		private byte[]? _buffer;
 		private int _offset;
 		private int _length = 0;
-		private string _data = null;
+		private string? _data = null;
 		private int _bufferSize = 0x400;
 		private bool _complete = false;
 		private bool _finalBlock = false;
@@ -115,6 +116,9 @@ namespace IonKiwi.Json {
 		}
 
 		public string GetValue() {
+			if (_data == null) {
+				ThrowDataNull();
+			}
 			return _data;
 		}
 
@@ -137,7 +141,7 @@ namespace IonKiwi.Json {
 			else if (_isShared && _offset >= _length) {
 				EnsureBuffer();
 				_offset = 0;
-				_length = _stream.Read(_buffer);
+				_length = _stream!.Read(_buffer);
 				_finalBlock = _length == 0;
 			}
 
@@ -147,7 +151,7 @@ namespace IonKiwi.Json {
 				int bytesInBuffer = _length - _offset;
 				if (bytesInBuffer == 0) {
 					// read more data
-					_length = _stream.Read(_buffer);
+					_length = _stream!.Read(_buffer);
 					_finalBlock = _length == 0;
 					_offset = 0;
 				}
@@ -157,22 +161,22 @@ namespace IonKiwi.Json {
 					var buffer2 = ArrayPool<byte>.Shared.Rent(_bufferSize);
 
 					// copy the unprocessed data
-					Buffer.BlockCopy(_buffer, _offset, buffer2, 0, bytesInBuffer);
+					Buffer.BlockCopy(_buffer!, _offset, buffer2, 0, bytesInBuffer);
 
-					ArrayPool<byte>.Shared.Return(_buffer);
+					ArrayPool<byte>.Shared.Return(_buffer!);
 					_buffer = buffer2;
 
 					// read more data
-					_length = _stream.Read(_buffer.AsSpan(bytesInBuffer));
+					_length = _stream!.Read(_buffer.AsSpan(bytesInBuffer));
 					_finalBlock = _length == 0;
 					_length += bytesInBuffer;
 					_offset = 0;
 				}
 				else {
-					Buffer.BlockCopy(_buffer, _offset, _buffer, 0, bytesInBuffer);
+					Buffer.BlockCopy(_buffer!, _offset, _buffer!, 0, bytesInBuffer);
 
 					// read more data
-					_length = _stream.Read(_buffer.AsSpan(bytesInBuffer));
+					_length = _stream!.Read(_buffer.AsSpan(bytesInBuffer));
 					_finalBlock = _length == 0;
 					_length += bytesInBuffer;
 					_offset = 0;
@@ -191,7 +195,7 @@ namespace IonKiwi.Json {
 			else if (_isShared && _offset >= _length) {
 				EnsureBuffer();
 				_offset = 0;
-				_length = await _stream.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
+				_length = await _stream!.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
 				_finalBlock = _length == 0;
 			}
 
@@ -201,7 +205,7 @@ namespace IonKiwi.Json {
 				int bytesInBuffer = _length - _offset;
 				if (bytesInBuffer == 0) {
 					// read more data
-					_length = await _stream.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
+					_length = await _stream!.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
 					_finalBlock = _length == 0;
 					_offset = 0;
 				}
@@ -211,23 +215,23 @@ namespace IonKiwi.Json {
 					var buffer2 = ArrayPool<byte>.Shared.Rent(_bufferSize);
 
 					// copy the unprocessed data
-					Buffer.BlockCopy(_buffer, _offset, buffer2, 0, bytesInBuffer);
+					Buffer.BlockCopy(_buffer!, _offset, buffer2, 0, bytesInBuffer);
 
-					ArrayPool<byte>.Shared.Return(_buffer);
+					ArrayPool<byte>.Shared.Return(_buffer!);
 					_buffer = buffer2;
 
 					// read more data
-					_length = await _stream.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
+					_length = await _stream!.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
 					_finalBlock = _length == 0;
 					_length += bytesInBuffer;
 					_offset = 0;
 				}
 				else {
 					// copy the unprocessed data
-					Buffer.BlockCopy(_buffer, _offset, _buffer, 0, bytesInBuffer);
+					Buffer.BlockCopy(_buffer!, _offset, _buffer!, 0, bytesInBuffer);
 
 					// read more data
-					_length = await _stream.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
+					_length = await _stream!.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
 					_finalBlock = _length == 0;
 					_length += bytesInBuffer;
 					_offset = 0;
@@ -255,7 +259,7 @@ namespace IonKiwi.Json {
 			if (_isShared && _offset >= _length) {
 				EnsureBuffer();
 				_offset = 0;
-				_length = _stream.Read(_buffer);
+				_length = _stream!.Read(_buffer);
 				_finalBlock = _length == 0;
 			}
 
@@ -278,7 +282,7 @@ namespace IonKiwi.Json {
 					int bytesInBuffer = _length - _offset;
 					if (bytesInBuffer == 0) {
 						// read more data
-						_length = _stream.Read(_buffer);
+						_length = _stream!.Read(_buffer);
 						_finalBlock = _length == 0;
 						_offset = 0;
 						reader = new Utf8JsonReader(new ReadOnlySpan<byte>(_buffer, 0, _length), _finalBlock, _readerState);
@@ -290,13 +294,13 @@ namespace IonKiwi.Json {
 						var buffer2 = ArrayPool<byte>.Shared.Rent(_bufferSize);
 
 						// copy the unprocessed data
-						Buffer.BlockCopy(_buffer, _offset, buffer2, 0, bytesInBuffer);
+						Buffer.BlockCopy(_buffer!, _offset, buffer2, 0, bytesInBuffer);
 
-						ArrayPool<byte>.Shared.Return(_buffer);
+						ArrayPool<byte>.Shared.Return(_buffer!);
 						_buffer = buffer2;
 
 						// read more data
-						_length = _stream.Read(_buffer.AsSpan(bytesInBuffer));
+						_length = _stream!.Read(_buffer.AsSpan(bytesInBuffer));
 						_finalBlock = _length == 0;
 						_length += bytesInBuffer;
 						_offset = 0;
@@ -304,10 +308,10 @@ namespace IonKiwi.Json {
 						readeroffset = 0;
 					}
 					else {
-						Buffer.BlockCopy(_buffer, _offset, _buffer, 0, bytesInBuffer);
+						Buffer.BlockCopy(_buffer!, _offset, _buffer!, 0, bytesInBuffer);
 
 						// read more data
-						_length = _stream.Read(_buffer.AsSpan(bytesInBuffer));
+						_length = _stream!.Read(_buffer.AsSpan(bytesInBuffer));
 						_finalBlock = _length == 0;
 						_length += bytesInBuffer;
 						_offset = 0;
@@ -346,7 +350,7 @@ namespace IonKiwi.Json {
 			if (_isShared && _offset >= _length) {
 				EnsureBuffer();
 				_offset = 0;
-				_length = await _stream.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
+				_length = await _stream!.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
 				_finalBlock = _length == 0;
 			}
 
@@ -357,7 +361,7 @@ namespace IonKiwi.Json {
 					int bytesInBuffer = _length - _offset;
 					if (bytesInBuffer == 0) {
 						// read more data
-						_length = await _stream.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
+						_length = await _stream!.ReadAsync(_buffer.AsMemory()).ConfigureAwait(false);
 						_finalBlock = _length == 0;
 						_offset = 0;
 					}
@@ -367,23 +371,23 @@ namespace IonKiwi.Json {
 						var buffer2 = ArrayPool<byte>.Shared.Rent(_bufferSize);
 
 						// copy the unprocessed data
-						Buffer.BlockCopy(_buffer, _offset, buffer2, 0, bytesInBuffer);
+						Buffer.BlockCopy(_buffer!, _offset, buffer2, 0, bytesInBuffer);
 
-						ArrayPool<byte>.Shared.Return(_buffer);
+						ArrayPool<byte>.Shared.Return(_buffer!);
 						_buffer = buffer2;
 
 						// read more data
-						_length = await _stream.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
+						_length = await _stream!.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
 						_finalBlock = _length == 0;
 						_length += bytesInBuffer;
 						_offset = 0;
 					}
 					else {
 						// copy the unprocessed data
-						Buffer.BlockCopy(_buffer, _offset, _buffer, 0, bytesInBuffer);
+						Buffer.BlockCopy(_buffer!, _offset, _buffer!, 0, bytesInBuffer);
 
 						// read more data
-						_length = await _stream.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
+						_length = await _stream!.ReadAsync(_buffer.AsMemory(bytesInBuffer)).ConfigureAwait(false);
 						_finalBlock = _length == 0;
 						_length += bytesInBuffer;
 						_offset = 0;
@@ -431,7 +435,7 @@ namespace IonKiwi.Json {
 		}
 
 		private JsonReader.JsonToken ReplayState() {
-			var item = _rewindState.Pop();
+			var item = _rewindState!.Pop();
 			if (_rewindState.Count == 0) {
 				_rewindState = null;
 			}
@@ -440,7 +444,7 @@ namespace IonKiwi.Json {
 			}
 			_stack.Push(item);
 			if (item.Token == JsonReader.JsonToken.None) {
-				item = _rewindState.Pop();
+				item = _rewindState!.Pop();
 				if (_rewindState.Count == 0) {
 					_rewindState = null;
 				}
@@ -609,7 +613,7 @@ namespace IonKiwi.Json {
 						return Encoding.UTF8.GetString(ms.ToArray());
 					}
 				}
-				return GetValue();
+				return GetValue()!;
 			}
 			else if (currentToken == JsonReader.JsonToken.ObjectStart || currentToken == JsonReader.JsonToken.ArrayStart) {
 
@@ -692,7 +696,7 @@ namespace IonKiwi.Json {
 						return Encoding.UTF8.GetString(ms.ToArray());
 					}
 				}
-				return GetValue();
+				return GetValue()!;
 			}
 			else if (currentToken == JsonReader.JsonToken.ObjectStart || currentToken == JsonReader.JsonToken.ArrayStart) {
 
@@ -779,7 +783,7 @@ namespace IonKiwi.Json {
 					writer.WriteNullValue();
 					break;
 				case JsonReader.JsonToken.Number: {
-						var v = GetValue();
+						var v = GetValue()!;
 						var pi = v.IndexOf('.');
 						if (pi >= 0) {
 							int digits = v.Length - pi - 1;
@@ -930,50 +934,62 @@ namespace IonKiwi.Json {
 				}
 		}
 
+		[DoesNotReturn]
 		private static void ThrowReaderNotSkippablePosition(JsonReader.JsonToken token) {
 			throw new InvalidOperationException("Reader is not at a skippable position. token: " + token);
 		}
 
+		[DoesNotReturn]
 		private static void ThrowMoreDataExpectedException() {
 			throw new JsonReader.MoreDataExpectedException();
 		}
 
+		[DoesNotReturn]
 		private static void ThrowUnexpectedDataException() {
 			throw new JsonReader.UnexpectedDataException();
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInvalidJson(string json) {
 			throw new NotSupportedException("Invalid json: " + json);
 		}
 
+		[DoesNotReturn]
 		private static void ThrowUnhandledToken(JsonReader.JsonToken token) {
 			throw new NotImplementedException(token.ToString());
 		}
 
+		[DoesNotReturn]
 		private static void ThrowNotStartTag(JsonReader.JsonToken token) {
 			throw new InvalidOperationException("Reader is not positioned on a start tag. token: " + token);
 		}
 
+		[DoesNotReturn]
 		private static void ThrowNotSupportedException(string message) {
 			throw new NotSupportedException(message);
 		}
 
+		[DoesNotReturn]
 		private static void ThrowTokenShouldBeObjectStartOrArrayStart(JsonReader.JsonToken token) {
 			throw new InvalidOperationException($"'{nameof(token)}' should be {JsonReader.JsonToken.ObjectStart} or {JsonReader.JsonToken.ArrayStart}");
 		}
 
+		[DoesNotReturn]
 		private static void ThrowTokenShouldBeObjectStart(JsonReader.JsonToken token) {
 			throw new InvalidOperationException($"'{nameof(token)}' should be {JsonReader.JsonToken.ObjectStart}");
 		}
 
+		[DoesNotReturn]
 		private static void ThowInvalidPositionForResetReaderPositionForVisitor() {
 			throw new InvalidOperationException("Reader is not at a valid position for ResetReaderPositionForVisitor()");
 		}
 
+		[DoesNotReturn]
 		private static void ThrowTokenShouldBeArrayStart(JsonReader.JsonToken token) {
 			throw new InvalidOperationException($"'{nameof(token)}' should be {JsonReader.JsonToken.ArrayStart}");
 		}
 
+		[DoesNotReturn]
 		private static void ThrowInternalStateCorruption() {
 			throw new InvalidOperationException("Internal state corruption");
 		}
@@ -1198,6 +1214,9 @@ namespace IonKiwi.Json {
 		}
 
 		void IJsonReader.Unwind() {
+			if (_rewindState == null) {
+				ThrowNoRewindStateNull();
+			}
 			do {
 				var item = _rewindState.Pop();
 				if (item.Token != JsonReader.JsonToken.Comment) {
@@ -1241,8 +1260,19 @@ namespace IonKiwi.Json {
 			}
 		}
 
+		[DoesNotReturn]
 		private static void ThrowNewNotSupportedException(JsonTokenType token) {
 			throw new NotSupportedException(token.ToString());
+		}
+
+		[DoesNotReturn]
+		private static void ThrowNoRewindStateNull() {
+			throw new InvalidOperationException("No rewind state");
+		}
+
+		[DoesNotReturn]
+		private static void ThrowDataNull() {
+			throw new InvalidOperationException("Data is null");
 		}
 
 		void IDisposable.Dispose() {
@@ -1255,9 +1285,9 @@ namespace IonKiwi.Json {
 		[DebuggerDisplay("{Token}: {Data}")]
 		private sealed class StackInformation {
 			public JsonReader.JsonToken Token;
-			public string Data;
+			public string? Data;
 			public int ItemCount = -1;
-			public List<string> CommentsBeforeFirstToken;
+			public List<string>? CommentsBeforeFirstToken;
 		}
 
 		private sealed class RawPosition {

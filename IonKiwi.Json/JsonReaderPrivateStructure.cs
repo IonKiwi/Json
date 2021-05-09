@@ -61,34 +61,58 @@ namespace IonKiwi.Json {
 		}
 
 		private abstract class JsonInternalState {
+
+			protected JsonInternalState(JsonInternalState parent) {
+				Parent = parent;
+			}
+
+			private protected JsonInternalState() {
+				Parent = this;
+			}
+
 			public JsonInternalState Parent;
 			public bool IsComplete;
 
 			public JsonInternalEscapeToken EscapeToken;
 
-			public byte[] MultiByteSequence;
+			public byte[]? MultiByteSequence;
 			public int MultiByteIndex;
 			public int MultiByteSequenceLength;
 		}
 
 		private sealed class JsonInternalRootState : JsonInternalState {
+
+			public JsonInternalRootState() : base() {
+
+			}
+
 			public JsonInternalRootToken Token = JsonInternalRootToken.None;
 			public bool IsCarriageReturn;
 			public bool IsForwardSlash;
 		}
 
 		private sealed class JsonInternalObjectState : JsonInternalState {
+
+			public JsonInternalObjectState(JsonInternalState parent) : base(parent) {
+
+			}
+
 			public JsonInternalObjectToken Token = JsonInternalObjectToken.BeforeProperty;
 			public bool IsCarriageReturn;
 			public bool IsForwardSlash;
 			public bool ExpectUnicodeEscapeSequence;
 			public int PropertyCount;
 			public readonly StringBuilder CurrentProperty = new StringBuilder();
-			public List<JsonInternalCommentState> CommentsBeforeFirstProperty;
+			public List<JsonInternalCommentState>? CommentsBeforeFirstProperty;
 			//public Dictionary<string, JsonInternalObjectPropertyState> Properties = new Dictionary<string, JsonInternalObjectPropertyState>(StringComparer.Ordinal);
 		}
 
 		private sealed class JsonInternalObjectPropertyState : JsonInternalState {
+
+			public JsonInternalObjectPropertyState(JsonInternalState parent, string propertyName) : base(parent) {
+				PropertyName = propertyName;
+			}
+
 			public JsonInternalObjectPropertyToken Token = JsonInternalObjectPropertyToken.BeforeValue;
 			public string PropertyName;
 			public bool IsCarriageReturn;
@@ -96,36 +120,69 @@ namespace IonKiwi.Json {
 		}
 
 		private sealed class JsonInternalArrayState : JsonInternalState {
-			public List<JsonInternalCommentState> CommentsBeforeFirstValue;
+
+			public JsonInternalArrayState(JsonInternalState parent) : base(parent) {
+
+			}
+
+			public List<JsonInternalCommentState>? CommentsBeforeFirstValue;
 			//public List<JsonInternalArrayItemState> Items = new List<JsonInternalArrayItemState>();
 			public int ItemCount;
 		}
 
 		private abstract class JsonInternalStringState : JsonInternalState {
+
+			public JsonInternalStringState(JsonInternalState parent) : base(parent) {
+
+			}
+
 			public readonly StringBuilder Data = new StringBuilder();
 		}
 
 		private abstract class JsonInternalCommentState : JsonInternalStringState {
 
+			protected JsonInternalCommentState(JsonInternalState parent) : base(parent) {
+
+			}
 		}
 
 		private sealed class JsonInternalSingleLineCommentState : JsonInternalCommentState {
+			public JsonInternalSingleLineCommentState(JsonInternalState parent) : base(parent) {
 
+			}
 		}
 
 		private sealed class JsonInternalMultiLineCommentState : JsonInternalCommentState {
+			public JsonInternalMultiLineCommentState(JsonInternalState parent) : base(parent) {
+
+			}
 			public bool IsAsterisk;
 		}
 
 		private sealed class JsonInternalSingleQuotedStringState : JsonInternalStringState {
+			public JsonInternalSingleQuotedStringState(JsonInternalState parent) : base(parent) {
+
+			}
 			public bool IsCarriageReturn;
 		}
 
 		private sealed class JsonInternalDoubleQuotedStringState : JsonInternalStringState {
+			public JsonInternalDoubleQuotedStringState(JsonInternalState parent) : base(parent) {
+
+			}
 			public bool IsCarriageReturn;
 		}
 
 		private sealed class JsonInternalArrayItemState : JsonInternalState {
+
+			public JsonInternalArrayItemState(JsonInternalState parent) : base(parent) {
+
+			}
+
+			public JsonInternalArrayItemState(JsonInternalState parent, int index) : base(parent) {
+				Index = index;
+			}
+
 			public JsonInternalArrayItemToken Token = JsonInternalArrayItemToken.BeforeValue;
 			public int Index;
 			public bool IsCarriageReturn;
@@ -133,6 +190,11 @@ namespace IonKiwi.Json {
 		}
 
 		private sealed class JsonInternalNumberState : JsonInternalStringState {
+
+			public JsonInternalNumberState(JsonInternalState parent, JsonInternalNumberToken token) : base(parent) {
+				Token = token;
+			}
+
 			public JsonInternalNumberToken Token;
 			public bool Negative;
 			public bool AfterDot;
@@ -142,14 +204,29 @@ namespace IonKiwi.Json {
 		}
 
 		private sealed class JsonInternalNullState : JsonInternalStringState {
+
+			public JsonInternalNullState(JsonInternalState parent) : base(parent) {
+
+			}
+
 			public bool IsForwardSlash;
 		}
 
 		private sealed class JsonInternalTrueState : JsonInternalStringState {
+
+			public JsonInternalTrueState(JsonInternalState parent) : base(parent) {
+
+			}
+
 			public bool IsForwardSlash;
 		}
 
 		private sealed class JsonInternalFalseState : JsonInternalStringState {
+
+			public JsonInternalFalseState(JsonInternalState parent) : base(parent) {
+
+			}
+
 			public bool IsForwardSlash;
 		}
 	}

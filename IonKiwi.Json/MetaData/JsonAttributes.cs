@@ -18,8 +18,6 @@ namespace IonKiwi.Json.MetaData {
 	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Property | AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
 	public sealed class JsonKnownTypeAttribute : Attribute {
 
-		public JsonKnownTypeAttribute() { }
-
 		public JsonKnownTypeAttribute(Type knownType) {
 			KnownType = knownType;
 		}
@@ -49,7 +47,8 @@ namespace IonKiwi.Json.MetaData {
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 	public class JsonCollectionAttribute : Attribute {
-		public Type CollectionInterface { get; set; }
+
+		public Type? CollectionInterface { get; set; }
 
 		public bool IsSingleOrArrayValue { get; set; }
 	}
@@ -57,7 +56,7 @@ namespace IonKiwi.Json.MetaData {
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 	public class JsonDictionaryAttribute : Attribute {
 
-		public Type DictionaryInterface { get; set; }
+		public Type? DictionaryInterface { get; set; }
 	}
 
 	public enum JsonEmitTypeName {
@@ -71,7 +70,7 @@ namespace IonKiwi.Json.MetaData {
 
 		public JsonPropertyAttribute() { }
 
-		public JsonPropertyAttribute(string name = null, bool required = true, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType) {
+		public JsonPropertyAttribute(string? name = null, bool required = true, JsonEmitTypeName emitTypeName = JsonEmitTypeName.DifferentType) {
 			Name = name;
 			Required = required;
 			EmitTypeName = emitTypeName;
@@ -81,7 +80,7 @@ namespace IonKiwi.Json.MetaData {
 
 		public bool EmitNullValue { get; set; } = true;
 
-		public string Name { get; set; }
+		public string? Name { get; set; }
 
 		public JsonEmitTypeName EmitTypeName { get; set; }
 
@@ -95,10 +94,10 @@ namespace IonKiwi.Json.MetaData {
 
 		public JsonParameterAttribute() { }
 
-		public JsonParameterAttribute(string name = null) {
+		public JsonParameterAttribute(string? name = null) {
 			Name = name;
 		}
 
-		public string Name { get; set; }
+		public string? Name { get; set; }
 	}
 }

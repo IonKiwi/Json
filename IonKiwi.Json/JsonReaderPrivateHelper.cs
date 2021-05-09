@@ -68,7 +68,7 @@ namespace IonKiwi.Json {
 			}
 			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceUnicodeHex) {
 				if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+					state.MultiByteSequence![state.MultiByteIndex++] = (byte)c;
 					if (state.MultiByteIndex < state.MultiByteSequenceLength) {
 						return 0;
 					}
@@ -126,7 +126,7 @@ namespace IonKiwi.Json {
 					return 0;
 				}
 				else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+					state.MultiByteSequence![state.MultiByteIndex++] = (byte)c;
 					if (state.MultiByteIndex < state.MultiByteSequenceLength) {
 						return 0;
 					}
@@ -167,9 +167,9 @@ namespace IonKiwi.Json {
 					}
 					int v = 0;
 					for (int ii = 0, ls = (state.MultiByteIndex - 1) * 4; ii < state.MultiByteIndex - 1; ii++, ls -= 4) {
-						v |= GetByte(state.MultiByteSequence[ii], out _) << ls;
+						v |= GetByte(state.MultiByteSequence![ii], out _) << ls;
 					}
-					v |= GetByte(state.MultiByteSequence[state.MultiByteIndex - 1], out _);
+					v |= GetByte(state.MultiByteSequence![state.MultiByteIndex - 1], out _);
 					var utf16 = Char.ConvertFromUtf32(v);
 					state.EscapeToken = escapeToken = JsonInternalEscapeToken.None;
 					for (int i = 0; i < utf16.Length; i++) {
@@ -183,7 +183,7 @@ namespace IonKiwi.Json {
 						return 0;
 					}
 					if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || c >= 'A' && c <= 'Z') {
-						state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+						state.MultiByteSequence![state.MultiByteIndex++] = (byte)c;
 						return 0;
 					}
 					else {
@@ -194,7 +194,7 @@ namespace IonKiwi.Json {
 			}
 			else if (escapeToken == JsonInternalEscapeToken.EscapeSequenceHex) {
 				if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
-					state.MultiByteSequence[state.MultiByteIndex++] = (byte)c;
+					state.MultiByteSequence![state.MultiByteIndex++] = (byte)c;
 					if (state.MultiByteIndex < state.MultiByteSequenceLength) {
 						return 0;
 					}

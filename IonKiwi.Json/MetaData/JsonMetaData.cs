@@ -9,7 +9,7 @@ using System.Text;
 
 namespace IonKiwi.Json.MetaData {
 	public static class JsonMetaData {
-		public static event EventHandler<JsonMetaDataEventArgs> MetaData;
+		public static event EventHandler<JsonMetaDataEventArgs>? MetaData;
 
 		internal static void OnMetaData(JsonMetaDataEventArgs e) {
 			var md = MetaData;

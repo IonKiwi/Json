@@ -43,14 +43,14 @@ namespace IonKiwi.Json {
 			return Reader.Token;
 		}
 
-		public T Parse<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		public T? Parse<T>(IJsonReader reader, Type? objectType = null, string[]? tupleNames = null) {
 			return JsonParser.Parse<T>(reader, objectType, tupleNames, parserSettings: ParserSettings);
 		}
 
 #if !NET472
-		public ValueTask<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		public ValueTask<T?> ParseAsync<T>(IJsonReader reader, Type? objectType = null, string[]? tupleNames = null) {
 #else
-		public Task<T> ParseAsync<T>(IJsonReader reader, Type objectType = null, string[] tupleNames = null) {
+		public Task<T?> ParseAsync<T>(IJsonReader reader, Type? objectType = null, string[]? tupleNames = null) {
 #endif
 			return JsonParser.ParseAsync<T>(reader, objectType, tupleNames, parserSettings: ParserSettings);
 		}
