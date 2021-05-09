@@ -105,7 +105,7 @@ namespace IonKiwi.Json {
 						return null;
 				}
 
-				state = state.Parent;
+				state = state.ParentNoRoot;
 			}
 			return sb.ToString();
 		}

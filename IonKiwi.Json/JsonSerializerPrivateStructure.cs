@@ -42,6 +42,7 @@ namespace IonKiwi.Json {
 				}
 
 				public JsonSerializerInternalState Parent;
+				public JsonSerializerInternalState? ParentNoRoot => Parent == this ? null : Parent;
 				public bool WriteValueCallbackCalled;
 			}
 

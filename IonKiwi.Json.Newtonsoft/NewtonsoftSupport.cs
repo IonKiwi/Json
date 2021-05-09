@@ -136,6 +136,9 @@ namespace IonKiwi.Json.Newtonsoft {
 
 							var mapping = new Dictionary<string, string>(StringComparer.Ordinal);
 							foreach (var ctorParameter in ctor.GetParameters()) {
+								if (ctorParameter.Name == null) {
+									throw new Exception("Name is null");
+								}
 								if (!properties1.Contains(ctorParameter.Name)) {
 									if (properties2.TryGetValue(ctorParameter.Name, out var otherName)) {
 										mapping.Add(ctorParameter.Name, otherName);

@@ -38,6 +38,7 @@ namespace IonKiwi.Json {
 				}
 
 				public JsonParserInternalState Parent;
+				public JsonParserInternalState? ParentNoRoot => Parent == this ? null : Parent;
 				public bool IsComplete;
 				public object? Value;
 			}

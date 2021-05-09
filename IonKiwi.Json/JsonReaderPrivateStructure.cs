@@ -71,6 +71,7 @@ namespace IonKiwi.Json {
 			}
 
 			public JsonInternalState Parent;
+			public JsonInternalState? ParentNoRoot => Parent == this ? null : Parent;
 			public bool IsComplete;
 
 			public JsonInternalEscapeToken EscapeToken;

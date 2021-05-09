@@ -29,8 +29,8 @@ namespace IonKiwi.Json.Test {
 					e.AddProperty<CustomObject1, int>("value1", (obj) => obj.Value1, null, originalName: "Value1", required: true);
 					e.AddProperty<CustomObject1, bool>("value2", (obj) => obj.Value2, (obj, val) => { obj.Value2 = val; return obj; }, originalName: "Value2");
 					e.AddCustomInstantiator<CustomObject1>((context) => {
-						var value = context.GetValue<int>("value1");
-						return new CustomObject1(value.value);
+						context.GetValue<int>("value1", out var value);
+						return new CustomObject1(value);
 					});
 				}
 			};

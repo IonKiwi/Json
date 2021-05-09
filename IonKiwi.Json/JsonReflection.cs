@@ -413,13 +413,13 @@ namespace IonKiwi.Json {
 
 					PropertyInfo? realProperty = realType.GetProperty(p.Name, BindingFlags.Instance | BindingFlags.Public);
 					FieldInfo? realField = realProperty != null ? null : realType.GetField(p.Name, BindingFlags.Instance | BindingFlags.Public);
-					if (realField == null) {
+					if (realProperty == null && realField == null) {
 						throw new InvalidOperationException("property & field is null");
 					}
 					var pi = new JsonPropertyInfo(
 						p.PropertyType,
 						ReflectionUtility.CreatePropertySetterAction<object, object>(p),
-						realProperty != null ? ReflectionUtility.CreatePropertyGetter<object, object>(realProperty) : ReflectionUtility.CreateFieldGetter<object, object>(realField),
+						realProperty != null ? ReflectionUtility.CreatePropertyGetter<object, object>(realProperty) : ReflectionUtility.CreateFieldGetter<object, object>(realField!),
 						p.Name);
 
 					ti.Properties.Add(pi.Name, pi);
@@ -430,13 +430,13 @@ namespace IonKiwi.Json {
 
 					PropertyInfo? realProperty = realType.GetProperty(f.Name, BindingFlags.Instance | BindingFlags.Public);
 					FieldInfo? realField = realProperty != null ? null : realType.GetField(f.Name, BindingFlags.Instance | BindingFlags.Public);
-					if (realField == null) {
+					if (realProperty == null && realField == null) {
 						throw new InvalidOperationException("property & field is null");
 					}
 					var pi = new JsonPropertyInfo(
 						f.FieldType,
 						ReflectionUtility.CreateFieldSetterAction<object, object>(f),
-						realProperty != null ? ReflectionUtility.CreatePropertyGetter<object, object>(realProperty) : ReflectionUtility.CreateFieldGetter<object, object>(realField),
+						realProperty != null ? ReflectionUtility.CreatePropertyGetter<object, object>(realProperty) : ReflectionUtility.CreateFieldGetter<object, object>(realField!),
 						f.Name);
 
 					ti.Properties.Add(pi.Name, pi);
