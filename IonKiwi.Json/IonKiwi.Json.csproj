@@ -44,6 +44,24 @@
 
 	<PropertyGroup>
 		<DefineConstants Condition="'$(Signed)' == 'true'">$(DefineConstants);SIGNED</DefineConstants>
+		<Description>Yet Another JSON parser
+
+Parse/write JSON/ECMAScript like content
+
+Features
+- unquoted property names
+- single / multi-line comments
+- trailing comma allowed for objects and arrays
+- single quoted strings
+- multi-line strings (by escaping new line characters)
+- unicode CodePoint escape
+- hexadecimal/octal/binary numbers
+- numbers with leading or trailing decimal point
+- positive infinity, negative infinity, NaN
+- explicit plus sign for numbers
+- support for C#/.NET Tuples (using Tuple Element Names)
+</Description>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -54,6 +72,13 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Resources\ID_Continue.bin" />
 		<EmbeddedResource Include="Resources\ID_Start.bin" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="..\README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
 	</ItemGroup>
 
 	<Target Name="ReSignAfterBuild" AfterTargets="AfterBuild" Condition="'$(Signed)' == 'true'">
