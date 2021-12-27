@@ -275,7 +275,7 @@ namespace IonKiwi.Json {
 				}
 
 				string v = reader.GetValue();
-				if (!long.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var longValue)) {
+				if (!long.TryParse(v, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var longValue)) {
 					ThrowDataDoesNotMatchTypeRequested(v, typeof(TimeSpan));
 				}
 
@@ -292,7 +292,7 @@ namespace IonKiwi.Json {
 				}
 
 				string v = reader.GetValue();
-				if (!long.TryParse(v, NumberStyles.None, CultureInfo.InvariantCulture, out var longValue)) {
+				if (!long.TryParse(v, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var longValue)) {
 					ThrowDataDoesNotMatchTypeRequested(v, typeof(TimeSpan?));
 				}
 

@@ -738,5 +738,21 @@ namespace IonKiwi.Json.Test {
 			Assert.Null(v2.ValueKey);
 			Assert.Equal(42, v2.Value);
 		}
+
+		[Fact]
+		public void TestTimeSpan1() {
+
+			var json = @"1";
+			var v = JsonUtility.Parse<TimeSpan>(json);
+			Assert.Equal(new TimeSpan(1), v);
+		}
+
+		[Fact]
+		public void TestTimeSpan2() {
+
+			var json = @"-1";
+			var v = JsonUtility.Parse<TimeSpan>(json);
+			Assert.Equal(new TimeSpan(-1), v);
+		}
 	}
 }
