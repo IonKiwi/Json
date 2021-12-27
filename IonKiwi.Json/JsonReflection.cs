@@ -369,6 +369,9 @@ namespace IonKiwi.Json {
 				ti.RootType = typeof(List<>).MakeGenericType(ti.ItemType);
 				ti.CollectionAddMethod = ReflectionUtility.CreateCollectionAdd<object, object>(ti.RootType, ti.ItemType);
 				var getEnumerator = t.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
+				if (getEnumerator == null) {
+					throw new Exception("Failed to find GetEnumerator method.");
+				}
 				var p1 = Expression.Parameter(typeof(object), "p1");
 				var getEnumeratorCall = Expression.Call(Expression.Convert(p1, t), getEnumerator);
 				ti.EnumerateMethod = Expression.Lambda<Func<object, System.Collections.IEnumerator>>(getEnumeratorCall, p1).Compile();
@@ -518,6 +521,9 @@ namespace IonKiwi.Json {
 					throw new InvalidOperationException("Dictionary without IEnumerable<>");
 				}
 				var getEnumerator = dictionaryEnumerableInterface.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
+				if (getEnumerator == null) {
+					throw new Exception("Failed to find GetEnumerator method.");
+				}
 				var p1 = Expression.Parameter(typeof(object), "p1");
 				var getEnumeratorCall = Expression.Call(Expression.Convert(p1, dictionaryEnumerableInterface), getEnumerator);
 				ti.EnumerateMethod = Expression.Lambda<Func<object, System.Collections.IEnumerator>>(getEnumeratorCall, p1).Compile();
@@ -551,6 +557,9 @@ namespace IonKiwi.Json {
 				ti.ObjectType = JsonObjectType.Array;
 				ti.CollectionAddMethod = ReflectionUtility.CreateCollectionAdd<object, object>(t, ti.ItemType);
 				var getEnumerator = collectionInterface.GetMethod("GetEnumerator", BindingFlags.Instance | BindingFlags.Public);
+				if (getEnumerator == null) {
+					throw new Exception("Failed to find GetEnumerator method.");
+				}
 				var p1 = Expression.Parameter(typeof(object), "p1");
 				var getEnumeratorCall = Expression.Call(Expression.Convert(p1, collectionInterface), getEnumerator);
 				ti.EnumerateMethod = Expression.Lambda<Func<object, System.Collections.IEnumerator>>(getEnumeratorCall, p1).Compile();
@@ -807,8 +816,16 @@ namespace IonKiwi.Json {
 		}
 
 		private static Action<object> CreateCallbackAction(MethodInfo mi) {
+			if (mi == null) {
+				throw new ArgumentNullException(nameof(mi));
+			}
+			var declaringType = mi.DeclaringType;
+			if (declaringType == null) {
+				throw new Exception("Method without declaring type.");
+			}
+
 			var p1 = Expression.Parameter(typeof(object), "p1");
-			var e1 = Expression.Convert(p1, mi.DeclaringType);
+			var e1 = Expression.Convert(p1, declaringType);
 			var methodCall = Expression.Call(e1, mi);
 			var methodExpression = Expression.Lambda(methodCall, p1);
 			var methodLambda = (Expression<Action<object>>)methodExpression;

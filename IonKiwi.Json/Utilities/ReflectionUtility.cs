@@ -232,6 +232,9 @@ namespace IonKiwi.Json.Utilities {
 
 					if (_hasEnumFlag == null) {
 						var mi = typeof(Enum).GetMethod("HasFlag", BindingFlags.Public | BindingFlags.Instance);
+						if (mi == null) {
+							throw new Exception("Failed to find 'HasFlag'.");
+						}
 
 						var p1 = Expression.Parameter(typeof(object), "p1");
 						var p2 = Expression.Parameter(typeof(object), "p2");
@@ -297,6 +300,13 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static Func<TIn, TOut?> CreatePropertyGetter<TIn, TOut>(PropertyInfo pi) {
+			if (pi == null) {
+				throw new ArgumentNullException(nameof(pi));
+			}
+			var declaringType = pi.DeclaringType;
+			if (declaringType == null) {
+				throw new Exception("No DeclaringType for property.");
+			}
 			var m = pi.GetGetMethod(true);
 			if (m == null) {
 				throw new Exception("Json property without getter");
@@ -307,8 +317,8 @@ namespace IonKiwi.Json.Utilities {
 
 			ParameterExpression p1 = Expression.Parameter(inType, "p1");
 			Expression p2;
-			if (inType != pi.DeclaringType) {
-				p2 = Expression.Convert(p1, pi.DeclaringType);
+			if (inType != declaringType) {
+				p2 = Expression.Convert(p1, declaringType);
 			}
 			else {
 				p2 = p1;
@@ -328,13 +338,23 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static Func<TIn, TOut?> CreateFieldGetter<TIn, TOut>(FieldInfo fi) {
+
+			if (fi == null) {
+				throw new ArgumentNullException(nameof(fi));
+			}
+
+			var declaringType = fi.DeclaringType;
+			if (declaringType == null) {
+				throw new Exception("No DeclaringType for field.");
+			}
+
 			Type inType = typeof(TIn);
 			Type outType = typeof(TOut);
 
 			ParameterExpression p1 = Expression.Parameter(inType, "p1");
 			Expression p2;
-			if (inType != fi.DeclaringType) {
-				p2 = Expression.Convert(p1, fi.DeclaringType);
+			if (inType != declaringType) {
+				p2 = Expression.Convert(p1, declaringType);
 
 			}
 			else {
@@ -355,11 +375,19 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		public static Action<TType, TValue?> CreatePropertySetterAction<TType, TValue>(PropertyInfo property) {
+			if (property == null) {
+				throw new ArgumentNullException(nameof(property));
+			}
 			var t = typeof(TType);
 			var v = typeof(TValue);
 			var d = property.DeclaringType;
 			if (d == null) {
 				throw new InvalidOperationException("Property without declaring type");
+			}
+
+			var setMethod = property.GetSetMethod(true);
+			if (setMethod == null) {
+				throw new InvalidOperationException("Property without set method");
 			}
 
 			var p1 = Expression.Parameter(t, "p1");
@@ -379,17 +407,25 @@ namespace IonKiwi.Json.Utilities {
 			else {
 				value = p2;
 			}
-			var callExpr = Expression.Call(instance, property.GetSetMethod(true), value);
+			var callExpr = Expression.Call(instance, setMethod, value);
 			var callLambda = Expression.Lambda<Action<TType, TValue?>>(callExpr, p1, p2).Compile();
 			return callLambda;
 		}
 
 		public static Func<TType, TValue?, TType> CreatePropertySetterFunc<TType, TValue>(PropertyInfo property) {
+			if (property == null) {
+				throw new ArgumentNullException(nameof(property));
+			}
 			var t = typeof(TType);
 			var v = typeof(TValue);
 			var d = property.DeclaringType;
 			if (d == null) {
 				throw new InvalidOperationException("Property without declaring type");
+			}
+
+			var setMethod = property.GetSetMethod(true);
+			if (setMethod == null) {
+				throw new InvalidOperationException("Property without set method");
 			}
 
 			var p1 = Expression.Parameter(t, "p1");
@@ -413,7 +449,7 @@ namespace IonKiwi.Json.Utilities {
 			}
 
 			var varValue = Expression.Assign(var, instance);
-			var callExpr = Expression.Call(var, property.GetSetMethod(true), value);
+			var callExpr = Expression.Call(var, setMethod, value);
 			var resultExpr = d != t ? (Expression)Expression.Convert(var, t) : var;
 			var blockExpr = Expression.Block(new List<ParameterExpression>() { var }, varValue, callExpr, resultExpr);
 			var callLambda = Expression.Lambda<Func<TType, TValue?, TType>>(blockExpr, p1, p2).Compile();
@@ -498,14 +534,18 @@ namespace IonKiwi.Json.Utilities {
 			if (p.Length != 1) {
 				throw new Exception("Expected 1 parameter for Add method");
 			}
+			var declaringType = mi.DeclaringType;
+			if (declaringType == null) {
+				throw new InvalidOperationException("Method without declaring type");
+			}
 
 			Type inType = typeof(TIn);
 			Type valueTypeX = typeof(TValue);
 
 			ParameterExpression p1 = Expression.Parameter(inType, "p1");
 			Expression p2;
-			if (inType != mi.DeclaringType) {
-				p2 = Expression.Convert(p1, mi.DeclaringType);
+			if (inType != declaringType) {
+				p2 = Expression.Convert(p1, declaringType);
 			}
 			else {
 				p2 = p1;
@@ -566,14 +606,19 @@ namespace IonKiwi.Json.Utilities {
 				throw new Exception("Expected 2 parameters for Dictionary Add method");
 			}
 
+			var declaringType = mi.DeclaringType;
+			if (declaringType == null) {
+				throw new InvalidOperationException("Method without declaring type");
+			}
+
 			Type inType = typeof(TIn);
 			Type valueType1 = typeof(TValue1);
 			Type valueType2 = typeof(TValue2);
 
 			ParameterExpression p1 = Expression.Parameter(inType, "p1");
 			Expression p2;
-			if (inType != mi.DeclaringType) {
-				p2 = Expression.Convert(p1, mi.DeclaringType);
+			if (inType != declaringType) {
+				p2 = Expression.Convert(p1, declaringType);
 			}
 			else {
 				p2 = p1;
@@ -619,13 +664,18 @@ namespace IonKiwi.Json.Utilities {
 				throw new Exception("Expected 1 parameter for Dictionary Add method");
 			}
 
+			var declaringType = mi.DeclaringType;
+			if (declaringType == null) {
+				throw new InvalidOperationException("Method without declaring type");
+			}
+
 			Type inType = typeof(TIn);
 			Type valueType1 = typeof(TValue1);
 
 			ParameterExpression p1 = Expression.Parameter(inType, "p1");
 			Expression p2;
-			if (inType != mi.DeclaringType) {
-				p2 = Expression.Convert(p1, mi.DeclaringType);
+			if (inType != declaringType) {
+				p2 = Expression.Convert(p1, declaringType);
 			}
 			else {
 				p2 = p1;
@@ -655,16 +705,25 @@ namespace IonKiwi.Json.Utilities {
 				throw new InvalidOperationException($"KeyValuePair type '{ReflectionUtility.GetTypeName(keyValuePair)}' without Value property.");
 			}
 
+			var keyGetMhetod = k.GetGetMethod(false);
+			if (keyGetMhetod == null) {
+				throw new Exception("Failed to find Key get method.");
+			}
+			var valueGetMhetod = v.GetGetMethod(false);
+			if (valueGetMhetod == null) {
+				throw new Exception("Failed to find Value get method.");
+			}
+
 			var p1 = Expression.Parameter(typeof(object), "p1");
 			var p2 = Expression.Convert(p1, keyValuePair);
 
-			var callExpr1 = Expression.Call(p2, k.GetGetMethod(false));
+			var callExpr1 = Expression.Call(p2, keyGetMhetod);
 			Expression callExpr1e = callExpr1;
 			if (k.PropertyType != typeof(TKey)) {
 				callExpr1e = Expression.Convert(callExpr1, typeof(TKey));
 			}
 			var lambda1 = Expression.Lambda<Func<object, TKey>>(callExpr1e, p1);
-			var callExpr2 = Expression.Call(p2, v.GetGetMethod(false));
+			var callExpr2 = Expression.Call(p2, valueGetMhetod);
 			Expression callExpr2e = callExpr2;
 			if (v.PropertyType != typeof(TValue)) {
 				callExpr2e = Expression.Convert(callExpr2, typeof(TValue));

@@ -32,7 +32,7 @@ namespace IonKiwi.Json {
 
 		public SystemJsonWriter(Stream stream, JsonWriterSettings? settings = null, JsonWriterOptions? options = null) {
 			var option2 = EnsureDefaultOptions(options ?? CreateDefaultOptions());
-			_encoder = option2.Encoder;
+			_encoder = option2.Encoder!;
 			_output = new Utf8JsonWriter(stream, option2);
 			_stream = stream;
 			_settings = settings ?? JsonWriter.DefaultSettings;
@@ -40,7 +40,7 @@ namespace IonKiwi.Json {
 
 		public SystemJsonWriter(IBufferWriter<byte> writer, JsonWriterSettings? settings = null, JsonWriterOptions? options = null) {
 			var option2 = EnsureDefaultOptions(options ?? CreateDefaultOptions());
-			_encoder = option2.Encoder;
+			_encoder = option2.Encoder!;
 			_output = new Utf8JsonWriter(writer, option2);
 			_writer = writer;
 			_settings = settings ?? JsonWriter.DefaultSettings;

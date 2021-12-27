@@ -105,8 +105,15 @@ namespace IonKiwi.Json.Utilities {
 		}
 
 		private static Action<object> CreateCallbackAction(MethodInfo mi) {
+			if (mi == null) {
+				throw new ArgumentNullException(nameof(mi));
+			}
+			var declaringType = mi.DeclaringType;
+			if (declaringType == null) {
+				throw new Exception("Method without declaring type.");
+			}
 			var p1 = Expression.Parameter(typeof(object), "p1");
-			var e1 = Expression.Convert(p1, mi.DeclaringType);
+			var e1 = Expression.Convert(p1, declaringType);
 			var methodCall = Expression.Call(e1, mi, Expression.New(typeof(StreamingContext)));
 			var methodExpression = Expression.Lambda(methodCall, p1);
 			var methodLambda = (Expression<Action<object>>)methodExpression;
