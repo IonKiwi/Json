@@ -9,7 +9,7 @@ using System;
 #if !NET472
 using System.Buffers;
 #endif
-#if NETCOREAPP3_1
+#if NETCOREAPP3_1_OR_GREATER
 using System.Text.Json;
 #endif
 using System.Collections.Generic;
@@ -144,7 +144,7 @@ namespace IonKiwi.Json.Utilities {
 			return sb.ToString();
 		}
 
-#if NETCOREAPP3_1
+#if NETCOREAPP3_1_OR_GREATER
 		public static class System {
 			public static IJsonReader CreateReader(string json) {
 				if (string.IsNullOrEmpty(json)) {

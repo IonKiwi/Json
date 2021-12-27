@@ -13,7 +13,7 @@ using PlatformTask = System.Threading.Tasks.ValueTask;
 
 namespace IonKiwi.Json {
 	internal class JsonWriterWrapper : IJsonWriter, IDisposable
-#if NETCOREAPP3_1
+#if NETCOREAPP3_1_OR_GREATER
 		, IAsyncDisposable
 #endif
 	{
@@ -366,7 +366,7 @@ namespace IonKiwi.Json {
 			_disposeAction();
 		}
 
-#if NETCOREAPP3_1
+#if NETCOREAPP3_1_OR_GREATER
 		async PlatformTask IAsyncDisposable.DisposeAsync() {
 			if (_writer is IAsyncDisposable disposable) {
 				await disposable.DisposeAsync().NoSync();
